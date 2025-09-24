@@ -14,6 +14,6 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci
-      - run: npx electron-builder --publish always
+      - run: npm run publish
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
