@@ -15,7 +15,7 @@ Keep track of tasks, focus on what matters, and get a pleasant little “ding”
 
 Prebuilt releases (macOS, Windows, Linux) are published under GitHub Releases:
 
-https://github.com/claudiacodacy/todolo/releases
+https://github.com/stklauz/todolo/releases
 
 ## Development
 
@@ -56,8 +56,8 @@ When enabled, Todolo checks for updates via GitHub Releases for `claudiacodacy/t
 
 ## Help & Feedback
 
-- Questions and ideas: https://github.com/claudiacodacy/todolo/discussions
-- Bug reports: https://github.com/claudiacodacy/todolo/issues
+- Questions and ideas: https://github.com/stklauz/todolo/discussions
+- Bug reports: https://github.com/stklauz/todolo/issues
 
 ## License
 
@@ -66,4 +66,3 @@ MIT
 ---
 
 Built with Electron, React, and inspired by Electron React Boilerplate.
-

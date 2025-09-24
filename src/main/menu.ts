@@ -169,17 +169,9 @@ export default class MenuBuilder {
           },
         },
         {
-          label: 'Todolo Discussions',
-          click() {
-            shell.openExternal(
-              'https://github.com/claudiacodacy/todolo/discussions',
-            );
-          },
-        },
-        {
           label: 'Search Issues',
           click() {
-            shell.openExternal('https://github.com/claudiacodacy/todolo/issues');
+            shell.openExternal('https://github.com/stklauz/todolo/issues');
           },
         },
       ],
@@ -272,19 +264,19 @@ export default class MenuBuilder {
             },
           },
           {
-            label: 'Todolo Discussions',
-            click() {
-              shell.openExternal(
-                'https://github.com/claudiacodacy/todolo/discussions',
-              );
-            },
+          label: 'Todolo Discussions',
+          click() {
+            shell.openExternal(
+              'https://github.com/stklauz/todolo/discussions',
+            );
           },
-          {
-            label: 'Search Issues',
-            click() {
-              shell.openExternal('https://github.com/claudiacodacy/todolo/issues');
-            },
+        },
+        {
+          label: 'Search Issues',
+          click() {
+            shell.openExternal('https://github.com/stklauz/todolo/issues');
           },
+        },
         ],
       },
     ];
