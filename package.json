@@ -169,7 +169,7 @@
   },
   "build": {
     "productName": "Todolo",
-    "appId": "com.claudiacodacy.todolo",
+    "appId": "com.stklauz.todolo",
     "asar": true,
     "afterSign": ".erb/scripts/notarize.js",
     "asarUnpack": "**\\*.{node,dll}",
