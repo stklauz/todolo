@@ -1,0 +1,50 @@
+:root {
+  --color-black: #333333;  
+  --color-grey-dark: #575757;  
+  --color-grey: #858585;
+  --color-grey-light: #dddddd;
+  --color-white: #ffffff;
+  
+  --color-main: #007acc;
+}
+
+/* Inter variable font (self-hosted) */
+@font-face {
+  font-family: 'Inter';
+  src: url('../../../assets/fonts/inter/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('../../../assets/fonts/inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans',
+    'Droid Sans', 'Helvetica Neue', Arial, 'Noto Sans',
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-white);
+  color: var(--color-black);
+}
+
+input, textarea, select { font-family:inherit; }
+
+/* Invisible draggable strip at the very top */
+.drag-region {
+  -webkit-app-region: drag;
+  height: 2.5rem;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+}

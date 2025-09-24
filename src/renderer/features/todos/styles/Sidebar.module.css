@@ -1,0 +1,84 @@
+.sidebar {
+  width: 240px;
+  padding: 3rem 1rem;
+  border-right: 1px solid #eee;
+  display: none;
+  height: 100vh; /* full height */
+  box-sizing: border-box;
+  overflow-y: auto;
+  background: #fff;
+}
+
+@media (min-width: 600px) {
+  .sidebar {
+    display: block;
+  }
+}
+
+
+.sidebarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.lists {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.listItem {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 120ms ease;
+  font-size: 14px;
+  color: var(--color-grey-dark)
+}
+
+.listItem:hover { 
+  background: #f8fafc; 
+  color: var(--color-black);
+}
+
+.listItemActive {
+  background: #f1f5f9;
+  color: var(--color-black);
+  font-weight: 700;
+}
+
+
+.listName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renameInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+}
+
+.iconBtn {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 6px;
+  color: #64748b; /* slate-500 */
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.iconBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a; /* slate-900 */
+  opacity: 1;
+}
