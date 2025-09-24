@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import fs from 'fs';
@@ -22,9 +22,71 @@ const getTodosPath = () => {
 };
 
 class AppUpdater {
-  constructor() {
+  constructor(window?: BrowserWindow | null) {
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
+
+    autoUpdater.autoDownload = true;
+
+    autoUpdater.on('checking-for-update', () => {
+      log.info('Checking for update...');
+    });
+
+    autoUpdater.on('update-available', (info) => {
+      log.info('Update available:', info.version);
+      if (window) {
+        dialog
+          .showMessageBox(window, {
+            type: 'info',
+            title: 'Update Available',
+            message: `A new version (${info.version}) is available. It will download in the background.`,
+            buttons: ['OK'],
+            defaultId: 0,
+          })
+          .catch((e) => log.warn('Update available dialog error', e));
+      }
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+      log.info(
+        `Download speed: ${Math.round(progress.bytesPerSecond / 1024)} KB/s - ` +
+          `Downloaded ${Math.round(progress.percent)}% (${progress.transferred}/${progress.total})`,
+      );
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      log.info('Update downloaded:', info.version);
+      if (window) {
+        dialog
+          .showMessageBox(window, {
+            type: 'question',
+            title: 'Install Update',
+            message: 'Update downloaded. Install and restart now?',
+            buttons: ['Install and Restart', 'Later'],
+            defaultId: 0,
+            cancelId: 1,
+          })
+          .then((result) => {
+            if (result.response === 0) {
+              autoUpdater.quitAndInstall();
+            }
+          })
+          .catch((e) => log.warn('Update downloaded dialog error', e));
+      } else {
+        // Fallback if no window is present
+        autoUpdater.quitAndInstall();
+      }
+    });
+
+    autoUpdater.on('update-not-available', () => {
+      log.info('No updates available');
+    });
+
+    autoUpdater.on('error', (err) => {
+      log.error('Auto update error:', err);
+    });
+
+    // Start the check on startup
     autoUpdater.checkForUpdatesAndNotify();
   }
 }
@@ -137,9 +199,9 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
-  // Remove this if your app does not use auto updates
+  // Auto updates: show notifications and prompt to install when ready
   // eslint-disable-next-line
-  new AppUpdater();
+  new AppUpdater(mainWindow);
 };
 
 /**

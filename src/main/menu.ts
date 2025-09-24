@@ -5,6 +5,7 @@ import {
   BrowserWindow,
   MenuItemConstructorOptions,
 } from 'electron';
+import { autoUpdater } from 'electron-updater';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -169,6 +170,12 @@ export default class MenuBuilder {
           },
         },
         {
+          label: 'Check for Updates…',
+          click: () => {
+            autoUpdater.checkForUpdates();
+          },
+        },
+        {
           label: 'Search Issues',
           click() {
             shell.openExternal('https://github.com/stklauz/todolo/issues');
@@ -261,6 +268,12 @@ export default class MenuBuilder {
               shell.openExternal(
                 'https://github.com/electron/electron/tree/main/docs#readme',
               );
+            },
+          },
+          {
+            label: 'Check for Updates…',
+            click: () => {
+              autoUpdater.checkForUpdates();
             },
           },
           {
