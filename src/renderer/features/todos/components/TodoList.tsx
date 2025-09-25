@@ -1,6 +1,13 @@
 import React from 'react';
-import popSound from '../../../../../assets/sounds/bell.wav';
 import { TodoRow } from './TodoRow';
+
+// Import audio file with fallback for tests
+let popSound: string;
+try {
+  popSound = require('../../../../../assets/sounds/bell.wav');
+} catch {
+  popSound = 'mock-audio';
+}
 const styles = require('../styles/TodoList.module.css');
 import type { EditorTodo } from '../types';
 
@@ -10,7 +17,10 @@ type Props = {
   toggleTodo: (id: number) => void;
   handleTodoKeyDown: (id: number) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   insertBelowAndFocus: (index: number, text?: string) => void;
+  changeIndent: (id: number, delta: number) => void;
+  removeAt: (index: number) => void;
   // drag & drop
+  dragInfo: { id: number; section: 'active' | 'completed' } | null;
   handleDragStart: (id: number) => void;
   handleDragEnd: () => void;
   handleDragOver: (e: React.DragEvent, targetId: number) => void;
@@ -30,6 +40,9 @@ export default function TodoList({
   toggleTodo,
   handleTodoKeyDown,
   insertBelowAndFocus,
+  changeIndent,
+  removeAt,
+  dragInfo,
   handleDragStart,
   handleDragEnd,
   handleDragOver,
@@ -42,51 +55,155 @@ export default function TodoList({
   handleDropAtEnd,
   setInputRef,
 }: Props) {
-  const isParentIndeterminate = (idx: number): boolean => {
-    const t = todos[idx];
-    if (!t || Number(t.indent ?? 0) !== 0) return false;
-    let hasChild = false;
-    let completedChildren = 0;
-    let totalChildren = 0;
-    for (let i = idx + 1; i < todos.length; i++) {
-      if (Number(todos[i].indent ?? 0) === 0) break;
-      hasChild = true;
-      totalChildren += 1;
-      if (todos[i].completed) completedChildren += 1;
-    }
-    if (!hasChild) return false;
-    return completedChildren > 0 && completedChildren < totalChildren;
-  };
+  // Keep latest todos in a ref so cached handlers can access fresh data
+  const todosRef = React.useRef(todos);
+  React.useEffect(() => { todosRef.current = todos; }, [todos]);
 
-  const isEffectivelyCompleted = (idx: number): boolean => {
-    const t = todos[idx];
-    if (!t) return false;
-    const indent = Number(t.indent ?? 0);
-    if (indent <= 0) {
-      if (!t.completed) return false;
-      for (let i = idx + 1; i < todos.length; i++) {
-        if (Number(todos[i].indent ?? 0) === 0) break;
-        if (!todos[i].completed) return false;
-      }
-      return true;
-    }
-    let parentCompleted = false;
-    for (let i = idx - 1; i >= 0; i--) {
-      if (Number(todos[i].indent ?? 0) === 0) {
-        parentCompleted = !!todos[i].completed;
-        break;
-      }
-    }
-    return !!t.completed && parentCompleted;
-  };
+  const idToIndex = React.useMemo(() => {
+    const m = new Map<number, number>();
+    todos.forEach((t, i) => m.set(t.id, i));
+    return m;
+  }, [todos]);
 
-  const activeTodos = todos.filter((_, i) => !isEffectivelyCompleted(i));
-  const completedTodos = todos.filter((_, i) => isEffectivelyCompleted(i));
-  const isSingleActive = activeTodos.length === 1;
+  const derived = React.useMemo(() => {
+    const indeterminate = new Map<number, boolean>();
+    const section = new Map<number, 'active' | 'completed'>();
+    for (let i = 0; i < todos.length; i++) {
+      const t = todos[i];
+      const indent = Number(t.indent ?? 0);
+      if (indent <= 0) {
+        // parent: compute indeterminate and effective completion
+        let hasChild = false;
+        let allChildrenCompleted = true;
+        let anyChildCompleted = false;
+        for (let j = i + 1; j < todos.length; j++) {
+          if (Number(todos[j].indent ?? 0) === 0) break;
+          hasChild = true;
+          if (todos[j].completed) anyChildCompleted = true;
+          if (!todos[j].completed) allChildrenCompleted = false;
+        }
+        const effCompleted = t.completed && (!hasChild || allChildrenCompleted);
+        section.set(t.id, effCompleted ? 'completed' : 'active');
+        indeterminate.set(t.id, hasChild && anyChildCompleted && !allChildrenCompleted);
+      } else {
+        // child: completed only if child and nearest parent are completed
+        let parentCompleted = false;
+        for (let j = i - 1; j >= 0; j--) {
+          if (Number(todos[j].indent ?? 0) === 0) { parentCompleted = !!todos[j].completed; break; }
+        }
+        section.set(t.id, t.completed && parentCompleted ? 'completed' : 'active');
+        indeterminate.set(t.id, false);
+      }
+    }
+    const active: EditorTodo[] = [];
+    const completed: EditorTodo[] = [];
+    todos.forEach((t) => (section.get(t.id) === 'completed' ? completed.push(t) : active.push(t)));
+    return { indeterminate, section, active, completed } as const;
+  }, [todos]);
+
+  const isSingleActive = derived.active.length === 1;
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  React.useEffect(() => {
+    try {
+      audioRef.current = new Audio(popSound);
+    } catch {}
+  }, []);
+
+  // Cache per-id handlers so TodoRow props remain stable across renders
+  const keydownByIdRef = React.useRef(new Map<number, (e: React.KeyboardEvent<HTMLTextAreaElement>) => void>());
+  const dragStartByIdRef = React.useRef(new Map<number, (e: React.DragEvent) => void>());
+  const dragOverByIdRef = React.useRef(new Map<number, (e: React.DragEvent) => void>());
+  const dragLeaveByIdRef = React.useRef(new Map<number, () => void>());
+  const dropOnByIdRef = React.useRef(new Map<number, () => void>());
+
+  // Small wrapper to call changeIndent via parent prop without recreating closures
+  const handleIndent = React.useCallback((id: number, delta: number) => {
+    changeIndent(id, delta);
+  }, [changeIndent]);
+
+  const getKeydownHandler = React.useCallback((id: number) => {
+    const existing = keydownByIdRef.current.get(id);
+    if (existing) return existing;
+    const fn = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const list = todosRef.current;
+      const idx = list.findIndex((t) => t.id === id);
+      if (idx === -1) return;
+      const cur = list[idx];
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        if (event.shiftKey) {
+          // outdent
+          handleIndent(id, -1);
+        } else {
+          // only indent if there is a parent above
+          let hasParent = false;
+          for (let i = idx - 1; i >= 0; i--) {
+            if ((Number(list[i].indent ?? 0)) === 0) { hasParent = true; break; }
+          }
+          if (hasParent) handleIndent(id, +1);
+        }
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        if (cur && cur.text.trim().length > 0) {
+          insertBelowAndFocus(idx);
+        }
+        return;
+      }
+      if (event.key === 'Backspace') {
+        const isEmpty = !cur || cur.text.length === 0;
+        if (isEmpty) {
+          event.preventDefault();
+          const indent = Number(cur?.indent ?? 0);
+          if (indent > 0) {
+            handleIndent(id, -1);
+            return;
+          }
+          if (list.length <= 1) return;
+          removeAt(idx);
+        }
+      }
+    };
+    keydownByIdRef.current.set(id, fn);
+    return fn;
+  }, [handleIndent, insertBelowAndFocus, removeAt]);
+
+  const getDragStart = React.useCallback((id: number) => {
+    const ex = dragStartByIdRef.current.get(id);
+    if (ex) return ex;
+    const fn = (_e: React.DragEvent) => handleDragStart(id);
+    dragStartByIdRef.current.set(id, fn);
+    return fn;
+  }, [handleDragStart]);
+
+  const getDragOver = React.useCallback((id: number) => {
+    const ex = dragOverByIdRef.current.get(id);
+    if (ex) return ex;
+    const fn = (e: React.DragEvent) => handleDragOver(e, id);
+    dragOverByIdRef.current.set(id, fn);
+    return fn;
+  }, [handleDragOver]);
+
+  const getDragLeave = React.useCallback((id: number) => {
+    const ex = dragLeaveByIdRef.current.get(id);
+    if (ex) return ex;
+    const fn = () => handleDragLeave(id);
+    dragLeaveByIdRef.current.set(id, fn);
+    return fn;
+  }, [handleDragLeave]);
+
+  const getDropOn = React.useCallback((id: number) => {
+    const ex = dropOnByIdRef.current.get(id);
+    if (ex) return ex;
+    const fn = () => handleDropOn(id);
+    dropOnByIdRef.current.set(id, fn);
+    return fn;
+  }, [handleDropOn]);
 
   return (
     <>
-      {activeTodos.map((todo) => {
+      {derived.active.map((todo) => {
         const isEmpty = todo.text.trim().length === 0;
         const toggleDisabled = isEmpty;
         return (
@@ -95,17 +212,16 @@ export default function TodoList({
           value={todo.text}
           checked={todo.completed}
           indent={todo.indent ?? 0}
-          indeterminate={isParentIndeterminate(todos.findIndex((t) => t.id === todo.id))}
+          indeterminate={derived.indeterminate.get(todo.id) === true}
           onToggle={() => {
             if (toggleDisabled) return;
             try {
-              // Play pop sound when checking a todo as completed
-              const audio = new Audio(popSound);
-              audio.play().catch(() => {});
+              const a = audioRef.current;
+              if (a) { a.currentTime = 0; a.play().catch(() => {}); }
             } catch (_) {
               // no-op if audio cannot play
             }
-            const index = todos.findIndex((t) => t.id === todo.id);
+            const index = idToIndex.get(todo.id) ?? -1;
             toggleTodo(todo.id);
             // If this was the only active non-empty todo, create a new empty one and focus it
             if (isSingleActive && !isEmpty && index !== -1) {
@@ -114,12 +230,12 @@ export default function TodoList({
           }}
           toggleDisabled={toggleDisabled}
           onChange={(e) => updateTodo(todo.id, e.target.value)}
-          onKeyDown={handleTodoKeyDown(todo.id)}
-          onDragStart={() => handleDragStart(todo.id)}
+          onKeyDown={getKeydownHandler(todo.id)}
+          onDragStart={getDragStart(todo.id)}
           onDragEnd={handleDragEnd}
-          onDragOver={(e) => handleDragOver(e, todo.id)}
-          onDragLeave={() => handleDragLeave(todo.id)}
-          onDrop={() => handleDropOn(todo.id)}
+          onDragOver={getDragOver(todo.id)}
+          onDragLeave={getDragLeave(todo.id)}
+          onDrop={getDropOn(todo.id)}
           isDropTarget={dropTargetId === todo.id}
           ref={(el) => setInputRef(todo.id, el)}
         />
@@ -134,27 +250,27 @@ export default function TodoList({
         onDrop={() => handleDropAtEnd('active')}
       />
 
-      {completedTodos.length > 0 && (
+      {derived.completed.length > 0 && (
         <div className={styles.sectionGroup}>
           <div className={styles.sectionDivider} />
         </div>
       )}
 
-      {completedTodos.map((todo) => (
+      {derived.completed.map((todo) => (
         <TodoRow
           key={todo.id}
           value={todo.text}
           checked={todo.completed}
           indent={todo.indent ?? 0}
-          indeterminate={isParentIndeterminate(todos.findIndex((t) => t.id === todo.id))}
+          indeterminate={derived.indeterminate.get(todo.id) === true}
           onToggle={() => toggleTodo(todo.id)}
           onChange={(e) => updateTodo(todo.id, e.target.value)}
-          onKeyDown={handleTodoKeyDown(todo.id)}
-          onDragStart={() => handleDragStart(todo.id)}
+          onKeyDown={getKeydownHandler(todo.id)}
+          onDragStart={getDragStart(todo.id)}
           onDragEnd={handleDragEnd}
-          onDragOver={(e) => handleDragOver(e, todo.id)}
-          onDragLeave={() => handleDragLeave(todo.id)}
-          onDrop={() => handleDropOn(todo.id)}
+          onDragOver={getDragOver(todo.id)}
+          onDragLeave={getDragLeave(todo.id)}
+          onDrop={getDropOn(todo.id)}
           isDropTarget={dropTargetId === todo.id}
           ref={(el) => setInputRef(todo.id, el)}
         />

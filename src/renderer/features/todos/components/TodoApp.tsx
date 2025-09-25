@@ -61,6 +61,7 @@ export default function TodoApp(): React.ReactElement {
     return cur.completed && parentCompleted ? 'completed' : 'active';
   };
   const {
+    dragInfo,
     dropTargetId,
     dropAtSectionEnd,
     handleDragStart,
@@ -275,6 +276,9 @@ export default function TodoApp(): React.ReactElement {
         toggleTodo={toggleTodo}
         insertBelowAndFocus={insertBelowAndFocus}
         handleTodoKeyDown={handleTodoKeyDown}
+        changeIndent={changeIndent}
+        removeAt={removeAtAndManageFocus}
+        dragInfo={dragInfo}
         handleDragStart={handleDragStart}
         handleDragEnd={handleDragEnd}
         handleDragOver={handleDragOver}

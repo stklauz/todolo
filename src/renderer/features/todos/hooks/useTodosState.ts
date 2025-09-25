@@ -1,5 +1,5 @@
 import React from 'react';
-import { loadAppData, saveAppData } from '../api/storage';
+import { loadListsIndex, saveListsIndex, loadListTodos, saveListTodos } from '../api/storage';
 import type { EditorTodo, TodoList } from '../types';
 
 type State = {
@@ -12,36 +12,25 @@ export default function useTodosState() {
   const [selectedListId, setSelectedListId] = React.useState<string | null>(null);
   const idCounterRef = React.useRef(1);
   const saveTimerRef = React.useRef<number | null>(null);
+  const selectedListIdRef = React.useRef<string | null>(null);
+  selectedListIdRef.current = selectedListId;
 
-  // Load on mount
+  // Load lists (index) on mount
   React.useEffect(() => {
     const load = async () => {
       try {
-        const data = await loadAppData();
-        const normalizedLists: TodoList[] = (data.lists || []).map((list, li) => {
-          const todosNorm: EditorTodo[] = (list.todos || []).map((t: any, i: number) => ({
-            id: typeof t.id === 'number' ? t.id : i + 1,
-            text: typeof t.text === 'string' ? t.text : String(t.text ?? ''),
-            completed: Boolean((t as any).completed ?? (t as any).checked ?? false),
-            indent: Math.max(0, Math.min(1, Number((t as any).indent ?? 0))),
-          }));
-          return {
-            id: typeof list.id === 'string' ? list.id : String(li + 1),
-            name: typeof list.name === 'string' ? list.name : `List ${li + 1}`,
-            todos: todosNorm,
-            createdAt: list.createdAt,
-            updatedAt: (list as any).updatedAt ?? list.createdAt ?? undefined,
-          };
-        });
+        const index = await loadListsIndex();
+        const normalizedLists: TodoList[] = (index.lists || []).map((list, li) => ({
+          id: String(list.id),
+          name: typeof list.name === 'string' ? list.name : `List ${li + 1}`,
+          todos: [],
+          createdAt: list.createdAt,
+          updatedAt: list.updatedAt,
+        }));
         setLists(normalizedLists);
-        const maxId = normalizedLists.reduce((m, l) => {
-          const localMax = l.todos.reduce((mm, t) => (t.id > mm ? t.id : mm), 0);
-          return Math.max(m, localMax);
-        }, 0);
-        idCounterRef.current = maxId + 1;
         setSelectedListId(
-          (data.selectedListId && normalizedLists.some((l) => l.id === data.selectedListId))
-            ? data.selectedListId!
+          (index.selectedListId && normalizedLists.some((l) => l.id === index.selectedListId))
+            ? index.selectedListId!
             : normalizedLists[0]?.id ?? null,
         );
       } catch (e) {
@@ -63,14 +52,19 @@ export default function useTodosState() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lists.length]);
 
-  // Debounced save
+  // Debounced save of lists index (names/order/selection, not todos)
   React.useEffect(() => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
       try {
-        saveAppData({ version: 1, lists, selectedListId: selectedListId ?? undefined });
+        const indexDoc = {
+          version: 2,
+          lists: lists.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
+          selectedListId: selectedListId ?? undefined,
+        } as const;
+        void saveListsIndex(indexDoc);
       } catch {}
-    }, 400);
+    }, 800);
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
@@ -90,16 +84,18 @@ export default function useTodosState() {
 
   const setSelectedTodos = React.useCallback(
     (updater: (prev: EditorTodo[]) => EditorTodo[] | null | undefined) => {
-      setLists((prevLists) =>
-        prevLists.map((l) => {
-          if (l.id !== selectedListId) return l;
+      setLists((prevLists) => {
+        const targetId = selectedListIdRef.current;
+        const next = prevLists.map((l) => {
+          if (l.id !== targetId) return l;
           const updated = updater(l.todos);
           if (!updated) return l;
           return { ...l, todos: updated, updatedAt: new Date().toISOString() };
-        }),
-      );
+        });
+        return next;
+      });
     },
-    [selectedListId],
+    [],
   );
 
   // Mutations
@@ -157,15 +153,45 @@ export default function useTodosState() {
     return id;
   }
 
-  // Ensure selected list always has at least one todo
+  // Lazy-load selected list todos when selection changes
   React.useEffect(() => {
+    const run = async () => {
+      if (!selectedListId) return;
+      const current = lists.find((l) => l.id === selectedListId);
+      if (!current) return;
+      if (current.todos && current.todos.length > 0) return;
+      const fetched = await loadListTodos(selectedListId);
+      const todosNorm: EditorTodo[] = (fetched.todos || []).map((t: any, i: number) => ({
+        id: typeof t.id === 'number' ? t.id : i + 1,
+        text: typeof t.text === 'string' ? t.text : String(t.text ?? ''),
+        completed: Boolean((t as any).completed ?? (t as any).checked ?? false),
+        indent: Math.max(0, Math.min(1, Number((t as any).indent ?? 0))),
+      }));
+      if (todosNorm.length === 0) {
+        const firstId = nextId();
+        const seed = [{ id: firstId, text: '', completed: false, indent: 0 }];
+        setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: seed } : l)));
+        void saveListTodos(selectedListId, { version: 2, todos: seed });
+      } else {
+        setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: todosNorm } : l)));
+        const maxId = todosNorm.reduce((m, t) => (t.id > m ? t.id : m), 0);
+        idCounterRef.current = Math.max(idCounterRef.current, maxId + 1);
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedListId]);
+
+  // Debounced save of selected list todos only
+  React.useEffect(() => {
+    if (!selectedListId) return;
     const selected = lists.find((l) => l.id === selectedListId);
     if (!selected) return;
-    if (selected.todos.length === 0) {
-      const id = nextId();
-      setSelectedTodos(() => [{ id, text: '', completed: false, indent: 0 }]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const handle = window.setTimeout(() => {
+      const doc = { version: 2, todos: selected.todos } as const;
+      void saveListTodos(selectedListId, doc);
+    }, 800);
+    return () => window.clearTimeout(handle);
   }, [lists, selectedListId]);
 
   function addList(): string {

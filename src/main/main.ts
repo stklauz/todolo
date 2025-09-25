@@ -16,9 +16,15 @@ import fs from 'fs';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
-// Get the path for storing todos
-const getTodosPath = () => {
-  return path.join(app.getPath('userData'), 'todos.json');
+// Storage helpers (legacy single-file and new per-list layout)
+const getUserDataDir = () => app.getPath('userData');
+const getLegacyTodosPath = () => path.join(getUserDataDir(), 'todos.json');
+const getDataDir = () => path.join(getUserDataDir(), 'data');
+const getListsIndexPath = () => path.join(getDataDir(), 'lists.json');
+const getListTodosPath = (listId: string) => path.join(getDataDir(), `list-${listId}.json`);
+const ensureDataDir = () => {
+  const dir = getDataDir();
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
 
 class AppUpdater {
@@ -96,7 +102,7 @@ let mainWindow: BrowserWindow | null = null;
 // IPC handlers for todo operations
 ipcMain.on('save-todos', async (event, todos) => {
   try {
-    const target = getTodosPath();
+    const target = getLegacyTodosPath();
     const tmp = `${target}.tmp`;
     fs.writeFileSync(tmp, JSON.stringify(todos));
     fs.renameSync(tmp, target);
@@ -109,14 +115,154 @@ ipcMain.on('save-todos', async (event, todos) => {
 
 ipcMain.handle('load-todos', async () => {
   try {
-    if (fs.existsSync(getTodosPath())) {
-      const data = fs.readFileSync(getTodosPath(), 'utf-8');
+    if (fs.existsSync(getLegacyTodosPath())) {
+      const data = fs.readFileSync(getLegacyTodosPath(), 'utf-8');
       return JSON.parse(data);
     }
     return [];
   } catch (error) {
     console.error('Failed to load todos:', error);
     return [];
+  }
+});
+
+// New IPC: per-list storage
+ipcMain.handle('load-lists', async () => {
+  try {
+    ensureDataDir();
+    const listsPath = getListsIndexPath();
+    // If index exists, load and return
+    if (fs.existsSync(listsPath)) {
+      const raw = fs.readFileSync(listsPath, 'utf-8');
+      const data = JSON.parse(raw);
+      return data;
+    }
+    // Migration from legacy
+    const legacyPath = getLegacyTodosPath();
+    if (fs.existsSync(legacyPath)) {
+      const rawLegacy = fs.readFileSync(legacyPath, 'utf-8');
+      let migratedIndex: any;
+      try {
+        const parsed = JSON.parse(rawLegacy);
+        if (Array.isArray(parsed)) {
+          // Legacy array -> single list
+          const id = `${Date.now()}`;
+          const now = new Date().toISOString();
+          const index = { version: 2, lists: [{ id, name: 'My Todos', createdAt: now }], selectedListId: id };
+          const todosDoc = { version: 2, todos: parsed };
+          const todosPath = getListTodosPath(id);
+          const tmpTodos = `${todosPath}.tmp`;
+          fs.writeFileSync(tmpTodos, JSON.stringify(todosDoc));
+          fs.renameSync(tmpTodos, todosPath);
+          migratedIndex = index;
+        } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).lists)) {
+          const lists = (parsed as any).lists.map((l: any, i: number) => ({
+            id: typeof l.id === 'string' ? l.id : String(i + 1),
+            name: typeof l.name === 'string' ? l.name : `List ${i + 1}`,
+            createdAt: l.createdAt || new Date().toISOString(),
+            updatedAt: l.updatedAt || l.createdAt || undefined,
+          }));
+          // Write each list's todos
+          lists.forEach((l: any, i: number) => {
+            const todos = Array.isArray((parsed as any).lists?.[i]?.todos) ? (parsed as any).lists[i].todos : [];
+            const doc = { version: 2, todos };
+            const p = getListTodosPath(l.id);
+            const tmp = `${p}.tmp`;
+            fs.writeFileSync(tmp, JSON.stringify(doc));
+            fs.renameSync(tmp, p);
+          });
+          migratedIndex = { version: 2, lists, selectedListId: (parsed as any).selectedListId };
+        }
+      } catch (e) {
+        console.error('Failed parsing legacy todos for migration', e);
+      }
+      if (migratedIndex) {
+        const tmp = `${listsPath}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(migratedIndex));
+        fs.renameSync(tmp, listsPath);
+        return migratedIndex;
+      }
+    }
+    // Fresh install default
+    const fresh = { version: 2, lists: [], selectedListId: undefined } as const;
+    const tmp = `${listsPath}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(fresh));
+    fs.renameSync(tmp, listsPath);
+    return fresh;
+  } catch (error) {
+    console.error('Failed to load lists:', error);
+    return { version: 2, lists: [], selectedListId: undefined };
+  }
+});
+
+ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
+  try {
+    ensureDataDir();
+    const target = getListsIndexPath();
+    const tmp = `${target}.tmp`;
+    // Keep backup of previous version
+    if (fs.existsSync(target)) {
+      fs.copyFileSync(target, `${target}.bak`);
+    }
+    fs.writeFileSync(tmp, JSON.stringify(indexDoc));
+    fs.renameSync(tmp, target);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save lists:', error);
+    // Try to restore backup on failure
+    const target = getListsIndexPath();
+    const backup = `${target}.bak`;
+    if (fs.existsSync(backup)) {
+      try {
+        fs.copyFileSync(backup, target);
+      } catch (restoreError) {
+        console.error('Failed to restore backup:', restoreError);
+      }
+    }
+    return { success: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('load-list-todos', async (_event, listId: string) => {
+  try {
+    ensureDataDir();
+    const p = getListTodosPath(listId);
+    if (!fs.existsSync(p)) return { version: 2, todos: [] };
+    const raw = fs.readFileSync(p, 'utf-8');
+    const doc = JSON.parse(raw);
+    if (doc && typeof doc === 'object' && Array.isArray((doc as any).todos)) return doc;
+    return { version: 2, todos: [] };
+  } catch (error) {
+    console.error('Failed to load list todos:', error);
+    return { version: 2, todos: [] };
+  }
+});
+
+ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) => {
+  try {
+    ensureDataDir();
+    const target = getListTodosPath(listId);
+    const tmp = `${target}.tmp`;
+    // Keep backup of previous version
+    if (fs.existsSync(target)) {
+      fs.copyFileSync(target, `${target}.bak`);
+    }
+    fs.writeFileSync(tmp, JSON.stringify(todosDoc));
+    fs.renameSync(tmp, target);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save list todos:', error);
+    // Try to restore backup on failure
+    const target = getListTodosPath(listId);
+    const backup = `${target}.bak`;
+    if (fs.existsSync(backup)) {
+      try {
+        fs.copyFileSync(backup, target);
+      } catch (restoreError) {
+        console.error('Failed to restore backup:', restoreError);
+      }
+    }
+    return { success: false, error: String(error) };
   }
 });
 

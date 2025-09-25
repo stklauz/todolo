@@ -13,19 +13,19 @@ export default function useDragReorder(
   const [dropTargetId, setDropTargetId] = React.useState<number | null>(null);
   const [dropAtSectionEnd, setDropAtSectionEnd] = React.useState<Section | null>(null);
 
-  function handleDragStart(id: number) {
+  const handleDragStart = React.useCallback((id: number) => {
     setDragInfo({ id, section: sectionOf(id) });
     setDropTargetId(null);
     setDropAtSectionEnd(null);
-  }
+  }, [sectionOf]);
 
-  function handleDragEnd() {
+  const handleDragEnd = React.useCallback(() => {
     setDragInfo(null);
     setDropTargetId(null);
     setDropAtSectionEnd(null);
-  }
+  }, []);
 
-  function handleDragOver(event: React.DragEvent, targetId: number) {
+  const handleDragOver = React.useCallback((event: React.DragEvent, targetId: number) => {
     event.preventDefault();
     if (!dragInfo) return;
     if (targetId === dragInfo.id) {
@@ -38,13 +38,13 @@ export default function useDragReorder(
     }
     setDropTargetId(targetId);
     setDropAtSectionEnd(null);
-  }
+  }, [dragInfo, sectionOf]);
 
-  function handleDragLeave(targetId: number) {
+  const handleDragLeave = React.useCallback((targetId: number) => {
     setDropTargetId((prev) => (prev === targetId ? null : prev));
-  }
+  }, []);
 
-  function handleDropOn(targetId: number) {
+  const handleDropOn = React.useCallback((targetId: number) => {
     if (!dragInfo) return;
     const sourceId = dragInfo.id;
     if (sectionOf(targetId) !== dragInfo.section) return handleDragEnd();
@@ -120,9 +120,9 @@ export default function useDragReorder(
       return next;
     });
     handleDragEnd();
-  }
+  }, [dragInfo, handleDragEnd, sectionOf, setTodos]);
 
-  function handleDragOverEndZone(event: React.DragEvent, section: Section) {
+  const handleDragOverEndZone = React.useCallback((event: React.DragEvent, section: Section) => {
     event.preventDefault();
     if (!dragInfo || dragInfo.section !== section) {
       setDropAtSectionEnd(null);
@@ -130,13 +130,13 @@ export default function useDragReorder(
     }
     setDropTargetId(null);
     setDropAtSectionEnd(section);
-  }
+  }, [dragInfo]);
 
-  function handleDragLeaveEndZone(section: Section) {
+  const handleDragLeaveEndZone = React.useCallback((section: Section) => {
     setDropAtSectionEnd((prev) => (prev === section ? null : prev));
-  }
+  }, []);
 
-  function handleDropAtEnd(section: Section) {
+  const handleDropAtEnd = React.useCallback((section: Section) => {
     if (!dragInfo || dragInfo.section !== section) return;
     const sourceId = dragInfo.id;
     setTodos((prev) => {
@@ -195,7 +195,7 @@ export default function useDragReorder(
       return next;
     });
     handleDragEnd();
-  }
+  }, [dragInfo, handleDragEnd, setTodos]);
 
   return {
     dragInfo,
