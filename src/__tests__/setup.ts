@@ -2,8 +2,7 @@
 import '@testing-library/jest-dom';
 
 // Mock audio files
-jest.mock('../../assets/sounds/bell.wav', () => 'mock-bell-audio');
-jest.mock('../../assets/sounds/pop.mp3', () => 'mock-pop-audio');
+jest.mock('../../assets/sounds/bell.mp3', () => 'mock-bell-audio');
 
 // Mock window.electron for all tests
 Object.defineProperty(window, 'electron', {

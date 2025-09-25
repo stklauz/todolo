@@ -4,7 +4,7 @@ import { TodoRow } from './TodoRow';
 // Import audio file with fallback for tests
 let popSound: string;
 try {
-  popSound = require('../../../../../assets/sounds/bell.wav');
+  popSound = require('../../../../../assets/sounds/bell.mp3');
 } catch {
   popSound = 'mock-audio';
 }
@@ -105,8 +105,13 @@ export default function TodoList({
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   React.useEffect(() => {
     try {
-      audioRef.current = new Audio(popSound);
-    } catch {}
+      const audio = new Audio(popSound);
+      audio.preload = 'auto';
+      audio.volume = 0.3; // Set a reasonable volume
+      audioRef.current = audio;
+    } catch (error) {
+      console.warn('Failed to initialize audio:', error);
+    }
   }, []);
 
   // Cache per-id handlers so TodoRow props remain stable across renders
@@ -215,12 +220,20 @@ export default function TodoList({
           indeterminate={derived.indeterminate.get(todo.id) === true}
           onToggle={() => {
             if (toggleDisabled) return;
-            try {
-              const a = audioRef.current;
-              if (a) { a.currentTime = 0; a.play().catch(() => {}); }
-            } catch (_) {
-              // no-op if audio cannot play
+            
+            // Play audio with better error handling
+            const audio = audioRef.current;
+            if (audio) {
+              try {
+                audio.currentTime = 0;
+                audio.play().catch((error) => {
+                  console.warn('Audio playback failed:', error);
+                });
+              } catch (error) {
+                console.warn('Audio error:', error);
+              }
             }
+            
             const index = idToIndex.get(todo.id) ?? -1;
             toggleTodo(todo.id);
             // If this was the only active non-empty todo, create a new empty one and focus it
