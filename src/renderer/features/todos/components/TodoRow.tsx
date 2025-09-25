@@ -1,6 +1,15 @@
 import React from 'react';
 const styles = require('../styles/TodoList.module.css');
 
+// Debug mode - set to true to enable detailed logging
+const DEBUG_DRAG_DROP = true;
+
+const debugLog = (message: string, data?: any) => {
+  if (DEBUG_DRAG_DROP) {
+    console.log(`[TodoRow Debug] ${message}`, data || '');
+  }
+};
+
 type TodoRowProps = {
   value: string;
   checked: boolean;
@@ -50,9 +59,24 @@ export const TodoRow = React.memo(
       return (
         <div
           className={`${styles.row} ${indentClass} ${isDropTarget ? styles.dropTarget : ''}`}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
+          onDragOver={(e) => {
+            debugLog('Row drag over', { value, isDropTarget, eventType: e.type });
+            e.preventDefault();
+            e.stopPropagation();
+            onDragOver(e);
+          }}
+          onDragLeave={(e) => {
+            debugLog('Row drag leave', { value, isDropTarget, eventType: e.type });
+            e.preventDefault();
+            e.stopPropagation();
+            onDragLeave();
+          }}
+          onDrop={(e) => {
+            debugLog('Row drop', { value, isDropTarget, eventType: e.type });
+            e.preventDefault();
+            e.stopPropagation();
+            onDrop();
+          }}
         >
           <span
             title="Drag to reorder"
@@ -60,8 +84,16 @@ export const TodoRow = React.memo(
             aria-label="Drag to reorder"
             className={styles.draggable}
             draggable
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
+            onDragStart={(e) => {
+              debugLog('Span drag start', { value, eventType: e.type });
+              e.stopPropagation();
+              onDragStart(e);
+            }}
+            onDragEnd={(e) => {
+              debugLog('Span drag end', { value, eventType: e.type });
+              e.stopPropagation();
+              onDragEnd();
+            }}
           >
             <input
               type="checkbox"

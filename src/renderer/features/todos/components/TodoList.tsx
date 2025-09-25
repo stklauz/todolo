@@ -11,6 +11,15 @@ try {
 const styles = require('../styles/TodoList.module.css');
 import type { EditorTodo } from '../types';
 
+// Debug mode - set to true to enable detailed logging
+const DEBUG_DRAG_DROP = true;
+
+const debugLog = (message: string, data?: any) => {
+  if (DEBUG_DRAG_DROP) {
+    console.log(`[TodoList Debug] ${message}`, data || '');
+  }
+};
+
 type Props = {
   todos: EditorTodo[];
   updateTodo: (id: number, text: string) => void;
@@ -258,9 +267,24 @@ export default function TodoList({
       {/* End drop zone for Active section */}
       <div
         className={dropAtSectionEnd === 'active' ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
-        onDragOver={(e) => handleDragOverEndZone(e, 'active')}
-        onDragLeave={() => handleDragLeaveEndZone('active')}
-        onDrop={() => handleDropAtEnd('active')}
+        onDragOver={(e) => {
+          debugLog('Active end zone drag over', { eventType: e.type, dropAtSectionEnd });
+          e.preventDefault();
+          e.stopPropagation();
+          handleDragOverEndZone(e, 'active');
+        }}
+        onDragLeave={(e) => {
+          debugLog('Active end zone drag leave', { eventType: e.type, dropAtSectionEnd });
+          e.preventDefault();
+          e.stopPropagation();
+          handleDragLeaveEndZone('active');
+        }}
+        onDrop={(e) => {
+          debugLog('Active end zone drop', { eventType: e.type, dropAtSectionEnd });
+          e.preventDefault();
+          e.stopPropagation();
+          handleDropAtEnd('active');
+        }}
       />
 
       {derived.completed.length > 0 && (
@@ -292,9 +316,24 @@ export default function TodoList({
       {/* End drop zone for Completed section (bottom of list) */}
       <div
         className={dropAtSectionEnd === 'completed' ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
-        onDragOver={(e) => handleDragOverEndZone(e, 'completed')}
-        onDragLeave={() => handleDragLeaveEndZone('completed')}
-        onDrop={() => handleDropAtEnd('completed')}
+        onDragOver={(e) => {
+          debugLog('Completed end zone drag over', { eventType: e.type, dropAtSectionEnd });
+          e.preventDefault();
+          e.stopPropagation();
+          handleDragOverEndZone(e, 'completed');
+        }}
+        onDragLeave={(e) => {
+          debugLog('Completed end zone drag leave', { eventType: e.type, dropAtSectionEnd });
+          e.preventDefault();
+          e.stopPropagation();
+          handleDragLeaveEndZone('completed');
+        }}
+        onDrop={(e) => {
+          debugLog('Completed end zone drop', { eventType: e.type, dropAtSectionEnd });
+          e.preventDefault();
+          e.stopPropagation();
+          handleDropAtEnd('completed');
+        }}
       />
     </>
   );
