@@ -4,6 +4,7 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
+  dialog,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
@@ -17,6 +18,51 @@ export default class MenuBuilder {
 
   constructor(mainWindow: BrowserWindow) {
     this.mainWindow = mainWindow;
+  }
+
+  private async checkForUpdatesManually() {
+    try {
+      // Ensure no background downloads
+      autoUpdater.autoDownload = false;
+      // Perform a one-time check
+      const result = await autoUpdater.checkForUpdates();
+      const latest = result?.updateInfo?.version;
+      const current = app.getVersion();
+
+      if (latest && latest !== current) {
+        const resp = await dialog.showMessageBox(this.mainWindow, {
+          type: 'info',
+          title: 'Update Available',
+          message: `A new version (${latest}) is available. You are on ${current}.`,
+          buttons: ['Open Releases Page', 'Cancel'],
+          defaultId: 0,
+          cancelId: 1,
+        });
+        if (resp.response === 0) {
+          shell.openExternal('https://github.com/stklauz/todolo/releases');
+        }
+      } else {
+        await dialog.showMessageBox(this.mainWindow, {
+          type: 'info',
+          title: 'Up to Date',
+          message: `You’re running the latest version (${current}).`,
+          buttons: ['OK'],
+          defaultId: 0,
+        });
+      }
+    } catch (err: any) {
+      const resp = await dialog.showMessageBox(this.mainWindow, {
+        type: 'warning',
+        title: 'Update Check Failed',
+        message: `Could not check for updates. ${err?.message ?? ''}`.trim(),
+        buttons: ['Open Releases Page', 'Cancel'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (resp.response === 0) {
+        shell.openExternal('https://github.com/stklauz/todolo/releases');
+      }
+    }
   }
 
   buildMenu(): Menu {
@@ -187,8 +233,8 @@ export default class MenuBuilder {
         },
         {
           label: 'Check for Updates…',
-          click: () => {
-            autoUpdater.checkForUpdates();
+          click: async () => {
+            await this.checkForUpdatesManually();
           },
         },
         {
@@ -304,8 +350,8 @@ export default class MenuBuilder {
           },
           {
             label: 'Check for Updates…',
-            click: () => {
-              autoUpdater.checkForUpdates();
+            click: async () => {
+              await this.checkForUpdatesManually();
             },
           },
           {
