@@ -71,22 +71,85 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
   });
 }
 
+// Storage batching to reduce IPC overhead
+class StorageBatcher {
+  private pendingSaves = new Map<string, { doc: ListTodosV2; resolve: (success: boolean) => void }>();
+  private saveTimeout: NodeJS.Timeout | null = null;
+  private readonly BATCH_DELAY = 50; // 50ms batching window
+
+  async saveListTodos(listId: string, doc: ListTodosV2): Promise<boolean> {
+    return new Promise((resolve) => {
+      // Cancel existing timeout if we have one
+      if (this.saveTimeout) {
+        clearTimeout(this.saveTimeout);
+      }
+
+      // Store the pending save
+      this.pendingSaves.set(listId, { doc, resolve });
+
+      // Set a new timeout to batch saves
+      this.saveTimeout = setTimeout(() => {
+        this.flushPendingSaves();
+      }, this.BATCH_DELAY);
+    });
+  }
+
+  private async flushPendingSaves() {
+    if (this.pendingSaves.size === 0) return;
+
+    const saves = Array.from(this.pendingSaves.entries());
+    this.pendingSaves.clear();
+    this.saveTimeout = null;
+
+    // Process all saves in parallel
+    const savePromises = saves.map(async ([listId, { doc, resolve }]) => {
+      try {
+        debugLogger.log('info', 'Saving list todos (batched)', { 
+          listId, 
+          todoCount: doc.todos.length 
+        });
+        const res = (await window.electron.ipcRenderer.invoke('save-list-todos', listId, doc)) as any;
+        const success = !!res?.success;
+        debugLogger.log(success ? 'info' : 'error', 'List todos save result (batched)', { 
+          listId, 
+          success 
+        });
+        resolve(success);
+      } catch (error) {
+        debugLogger.log('error', 'Failed to save list todos (batched)', { listId, error });
+        resolve(false);
+      }
+    });
+
+    await Promise.all(savePromises);
+  }
+}
+
+const storageBatcher = new StorageBatcher();
+
 export async function saveListTodos(listId: string, doc: ListTodosV2): Promise<boolean> {
   return debugLogger.measureAsync('storage.saveListTodos', async () => {
+    return storageBatcher.saveListTodos(listId, doc);
+  });
+}
+
+// Immediate save for critical operations (e.g., app shutdown)
+export async function saveListTodosImmediate(listId: string, doc: ListTodosV2): Promise<boolean> {
+  return debugLogger.measureAsync('storage.saveListTodos', async () => {
     try {
-      debugLogger.log('info', 'Saving list todos', { 
+      debugLogger.log('info', 'Saving list todos (immediate)', { 
         listId, 
         todoCount: doc.todos.length 
       });
       const res = (await window.electron.ipcRenderer.invoke('save-list-todos', listId, doc)) as any;
       const success = !!res?.success;
-      debugLogger.log(success ? 'info' : 'error', 'List todos save result', { 
+      debugLogger.log(success ? 'info' : 'error', 'List todos save result (immediate)', { 
         listId, 
         success 
       });
       return success;
     } catch (error) {
-      debugLogger.log('error', 'Failed to save list todos', { listId, error });
+      debugLogger.log('error', 'Failed to save list todos (immediate)', { listId, error });
       return false;
     }
   });

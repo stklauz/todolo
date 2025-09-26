@@ -1,5 +1,5 @@
 import React from 'react';
-import { loadListsIndex, saveListsIndex, loadListTodos, saveListTodos } from '../api/storage';
+import { loadListsIndex, saveListsIndex, loadListTodos, saveListTodos, saveListTodosImmediate } from '../api/storage';
 import type { EditorTodo, TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
 
@@ -99,8 +99,8 @@ export default function useTodosState() {
         window.clearTimeout(todosSaveTimerRef.current);
         todosSaveTimerRef.current = null;
       }
-      // Save immediately
-      void saveListTodos(selectedListId, doc);
+      // Save immediately for critical operations
+      void saveListTodosImmediate(selectedListId, doc);
     } else {
       // Debounced save
       if (todosSaveTimerRef.current) {
@@ -293,7 +293,7 @@ export default function useTodosState() {
         const seed = [{ id: firstId, text: '', completed: false, indent: 0 }];
         setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: seed } : l)));
         loadedListsRef.current.add(selectedListId);
-        void saveListTodos(selectedListId, { version: 2, todos: seed });
+        void saveListTodosImmediate(selectedListId, { version: 2, todos: seed });
         debugLogger.log('info', 'Created new empty list with seed todo', { selectedListId });
       } else {
         setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: todosNorm } : l)));
