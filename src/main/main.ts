@@ -16,6 +16,12 @@ import fs from 'fs';
 import { exec } from 'child_process';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import {
+  loadListsIndex as dbLoadListsIndex,
+  saveListsIndex as dbSaveListsIndex,
+  loadListTodos as dbLoadListTodos,
+  saveListTodos as dbSaveListTodos,
+} from './db';
 
 // Storage helpers (legacy single-file and new per-list layout)
 const getUserDataDir = () => app.getPath('userData');
@@ -375,75 +381,15 @@ ipcMain.handle('load-todos', async () => {
   }
 });
 
-// New IPC: per-list storage
+// New IPC: per-list storage (SQLite-backed)
 ipcMain.handle('load-lists', async () => {
   const startTime = performance.now();
   try {
-    console.log(`[PERF] Starting load-lists operation`);
-    ensureDataDir();
-    const listsPath = getListsIndexPath();
-    // If index exists, load and return
-    if (fs.existsSync(listsPath)) {
-      const raw = await fs.promises.readFile(listsPath, 'utf-8');
-      const data = JSON.parse(raw);
-      const duration = performance.now() - startTime;
-      console.log(`[PERF] load-lists completed in ${duration.toFixed(2)}ms`);
-      return data;
-    }
-    // Migration from legacy
-    const legacyPath = getLegacyTodosPath();
-    if (fs.existsSync(legacyPath)) {
-      const rawLegacy = await fs.promises.readFile(legacyPath, 'utf-8');
-      let migratedIndex: any;
-      try {
-        const parsed = JSON.parse(rawLegacy);
-        if (Array.isArray(parsed)) {
-          // Legacy array -> single list
-          const id = `${Date.now()}`;
-          const now = new Date().toISOString();
-          const index = { version: 2, lists: [{ id, name: 'My Todos', createdAt: now }], selectedListId: id };
-          const todosDoc = { version: 2, todos: parsed };
-          const todosPath = getListTodosPath(id);
-          const tmpTodos = `${todosPath}.tmp`;
-          await fs.promises.writeFile(tmpTodos, JSON.stringify(todosDoc));
-          await fs.promises.rename(tmpTodos, todosPath);
-          migratedIndex = index;
-        } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).lists)) {
-          const lists = (parsed as any).lists.map((l: any, i: number) => ({
-            id: typeof l.id === 'string' ? l.id : String(i + 1),
-            name: typeof l.name === 'string' ? l.name : `List ${i + 1}`,
-            createdAt: l.createdAt || new Date().toISOString(),
-            updatedAt: l.updatedAt || l.createdAt || undefined,
-          }));
-          // Write each list's todos
-          for (const [i, l] of lists.entries()) {
-            const todos = Array.isArray((parsed as any).lists?.[i]?.todos) ? (parsed as any).lists[i].todos : [];
-            const doc = { version: 2, todos };
-            const p = getListTodosPath(l.id);
-            const tmp = `${p}.tmp`;
-            await fs.promises.writeFile(tmp, JSON.stringify(doc));
-            await fs.promises.rename(tmp, p);
-          }
-          migratedIndex = { version: 2, lists, selectedListId: (parsed as any).selectedListId };
-        }
-      } catch (e) {
-        console.error('Failed parsing legacy todos for migration', e);
-      }
-      if (migratedIndex) {
-        const tmp = `${listsPath}.tmp`;
-        await fs.promises.writeFile(tmp, JSON.stringify(migratedIndex));
-        await fs.promises.rename(tmp, listsPath);
-        return migratedIndex;
-      }
-    }
-    // Fresh install default
-    const fresh = { version: 2, lists: [], selectedListId: undefined } as const;
-    const tmp = `${listsPath}.tmp`;
-    await fs.promises.writeFile(tmp, JSON.stringify(fresh));
-    await fs.promises.rename(tmp, listsPath);
+    console.log(`[PERF] Starting load-lists operation (sqlite)`);
+    const data = dbLoadListsIndex();
     const duration = performance.now() - startTime;
-    console.log(`[PERF] load-lists completed (fresh install) in ${duration.toFixed(2)}ms`);
-    return fresh;
+    console.log(`[PERF] load-lists completed in ${duration.toFixed(2)}ms`);
+    return data;
   } catch (error) {
     const duration = performance.now() - startTime;
     console.error(`[PERF] load-lists failed after ${duration.toFixed(2)}ms:`, error);
@@ -454,32 +400,14 @@ ipcMain.handle('load-lists', async () => {
 ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
   const startTime = performance.now();
   try {
-    console.log(`[PERF] Starting save-lists operation`);
-    ensureDataDir();
-    const target = getListsIndexPath();
-    const tmp = `${target}.tmp`;
-    // Keep backup of previous version
-    if (fs.existsSync(target)) {
-      await fs.promises.copyFile(target, `${target}.bak`);
-    }
-    await fs.promises.writeFile(tmp, JSON.stringify(indexDoc));
-    await fs.promises.rename(tmp, target);
+    console.log(`[PERF] Starting save-lists operation (sqlite)`);
+    const res = dbSaveListsIndex(indexDoc);
     const duration = performance.now() - startTime;
     console.log(`[PERF] save-lists completed in ${duration.toFixed(2)}ms`);
-    return { success: true };
+    return res;
   } catch (error) {
     const duration = performance.now() - startTime;
     console.error(`[PERF] save-lists failed after ${duration.toFixed(2)}ms:`, error);
-    // Try to restore backup on failure
-    const target = getListsIndexPath();
-    const backup = `${target}.bak`;
-    if (fs.existsSync(backup)) {
-      try {
-        await fs.promises.copyFile(backup, target);
-      } catch (restoreError) {
-        console.error('Failed to restore backup:', restoreError);
-      }
-    }
     return { success: false, error: String(error) };
   }
 });
@@ -487,24 +415,11 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
 ipcMain.handle('load-list-todos', async (_event, listId: string) => {
   const startTime = performance.now();
   try {
-    console.log(`[PERF] Starting load-list-todos operation for list ${listId}`);
-    ensureDataDir();
-    const p = getListTodosPath(listId);
-    if (!fs.existsSync(p)) {
-      const duration = performance.now() - startTime;
-      console.log(`[PERF] load-list-todos completed (no file) in ${duration.toFixed(2)}ms`);
-      return { version: 2, todos: [] };
-    }
-    const raw = await fs.promises.readFile(p, 'utf-8');
-    const doc = JSON.parse(raw);
-    if (doc && typeof doc === 'object' && Array.isArray((doc as any).todos)) {
-      const duration = performance.now() - startTime;
-      console.log(`[PERF] load-list-todos completed in ${duration.toFixed(2)}ms`);
-      return doc;
-    }
+    console.log(`[PERF] Starting load-list-todos operation for list ${listId} (sqlite)`);
+    const doc = dbLoadListTodos(listId);
     const duration = performance.now() - startTime;
-    console.log(`[PERF] load-list-todos completed (invalid format) in ${duration.toFixed(2)}ms`);
-    return { version: 2, todos: [] };
+    console.log(`[PERF] load-list-todos completed in ${duration.toFixed(2)}ms`);
+    return doc;
   } catch (error) {
     const duration = performance.now() - startTime;
     console.error(`[PERF] load-list-todos failed after ${duration.toFixed(2)}ms:`, error);
@@ -515,32 +430,14 @@ ipcMain.handle('load-list-todos', async (_event, listId: string) => {
 ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) => {
   const startTime = performance.now();
   try {
-    console.log(`[PERF] Starting save-list-todos operation for list ${listId}`);
-    ensureDataDir();
-    const target = getListTodosPath(listId);
-    const tmp = `${target}.tmp`;
-    // Keep backup of previous version
-    if (fs.existsSync(target)) {
-      await fs.promises.copyFile(target, `${target}.bak`);
-    }
-    await fs.promises.writeFile(tmp, JSON.stringify(todosDoc));
-    await fs.promises.rename(tmp, target);
+    console.log(`[PERF] Starting save-list-todos operation for list ${listId} (sqlite)`);
+    const res = dbSaveListTodos(listId, todosDoc);
     const duration = performance.now() - startTime;
     console.log(`[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`);
-    return { success: true };
+    return res;
   } catch (error) {
     const duration = performance.now() - startTime;
     console.error(`[PERF] save-list-todos failed after ${duration.toFixed(2)}ms:`, error);
-    // Try to restore backup on failure
-    const target = getListTodosPath(listId);
-    const backup = `${target}.bak`;
-    if (fs.existsSync(backup)) {
-      try {
-        await fs.promises.copyFile(backup, target);
-      } catch (restoreError) {
-        console.error('Failed to restore backup:', restoreError);
-      }
-    }
     return { success: false, error: String(error) };
   }
 });
