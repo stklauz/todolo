@@ -43,7 +43,7 @@ type Props = {
   setInputRef: (id: number, el: HTMLTextAreaElement | null) => void;
 };
 
-export default function TodoList({
+const TodoList = React.memo(function TodoList({
   todos,
   updateTodo,
   toggleTodo,
@@ -337,4 +337,6 @@ export default function TodoList({
       />
     </>
   );
-}
+});
+
+export default TodoList;

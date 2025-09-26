@@ -340,8 +340,8 @@ ipcMain.on('save-todos', async (event, todos) => {
   try {
     const target = getLegacyTodosPath();
     const tmp = `${target}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(todos));
-    fs.renameSync(tmp, target);
+    await fs.promises.writeFile(tmp, JSON.stringify(todos));
+    await fs.promises.rename(tmp, target);
     event.reply('save-todos', { success: true });
   } catch (error) {
     console.error('Failed to save todos:', error);
@@ -352,7 +352,7 @@ ipcMain.on('save-todos', async (event, todos) => {
 ipcMain.handle('load-todos', async () => {
   try {
     if (fs.existsSync(getLegacyTodosPath())) {
-      const data = fs.readFileSync(getLegacyTodosPath(), 'utf-8');
+      const data = await fs.promises.readFile(getLegacyTodosPath(), 'utf-8');
       return JSON.parse(data);
     }
     return [];
@@ -369,14 +369,14 @@ ipcMain.handle('load-lists', async () => {
     const listsPath = getListsIndexPath();
     // If index exists, load and return
     if (fs.existsSync(listsPath)) {
-      const raw = fs.readFileSync(listsPath, 'utf-8');
+      const raw = await fs.promises.readFile(listsPath, 'utf-8');
       const data = JSON.parse(raw);
       return data;
     }
     // Migration from legacy
     const legacyPath = getLegacyTodosPath();
     if (fs.existsSync(legacyPath)) {
-      const rawLegacy = fs.readFileSync(legacyPath, 'utf-8');
+      const rawLegacy = await fs.promises.readFile(legacyPath, 'utf-8');
       let migratedIndex: any;
       try {
         const parsed = JSON.parse(rawLegacy);
@@ -388,8 +388,8 @@ ipcMain.handle('load-lists', async () => {
           const todosDoc = { version: 2, todos: parsed };
           const todosPath = getListTodosPath(id);
           const tmpTodos = `${todosPath}.tmp`;
-          fs.writeFileSync(tmpTodos, JSON.stringify(todosDoc));
-          fs.renameSync(tmpTodos, todosPath);
+          await fs.promises.writeFile(tmpTodos, JSON.stringify(todosDoc));
+          await fs.promises.rename(tmpTodos, todosPath);
           migratedIndex = index;
         } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).lists)) {
           const lists = (parsed as any).lists.map((l: any, i: number) => ({
@@ -399,14 +399,14 @@ ipcMain.handle('load-lists', async () => {
             updatedAt: l.updatedAt || l.createdAt || undefined,
           }));
           // Write each list's todos
-          lists.forEach((l: any, i: number) => {
+          for (const [i, l] of lists.entries()) {
             const todos = Array.isArray((parsed as any).lists?.[i]?.todos) ? (parsed as any).lists[i].todos : [];
             const doc = { version: 2, todos };
             const p = getListTodosPath(l.id);
             const tmp = `${p}.tmp`;
-            fs.writeFileSync(tmp, JSON.stringify(doc));
-            fs.renameSync(tmp, p);
-          });
+            await fs.promises.writeFile(tmp, JSON.stringify(doc));
+            await fs.promises.rename(tmp, p);
+          }
           migratedIndex = { version: 2, lists, selectedListId: (parsed as any).selectedListId };
         }
       } catch (e) {
@@ -414,16 +414,16 @@ ipcMain.handle('load-lists', async () => {
       }
       if (migratedIndex) {
         const tmp = `${listsPath}.tmp`;
-        fs.writeFileSync(tmp, JSON.stringify(migratedIndex));
-        fs.renameSync(tmp, listsPath);
+        await fs.promises.writeFile(tmp, JSON.stringify(migratedIndex));
+        await fs.promises.rename(tmp, listsPath);
         return migratedIndex;
       }
     }
     // Fresh install default
     const fresh = { version: 2, lists: [], selectedListId: undefined } as const;
     const tmp = `${listsPath}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(fresh));
-    fs.renameSync(tmp, listsPath);
+    await fs.promises.writeFile(tmp, JSON.stringify(fresh));
+    await fs.promises.rename(tmp, listsPath);
     return fresh;
   } catch (error) {
     console.error('Failed to load lists:', error);
@@ -438,10 +438,10 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
     const tmp = `${target}.tmp`;
     // Keep backup of previous version
     if (fs.existsSync(target)) {
-      fs.copyFileSync(target, `${target}.bak`);
+      await fs.promises.copyFile(target, `${target}.bak`);
     }
-    fs.writeFileSync(tmp, JSON.stringify(indexDoc));
-    fs.renameSync(tmp, target);
+    await fs.promises.writeFile(tmp, JSON.stringify(indexDoc));
+    await fs.promises.rename(tmp, target);
     return { success: true };
   } catch (error) {
     console.error('Failed to save lists:', error);
@@ -450,7 +450,7 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
     const backup = `${target}.bak`;
     if (fs.existsSync(backup)) {
       try {
-        fs.copyFileSync(backup, target);
+        await fs.promises.copyFile(backup, target);
       } catch (restoreError) {
         console.error('Failed to restore backup:', restoreError);
       }
@@ -464,7 +464,7 @@ ipcMain.handle('load-list-todos', async (_event, listId: string) => {
     ensureDataDir();
     const p = getListTodosPath(listId);
     if (!fs.existsSync(p)) return { version: 2, todos: [] };
-    const raw = fs.readFileSync(p, 'utf-8');
+    const raw = await fs.promises.readFile(p, 'utf-8');
     const doc = JSON.parse(raw);
     if (doc && typeof doc === 'object' && Array.isArray((doc as any).todos)) return doc;
     return { version: 2, todos: [] };
@@ -481,10 +481,10 @@ ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) 
     const tmp = `${target}.tmp`;
     // Keep backup of previous version
     if (fs.existsSync(target)) {
-      fs.copyFileSync(target, `${target}.bak`);
+      await fs.promises.copyFile(target, `${target}.bak`);
     }
-    fs.writeFileSync(tmp, JSON.stringify(todosDoc));
-    fs.renameSync(tmp, target);
+    await fs.promises.writeFile(tmp, JSON.stringify(todosDoc));
+    await fs.promises.rename(tmp, target);
     return { success: true };
   } catch (error) {
     console.error('Failed to save list todos:', error);
@@ -493,7 +493,7 @@ ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) 
     const backup = `${target}.bak`;
     if (fs.existsSync(backup)) {
       try {
-        fs.copyFileSync(backup, target);
+        await fs.promises.copyFile(backup, target);
       } catch (restoreError) {
         console.error('Failed to restore backup:', restoreError);
       }
