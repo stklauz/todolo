@@ -12,6 +12,7 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 12px;
   border-left: 1px solid #333;
+  padding-top: 32px; /* Add padding to avoid draggable bar */
 }
 
 .debug-panel-header {

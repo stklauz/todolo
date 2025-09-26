@@ -20,12 +20,10 @@ function Content() {
       }
     };
 
-    // Listen for IPC message from main process
-    window.electron.ipcRenderer.on('toggle-debug-mode', handleToggleDebug);
+    // Listen for IPC message from main process and get cleanup function
+    const cleanup = window.electron.ipcRenderer.on('toggle-debug-mode', handleToggleDebug);
 
-    return () => {
-      window.electron.ipcRenderer.removeListener('toggle-debug-mode', handleToggleDebug);
-    };
+    return cleanup;
   }, [isDebugVisible]);
 
   return (

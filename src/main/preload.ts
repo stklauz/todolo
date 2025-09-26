@@ -9,7 +9,8 @@ export type Channels =
   | 'load-lists'
   | 'save-lists'
   | 'load-list-todos'
-  | 'save-list-todos';
+  | 'save-list-todos'
+  | 'toggle-debug-mode';
 
 const electronHandler = {
   ipcRenderer: {
