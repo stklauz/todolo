@@ -1,6 +1,7 @@
 import React from 'react';
 import { loadListsIndex, saveListsIndex, loadListTodos, saveListTodos } from '../api/storage';
 import type { EditorTodo, TodoList } from '../types';
+import { debugLogger } from '../../../utils/debug';
 
 type State = {
   lists: TodoList[];
@@ -20,6 +21,7 @@ export default function useTodosState() {
   // Load lists (index) on mount
   React.useEffect(() => {
     const load = async () => {
+      debugLogger.log('info', 'Initializing todos state - loading lists');
       try {
         const index = await loadListsIndex();
         const normalizedLists: TodoList[] = (index.lists || []).map((list, li) => ({
@@ -35,8 +37,12 @@ export default function useTodosState() {
             ? index.selectedListId!
             : normalizedLists[0]?.id ?? null,
         );
+        debugLogger.log('info', 'Todos state initialized', { 
+          listCount: normalizedLists.length,
+          selectedListId: index.selectedListId 
+        });
       } catch (e) {
-        // ignore
+        debugLogger.log('error', 'Failed to initialize todos state', e);
       }
     };
     load();
@@ -80,6 +86,12 @@ export default function useTodosState() {
     if (!selected) return;
     
     const doc = { version: 2, todos: selected.todos } as const;
+    
+    debugLogger.log('info', `Saving todos with ${type} strategy`, { 
+      listId: selectedListId, 
+      todoCount: selected.todos.length,
+      delay: type === 'debounced' ? delay : 0
+    });
     
     if (type === 'immediate') {
       // Clear any pending debounced saves
@@ -248,17 +260,26 @@ export default function useTodosState() {
       const current = lists.find((l) => l.id === selectedListId);
       if (!current) return;
       
+      debugLogger.log('info', 'List selection changed - checking if todos need loading', { 
+        selectedListId,
+        isCached: loadedListsRef.current.has(selectedListId),
+        hasTodos: current.todos && current.todos.length > 0
+      });
+      
       // Skip loading if list is already cached and has todos
       if (loadedListsRef.current.has(selectedListId) && current.todos && current.todos.length > 0) {
+        debugLogger.log('info', 'List todos already cached, skipping load');
         return;
       }
       
       // Skip loading if list already has todos (from previous load)
       if (current.todos && current.todos.length > 0) {
         loadedListsRef.current.add(selectedListId);
+        debugLogger.log('info', 'List already has todos, marking as cached');
         return;
       }
       
+      debugLogger.log('info', 'Loading todos for selected list', { selectedListId });
       const fetched = await loadListTodos(selectedListId);
       const todosNorm: EditorTodo[] = (fetched.todos || []).map((t: any, i: number) => ({
         id: typeof t.id === 'number' ? t.id : i + 1,
@@ -273,11 +294,17 @@ export default function useTodosState() {
         setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: seed } : l)));
         loadedListsRef.current.add(selectedListId);
         void saveListTodos(selectedListId, { version: 2, todos: seed });
+        debugLogger.log('info', 'Created new empty list with seed todo', { selectedListId });
       } else {
         setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: todosNorm } : l)));
         loadedListsRef.current.add(selectedListId);
         const maxId = todosNorm.reduce((m, t) => (t.id > m ? t.id : m), 0);
         idCounterRef.current = Math.max(idCounterRef.current, maxId + 1);
+        debugLogger.log('info', 'Loaded existing todos for list', { 
+          selectedListId, 
+          todoCount: todosNorm.length,
+          maxId 
+        });
       }
     };
     run();

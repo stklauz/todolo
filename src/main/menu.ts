@@ -125,6 +125,14 @@ export default class MenuBuilder {
             this.mainWindow.webContents.toggleDevTools();
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Toggle Debug Mode',
+          accelerator: 'Command+D',
+          click: () => {
+            this.mainWindow.webContents.send('toggle-debug-mode');
+          },
+        },
       ],
     };
     const subMenuViewProd: MenuItemConstructorOptions = {
@@ -135,6 +143,14 @@ export default class MenuBuilder {
           accelerator: 'Ctrl+Command+F',
           click: () => {
             this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Debug Mode',
+          accelerator: 'Command+D',
+          click: () => {
+            this.mainWindow.webContents.send('toggle-debug-mode');
           },
         },
       ],
@@ -240,6 +256,14 @@ export default class MenuBuilder {
                     this.mainWindow.webContents.toggleDevTools();
                   },
                 },
+                { type: 'separator' },
+                {
+                  label: 'Toggle &Debug Mode',
+                  accelerator: 'Ctrl+D',
+                  click: () => {
+                    this.mainWindow.webContents.send('toggle-debug-mode');
+                  },
+                },
               ]
             : [
                 {
@@ -249,6 +273,14 @@ export default class MenuBuilder {
                     this.mainWindow.setFullScreen(
                       !this.mainWindow.isFullScreen(),
                     );
+                  },
+                },
+                { type: 'separator' },
+                {
+                  label: 'Toggle &Debug Mode',
+                  accelerator: 'Ctrl+D',
+                  click: () => {
+                    this.mainWindow.webContents.send('toggle-debug-mode');
                   },
                 },
               ],

@@ -337,40 +337,57 @@ let mainWindow: BrowserWindow | null = null;
 
 // IPC handlers for todo operations
 ipcMain.on('save-todos', async (event, todos) => {
+  const startTime = performance.now();
   try {
+    console.log(`[PERF] Starting save-todos operation`);
     const target = getLegacyTodosPath();
     const tmp = `${target}.tmp`;
     await fs.promises.writeFile(tmp, JSON.stringify(todos));
     await fs.promises.rename(tmp, target);
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] save-todos completed in ${duration.toFixed(2)}ms`);
     event.reply('save-todos', { success: true });
   } catch (error) {
-    console.error('Failed to save todos:', error);
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] save-todos failed after ${duration.toFixed(2)}ms:`, error);
     event.reply('save-todos', { success: false, error });
   }
 });
 
 ipcMain.handle('load-todos', async () => {
+  const startTime = performance.now();
   try {
+    console.log(`[PERF] Starting load-todos operation`);
     if (fs.existsSync(getLegacyTodosPath())) {
       const data = await fs.promises.readFile(getLegacyTodosPath(), 'utf-8');
-      return JSON.parse(data);
+      const result = JSON.parse(data);
+      const duration = performance.now() - startTime;
+      console.log(`[PERF] load-todos completed in ${duration.toFixed(2)}ms`);
+      return result;
     }
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] load-todos completed (no file) in ${duration.toFixed(2)}ms`);
     return [];
   } catch (error) {
-    console.error('Failed to load todos:', error);
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] load-todos failed after ${duration.toFixed(2)}ms:`, error);
     return [];
   }
 });
 
 // New IPC: per-list storage
 ipcMain.handle('load-lists', async () => {
+  const startTime = performance.now();
   try {
+    console.log(`[PERF] Starting load-lists operation`);
     ensureDataDir();
     const listsPath = getListsIndexPath();
     // If index exists, load and return
     if (fs.existsSync(listsPath)) {
       const raw = await fs.promises.readFile(listsPath, 'utf-8');
       const data = JSON.parse(raw);
+      const duration = performance.now() - startTime;
+      console.log(`[PERF] load-lists completed in ${duration.toFixed(2)}ms`);
       return data;
     }
     // Migration from legacy
@@ -424,15 +441,20 @@ ipcMain.handle('load-lists', async () => {
     const tmp = `${listsPath}.tmp`;
     await fs.promises.writeFile(tmp, JSON.stringify(fresh));
     await fs.promises.rename(tmp, listsPath);
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] load-lists completed (fresh install) in ${duration.toFixed(2)}ms`);
     return fresh;
   } catch (error) {
-    console.error('Failed to load lists:', error);
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] load-lists failed after ${duration.toFixed(2)}ms:`, error);
     return { version: 2, lists: [], selectedListId: undefined };
   }
 });
 
 ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
+  const startTime = performance.now();
   try {
+    console.log(`[PERF] Starting save-lists operation`);
     ensureDataDir();
     const target = getListsIndexPath();
     const tmp = `${target}.tmp`;
@@ -442,9 +464,12 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
     }
     await fs.promises.writeFile(tmp, JSON.stringify(indexDoc));
     await fs.promises.rename(tmp, target);
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] save-lists completed in ${duration.toFixed(2)}ms`);
     return { success: true };
   } catch (error) {
-    console.error('Failed to save lists:', error);
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] save-lists failed after ${duration.toFixed(2)}ms:`, error);
     // Try to restore backup on failure
     const target = getListsIndexPath();
     const backup = `${target}.bak`;
@@ -460,22 +485,37 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
 });
 
 ipcMain.handle('load-list-todos', async (_event, listId: string) => {
+  const startTime = performance.now();
   try {
+    console.log(`[PERF] Starting load-list-todos operation for list ${listId}`);
     ensureDataDir();
     const p = getListTodosPath(listId);
-    if (!fs.existsSync(p)) return { version: 2, todos: [] };
+    if (!fs.existsSync(p)) {
+      const duration = performance.now() - startTime;
+      console.log(`[PERF] load-list-todos completed (no file) in ${duration.toFixed(2)}ms`);
+      return { version: 2, todos: [] };
+    }
     const raw = await fs.promises.readFile(p, 'utf-8');
     const doc = JSON.parse(raw);
-    if (doc && typeof doc === 'object' && Array.isArray((doc as any).todos)) return doc;
+    if (doc && typeof doc === 'object' && Array.isArray((doc as any).todos)) {
+      const duration = performance.now() - startTime;
+      console.log(`[PERF] load-list-todos completed in ${duration.toFixed(2)}ms`);
+      return doc;
+    }
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] load-list-todos completed (invalid format) in ${duration.toFixed(2)}ms`);
     return { version: 2, todos: [] };
   } catch (error) {
-    console.error('Failed to load list todos:', error);
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] load-list-todos failed after ${duration.toFixed(2)}ms:`, error);
     return { version: 2, todos: [] };
   }
 });
 
 ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) => {
+  const startTime = performance.now();
   try {
+    console.log(`[PERF] Starting save-list-todos operation for list ${listId}`);
     ensureDataDir();
     const target = getListTodosPath(listId);
     const tmp = `${target}.tmp`;
@@ -485,9 +525,12 @@ ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) 
     }
     await fs.promises.writeFile(tmp, JSON.stringify(todosDoc));
     await fs.promises.rename(tmp, target);
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`);
     return { success: true };
   } catch (error) {
-    console.error('Failed to save list todos:', error);
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] save-list-todos failed after ${duration.toFixed(2)}ms:`, error);
     // Try to restore backup on failure
     const target = getListTodosPath(listId);
     const backup = `${target}.bak`;
