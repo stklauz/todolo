@@ -35,3 +35,7 @@ npm-debug.log.*
 
 #Ignore cursor AI rules
 .cursor/rules/codacy.mdc
+src/renderer/features/todos/api/storage.ts
+release/app/package-lock.json
+docs/todolo-debug-prod.json
+docs/todolo-debug-dev.json

@@ -519,19 +519,12 @@ ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) 
     ensureDataDir();
     const target = getListTodosPath(listId);
     const tmp = `${target}.tmp`;
-    
-    // Optimize: Skip backup for frequent saves to reduce I/O
-    const shouldBackup = !fs.existsSync(target) || (Date.now() - fs.statSync(target).mtime.getTime()) > 5000; // 5s threshold
-    
-    if (shouldBackup && fs.existsSync(target)) {
+    // Keep backup of previous version
+    if (fs.existsSync(target)) {
       await fs.promises.copyFile(target, `${target}.bak`);
     }
-    
-    // Use sync JSON.stringify for better performance on small objects
-    const jsonData = JSON.stringify(todosDoc);
-    await fs.promises.writeFile(tmp, jsonData, 'utf8');
+    await fs.promises.writeFile(tmp, JSON.stringify(todosDoc));
     await fs.promises.rename(tmp, target);
-    
     const duration = performance.now() - startTime;
     console.log(`[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`);
     return { success: true };
