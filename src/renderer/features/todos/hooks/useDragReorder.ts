@@ -4,7 +4,7 @@ import type { EditorTodo, Section } from '../types';
 type GetTodos = () => EditorTodo[];
 type SetTodos = (updater: (prev: EditorTodo[]) => EditorTodo[]) => void;
 
-// Debug mode - set to true to enable detailed logging
+// Debug mode: set to true to enable detailed logging
 const DEBUG_DRAG_DROP = true;
 
 const debugLog = (message: string, data?: any) => {

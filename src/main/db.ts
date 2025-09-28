@@ -163,17 +163,15 @@ export function loadListTodos(listId: string): { version: 2; todos: EditorTodo[]
 export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTodo[] }): { success: boolean; error?: string } {
   const database = openDatabase();
   try {
-    console.log(`[DB] Saving todos for list ${listId}:`, JSON.stringify(doc, null, 2));
+    console.log(`[DB] Saving todos for list ${listId} (count=${doc.todos.length})`);
     const del = database.prepare('DELETE FROM todos WHERE list_id = ?');
     const ins = database.prepare(
       'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)'
     );
     const tx = database.transaction(() => {
-      console.log(`[DB] Deleting existing todos for list ${listId}`);
       del.run(listId);
       let idx = 0;
       for (const t of doc.todos) {
-        console.log(`[DB] Inserting todo:`, { list_id: listId, id: t.id, text: t.text, completed: t.completed, indent: t.indent, order_index: idx });
         ins.run({
           list_id: listId,
           id: t.id,
@@ -184,14 +182,8 @@ export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTo
         });
       }
     });
-    console.log(`[DB] Executing transaction for list ${listId}`);
     tx();
-    console.log(`[DB] Transaction completed for list ${listId}`);
-    
-    // Force a WAL checkpoint to ensure data is written to disk
-    database.pragma('wal_checkpoint(PASSIVE)');
-    
-    console.log(`[DB] Successfully saved ${doc.todos.length} todos for list ${listId}`);
+    console.log(`[DB] Saved ${doc.todos.length} todos for list ${listId}`);
     return { success: true };
   } catch (e: any) {
     console.error(`[DB] Error saving todos for list ${listId}:`, e);

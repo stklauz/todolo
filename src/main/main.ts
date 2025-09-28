@@ -86,12 +86,10 @@ ipcMain.handle('load-list-todos', async (_event, listId: string) => {
 ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) => {
   const startTime = performance.now();
   try {
-    console.log(`[PERF] Starting save-list-todos operation for list ${listId} (sqlite)`);
-    console.log(`[DEBUG] Todos to save:`, JSON.stringify(todosDoc, null, 2));
+    console.log(`[PERF] Starting save-list-todos for list ${listId} (sqlite)`);
     const res = dbSaveListTodos(listId, todosDoc);
     const duration = performance.now() - startTime;
     console.log(`[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`);
-    console.log(`[DEBUG] Save result:`, res);
     return res;
   } catch (error) {
     const duration = performance.now() - startTime;
