@@ -1,4 +1,4 @@
-import type { AppData, TodoList, EditorTodo } from '../types';
+import type { AppData, TodoList, EditorTodo, AppSettings } from '../types';
 import { debugLogger } from '../../../utils/debug';
 
 // v2 index file format
@@ -87,6 +87,37 @@ export async function saveListTodos(listId: string, doc: ListTodosV2): Promise<b
       return success;
     } catch (error) {
       debugLogger.log('error', 'Failed to save list todos', { listId, error });
+      return false;
+    }
+  });
+}
+
+export async function loadAppSettings(): Promise<AppSettings> {
+  return debugLogger.measureAsync('storage.loadAppSettings', async () => {
+    try {
+      debugLogger.log('info', 'Loading app settings');
+      const result = (await window.electron.ipcRenderer.invoke('load-app-settings')) as AppSettings;
+      if (result && typeof result === 'object' && typeof result.hideCompletedItems === 'boolean') {
+        debugLogger.log('info', 'App settings loaded successfully', result);
+        return result;
+      }
+    } catch (error) {
+      debugLogger.log('error', 'Failed to load app settings', error);
+    }
+    return { hideCompletedItems: true };
+  });
+}
+
+export async function saveAppSettings(settings: AppSettings): Promise<boolean> {
+  return debugLogger.measureAsync('storage.saveAppSettings', async () => {
+    try {
+      debugLogger.log('info', 'Saving app settings', settings);
+      const res = (await window.electron.ipcRenderer.invoke('save-app-settings', settings)) as any;
+      const success = !!res?.success;
+      debugLogger.log(success ? 'info' : 'error', 'App settings save result', { success });
+      return success;
+    } catch (error) {
+      debugLogger.log('error', 'Failed to save app settings', error);
       return false;
     }
   });

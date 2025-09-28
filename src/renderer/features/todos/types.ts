@@ -13,4 +13,7 @@ export type TodoList = {
   updatedAt?: string;
 };
 export type AppData = { version: 1; lists: TodoList[]; selectedListId?: string };
+export type AppSettings = {
+  hideCompletedItems: boolean;
+};
 export type Section = 'active' | 'completed';

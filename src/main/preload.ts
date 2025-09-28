@@ -10,6 +10,8 @@ export type Channels =
   | 'save-lists'
   | 'load-list-todos'
   | 'save-list-todos'
+  | 'load-app-settings'
+  | 'save-app-settings'
   | 'toggle-debug-mode';
 
 const electronHandler = {

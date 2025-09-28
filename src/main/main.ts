@@ -17,6 +17,8 @@ import {
   saveListsIndex as dbSaveListsIndex,
   loadListTodos as dbLoadListTodos,
   saveListTodos as dbSaveListTodos,
+  loadAppSettings as dbLoadAppSettings,
+  saveAppSettings as dbSaveAppSettings,
   closeDatabase,
 } from './db';
 
@@ -94,6 +96,36 @@ ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) 
   } catch (error) {
     const duration = performance.now() - startTime;
     console.error(`[PERF] save-list-todos failed after ${duration.toFixed(2)}ms:`, error);
+    return { success: false, error: String(error) };
+  }
+});
+
+ipcMain.handle('load-app-settings', async () => {
+  const startTime = performance.now();
+  try {
+    console.log(`[PERF] Starting load-app-settings operation (sqlite)`);
+    const data = dbLoadAppSettings();
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] load-app-settings completed in ${duration.toFixed(2)}ms`);
+    return data;
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] load-app-settings failed after ${duration.toFixed(2)}ms:`, error);
+    return { hideCompletedItems: true };
+  }
+});
+
+ipcMain.handle('save-app-settings', async (_event, settings: any) => {
+  const startTime = performance.now();
+  try {
+    console.log(`[PERF] Starting save-app-settings operation (sqlite)`);
+    const res = dbSaveAppSettings(settings);
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] save-app-settings completed in ${duration.toFixed(2)}ms`);
+    return res;
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    console.error(`[PERF] save-app-settings failed after ${duration.toFixed(2)}ms:`, error);
     return { success: false, error: String(error) };
   }
 });

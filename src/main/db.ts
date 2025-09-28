@@ -22,6 +22,10 @@ export type ListsIndexV2 = {
   selectedListId?: string;
 };
 
+export type AppSettings = {
+  hideCompletedItems: boolean;
+};
+
 type DB = any;
 let db: DB | null = null;
 
@@ -91,7 +95,12 @@ function applyMigrations(database: DB) {
       PRIMARY KEY (list_id, id),
       FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
     );`;
-  database.exec(`${createMeta}${createLists}${createTodos}`);
+  const createAppSettings = `
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );`;
+  database.exec(`${createMeta}${createLists}${createTodos}${createAppSettings}`);
 }
 
 export function loadListsIndex(): ListsIndexV2 {
@@ -187,6 +196,29 @@ export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTo
     return { success: true };
   } catch (e: any) {
     console.error(`[DB] Error saving todos for list ${listId}:`, e);
+    return { success: false, error: e?.message || String(e) };
+  }
+}
+
+export function loadAppSettings(): AppSettings {
+  const database = openDatabase();
+  const hideCompletedRow = database.prepare('SELECT value FROM app_settings WHERE key = ?').get('hideCompletedItems');
+  return {
+    hideCompletedItems: hideCompletedRow ? hideCompletedRow.value === 'true' : true,
+  };
+}
+
+export function saveAppSettings(settings: AppSettings): { success: boolean; error?: string } {
+  const database = openDatabase();
+  try {
+    const upsert = database.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
+    const tx = database.transaction(() => {
+      upsert.run('hideCompletedItems', settings.hideCompletedItems ? 'true' : 'false');
+    });
+    tx();
+    return { success: true };
+  } catch (e: any) {
+    console.error(`[DB] Error saving app settings:`, e);
     return { success: false, error: e?.message || String(e) };
   }
 }
