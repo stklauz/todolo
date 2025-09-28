@@ -236,6 +236,9 @@ export default function TodoApp(): React.ReactElement {
   // After the todos array changes, focus the input we marked (if any),
   // otherwise if none left, focus the bottom create input
   React.useEffect(() => {
+    // Don't interfere with title editing
+    if (isEditingRef.current) return;
+    
     const id = focusNextIdRef.current;
     if (id != null) {
       const el = inputByIdRef.current.get(id);
@@ -248,15 +251,32 @@ export default function TodoApp(): React.ReactElement {
     }
   }, [todos]);
 
+  const [editingListId, setEditingListId] = React.useState<string | null>(null);
+  const [editingName, setEditingName] = React.useState<string>("");
+  const inputJustFocusedRef = React.useRef(false);
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
+  const isEditingRef = React.useRef(false);
+  
+  // Focus the input when editing starts (only when editingListId changes)
+  React.useEffect(() => {
+    if (editingListId === selectedListId && titleInputRef.current) {
+      // Small delay to ensure the input is rendered
+      setTimeout(() => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          // Don't select all text - let user position cursor where they want
+        }
+      }, 10);
+    }
+  }, [editingListId]); // Only depend on editingListId, not selectedListId
+
   // selected list info
   const selectedList = lists.find((l) => l.id === selectedListId) || null;
   const selectedListName = selectedList?.name || 'My List';
 
-  const [editingListId, setEditingListId] = React.useState<string | null>(null);
-  const [editingName, setEditingName] = React.useState<string>("");
-
   function onAddList() {
     const id = addList();
+    isEditingRef.current = true;
     setEditingListId(id);
     setEditingName(`List ${lists.length + 1}`);
   }
@@ -264,23 +284,27 @@ export default function TodoApp(): React.ReactElement {
   // deleteSelectedList comes from hook
 
   function startRename(listId: string, current: string) {
+    isEditingRef.current = true;
     setEditingListId(listId);
     setEditingName(current);
   }
 
   function commitRename() {
-    if (!editingListId) return;
+    if (!editingListId || !isEditingRef.current) return;
     const name = editingName.trim();
     if (!name) {
       setEditingListId(null);
+      isEditingRef.current = false;
       return;
     }
     setLists((prev) => prev.map((l) => (l.id === editingListId ? { ...l, name, updatedAt: new Date().toISOString() } : l)));
     setEditingListId(null);
+    isEditingRef.current = false;
   }
 
   function cancelRename() {
     setEditingListId(null);
+    isEditingRef.current = false;
   }
 
   // no debug globals/logs
@@ -306,15 +330,42 @@ export default function TodoApp(): React.ReactElement {
         <div className={styles.titleRow}>
           {editingListId === selectedListId ? (
             <input
+              ref={titleInputRef}
               className={styles.titleInput}
               value={editingName}
               onChange={(e) => setEditingName(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitRename();
-                if (e.key === 'Escape') cancelRename();
+              onFocus={() => {
+                inputJustFocusedRef.current = true;
+                // Reset the flag after a short delay
+                setTimeout(() => {
+                  inputJustFocusedRef.current = false;
+                }, 150);
               }}
-              autoFocus
+              onBlur={(e) => {
+                // Don't commit if this is an immediate blur after focus
+                if (inputJustFocusedRef.current) {
+                  return;
+                }
+                // Only commit if we're actually losing focus to something else
+                const relatedTarget = e.relatedTarget as HTMLElement;
+                if (relatedTarget && relatedTarget.closest('.titleRow')) {
+                  // If focus is moving to another element in the title row, don't commit
+                  return;
+                }
+                commitRename();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  commitRename();
+                }
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  cancelRename();
+                }
+              }}
             />
           ) : (
             <h1
@@ -322,7 +373,9 @@ export default function TodoApp(): React.ReactElement {
               onClick={() => {
                 const targetId = selectedList?.id ?? lists[0]?.id ?? null;
                 const currentName = selectedList?.name ?? lists[0]?.name ?? 'My List';
-                if (targetId) startRename(targetId, currentName);
+                if (targetId) {
+                  startRename(targetId, currentName);
+                }
               }}
               title="Click to rename"
             >
@@ -415,20 +468,6 @@ function ActionsRow({ createdAt, updatedAt, canDelete, onDelete, appSettings, on
       </button>
       {open && (
         <div className={styles.menu} ref={menuRef} role="menu">
-          <button
-            type="button"
-            className={styles.menuItemDanger}
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              if (canDelete) onDelete();
-            }}
-            disabled={!canDelete}
-            title={canDelete ? 'Delete this list' : "Can't delete your only list"}
-          >
-            Delete list
-          </button>
-          <div className={styles.menuDivider} />
           <div className={styles.menuSection}>
             <div className={styles.menuSectionTitle}>App Settings</div>
             <label className={styles.menuToggleItem}>
@@ -445,6 +484,20 @@ function ActionsRow({ createdAt, updatedAt, canDelete, onDelete, appSettings, on
               <span>Completed items</span>
             </label>
           </div>
+          <div className={styles.menuDivider} />
+          <button
+            type="button"
+            className={styles.menuItemDanger}
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              if (canDelete) onDelete();
+            }}
+            disabled={!canDelete}
+            title={canDelete ? 'Delete this list' : "Can't delete your only list"}
+          >
+            Delete list
+          </button>
         </div>
       )}
     </div>

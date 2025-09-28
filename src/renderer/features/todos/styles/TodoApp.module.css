@@ -18,6 +18,9 @@
 
 .titleClickable { 
   cursor: text; 
+  /* Ensure the element is clickable */
+  pointer-events: auto;
+  user-select: none;
 }
 
 .titleRow {
@@ -33,9 +36,12 @@
   border: 1px solid var(--color-grey-light);
   outline: none;
   background: transparent;
-  padding: 4px 6px;
-  border-radius: 6px;
+  padding: 0.25rem;
+  border-radius: 4px;
   width: 100%;
+  position: relative;
+  transform: translate(calc(-0.25rem - 1px), calc(-0.25rem - 1px));
+  margin-bottom: calc(-0.5rem - 2px);
 }
 
 .subtitle {
