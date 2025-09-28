@@ -260,14 +260,22 @@ export default function TodoApp(): React.ReactElement {
               {selectedListName}
             </h1>
           )}
+          {selectedList && (
+            <ActionsRow
+              createdAt={selectedList.createdAt}
+              updatedAt={selectedList.updatedAt}
+              canDelete={lists.length > 1}
+              onDelete={() => deleteList(selectedList.id)}
+            />
+          )}
         </div>
         {selectedList && (
-          <ActionsRow
-            createdAt={selectedList.createdAt}
-            updatedAt={selectedList.updatedAt}
-            canDelete={lists.length > 1}
-            onDelete={() => deleteList(selectedList.id)}
-          />
+          <div className={styles.subtitleRow}>
+            <div className={styles.subtitle}>
+              {selectedList.createdAt ? <span>Created {new Date(selectedList.createdAt).toLocaleDateString()} </span> : null}
+              {selectedList.updatedAt ? <span>• Updated {new Date(selectedList.updatedAt).toLocaleDateString()}</span> : null}
+            </div>
+          </div>
         )}
 
       <TodoList
@@ -320,41 +328,35 @@ function ActionsRow({ createdAt, updatedAt, canDelete, onDelete }: ActionsRowPro
   }, [open]);
 
   return (
-    <div className={styles.subtitleRow}>
-      <div className={styles.subtitle}>
-        {createdAt ? <span>Created {new Date(createdAt).toLocaleDateString()} </span> : null}
-        {updatedAt ? <span>• Updated {new Date(updatedAt).toLocaleDateString()}</span> : null}
-      </div>
-      <div className={styles.menuWrap}>
-        <button
-          type="button"
-          className={styles.menuBtn}
-          title="List actions"
-          aria-haspopup="menu"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          ref={btnRef}
-        >
-          <IoEllipsisHorizontal size={18} />
-        </button>
-        {open && (
-          <div className={styles.menu} ref={menuRef} role="menu">
-            <button
-              type="button"
-              className={styles.menuItemDanger}
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                if (canDelete) onDelete();
-              }}
-              disabled={!canDelete}
-              title={canDelete ? 'Delete this list' : "Can't delete your only list"}
-            >
-              Delete list
-            </button>
-          </div>
-        )}
-      </div>
+    <div className={styles.menuWrap}>
+      <button
+        type="button"
+        className={styles.menuBtn}
+        title="List actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+      >
+        <IoEllipsisHorizontal size={18} />
+      </button>
+      {open && (
+        <div className={styles.menu} ref={menuRef} role="menu">
+          <button
+            type="button"
+            className={styles.menuItemDanger}
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              if (canDelete) onDelete();
+            }}
+            disabled={!canDelete}
+            title={canDelete ? 'Delete this list' : "Can't delete your only list"}
+          >
+            Delete list
+          </button>
+        </div>
+      )}
     </div>
   );
 }
