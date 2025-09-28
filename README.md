@@ -1,68 +1,78 @@
 # Todolo
 
-Todolo is a fast, minimal desktop todo app built with Electron and React.
+A minimal desktop todo app built with Electron and React. Your data stays local, no accounts, no cloud.
 
-Keep track of tasks, focus on what matters, and get a pleasant little “ding” when you complete items.
+## What it does
 
-## Features
+- **Type and press Enter** to create todos. Press Enter again to create another one below.
+- **Tab/Shift+Tab** to indent/outdent items (creates subtasks)
+- **Click checkbox** to complete items
+- **Drag todos** up/down to reorder them
+- **Multiple lists** in the sidebar - click to switch between them
+- **Click list names** to rename them
+- **Completion sounds** when you check things off
+- **Hide completed items** toggle in the menu (three dots)
 
-- Lightweight, keyboard-friendly todo list
-- Multiple lists with a simple sidebar
-- Local, private storage (no account required)
-- Subtle completion sounds (customizable via assets)
+## What it doesn't do (by design)
+
+- No login, no cloud sync, no accounts
+- No fancy themes or customization (yet)
+- No due dates, priorities, or tags
+- No collaboration or sharing
+
 
 ## Download
 
-Prebuilt releases (macOS, Windows, Linux) are published under GitHub Releases:
+**[Download Todolo →](https://github.com/stklauz/todolo/releases)**
 
-https://github.com/stklauz/todolo/releases
+- **macOS**: `.dmg` file (pick ARM64 for M1/M2/M3, x64 for Intel)
+- **Windows**: `.exe` installer
+- **Linux**: `.AppImage`
+
+*Note: macOS might block the app - right-click and "Open" if that happens. Windows might show a SmartScreen warning - click "More info" then "Run anyway".*
 
 ## Development
 
-Prerequisites: Node.js (LTS) and npm.
-
-Install dependencies and start in development mode:
-
 ```bash
+git clone https://github.com/stklauz/todolo.git
+cd todolo
 npm install
 npm start
 ```
 
-This runs the main and renderer processes with hot reload.
+**Scripts:**
+- `npm start` - Development mode with hot reload
+- `npm run build` - Build for production
+- `npm run package` - Create installer for current platform
+- `npm run lint` - Check code style
+- `npm test` - Run tests
 
-## Build & Package
+## Data Storage
 
-Package the app for your current platform:
+Your todos are saved in a local SQLite database:
+- **macOS**: `~/Library/Application Support/Todolo/`
+- **Windows**: `%APPDATA%/Todolo/`
+- **Linux**: `~/.config/Todolo/`
 
-```bash
-npm run package
-```
+No cloud, no accounts, no internet required.
 
-Installers and bundles are output to `release/build/`.
+## Tech Stack
 
-Icons are loaded from `assets/icons/` — replace these with your own artwork before publishing:
+- Electron + React + TypeScript
+- SQLite for local storage
+- CSS Modules for styling
 
-- macOS app icon: `assets/icons/icon.icns`
-- Windows app/installer icon: `assets/icons/icon.ico`
-- Linux icon: `assets/icons/icon.png`
+## Future Plans
 
-## Data & Privacy
+- Themes and customization options
+- Export/import functionality
+- Keyboard shortcuts customization
 
-Todolo stores your tasks locally on your machine only. Data is saved to a JSON file in your user data directory (Electron’s `app.getPath('userData')`). No cloud sync or external services.
+## Support
 
-## Auto‑updates
-
-When enabled, Todolo checks for updates via GitHub Releases for `claudiacodacy/todolo`.
-
-## Help & Feedback
-
-- Questions and ideas: https://github.com/stklauz/todolo/discussions
-- Bug reports: https://github.com/stklauz/todolo/issues
+- [GitHub Issues](https://github.com/stklauz/todolo/issues) for bugs / feature requests
+- [GitHub Project](https://github.com/users/stklauz/projects/1) for checking progress
 
 ## License
 
 MIT
-
----
-
-Built with Electron, React, and inspired by Electron React Boilerplate.
