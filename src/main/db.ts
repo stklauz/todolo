@@ -1,6 +1,6 @@
 import path from 'path';
-import fs from 'fs';
 import { app } from 'electron';
+import fs from 'fs';
 
 // We use better-sqlite3 for fast, local, embedded storage in the main process
 // Following ERB patterns: keep all storage in main and expose via IPC
@@ -26,30 +26,45 @@ type DB = any;
 let db: DB | null = null;
 
 const getUserDataDir = () => app.getPath('userData');
-const getDataDir = () => path.join(getUserDataDir(), 'data');
-const getLegacyTodosPath = () => path.join(getUserDataDir(), 'todos.json');
-const getListsIndexPath = () => path.join(getDataDir(), 'lists.json');
-const getListTodosPath = (listId: string) => path.join(getDataDir(), `list-${listId}.json`);
-
-const ensureDir = (p: string) => {
-  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-};
 
 function getDbPath() {
-  ensureDir(getUserDataDir());
-  return path.join(getUserDataDir(), 'todolo.db');
+  const dir = getUserDataDir();
+  console.log(`[DB] UserData directory: ${dir}`);
+  try {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  } catch {}
+  const dbPath = path.join(dir, 'todolo.db');
+  console.log(`[DB] Database path: ${dbPath}`);
+  return dbPath;
 }
 
 export function openDatabase(): DB {
-  if (db) return db;
+  if (db) {
+    console.log(`[DB] Reusing existing database connection`);
+    return db;
+  }
   const dbPath = getDbPath();
+  console.log(`[DB] Opening database at: ${dbPath}`);
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
 
   applyMigrations(db);
-  maybeMigrateFromJson(db);
   return db;
+}
+
+export function closeDatabase(): void {
+  if (db) {
+    try {
+      // Force WAL checkpoint to ensure all data is written to main database
+      db.pragma('wal_checkpoint(FULL)');
+      db.close();
+    } catch (error) {
+      console.error('Error closing database:', error);
+    } finally {
+      db = null;
+    }
+  }
 }
 
 function applyMigrations(database: DB) {
@@ -77,131 +92,6 @@ function applyMigrations(database: DB) {
       FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE CASCADE
     );`;
   database.exec(`${createMeta}${createLists}${createTodos}`);
-}
-
-function maybeMigrateFromJson(database: DB) {
-  // If we already have lists, assume migrated
-  const row = database.prepare('SELECT COUNT(1) AS c FROM lists').get();
-  if (row && row.c > 0) return;
-
-  // Prefer new per-list layout if present
-  const listsPath = getListsIndexPath();
-  if (fs.existsSync(listsPath)) {
-    try {
-      const raw = fs.readFileSync(listsPath, 'utf-8');
-      const indexDoc = JSON.parse(raw) as ListsIndexV2;
-      if (indexDoc && indexDoc.version === 2 && Array.isArray(indexDoc.lists)) {
-        const insertList = database.prepare(
-          'INSERT OR REPLACE INTO lists (id, name, created_at, updated_at) VALUES (@id, @name, @created_at, @updated_at)'
-        );
-        const insertTodo = database.prepare(
-          'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)'
-        );
-        const tx = database.transaction(() => {
-          for (const l of indexDoc.lists) {
-            insertList.run({
-              id: l.id,
-              name: l.name,
-              created_at: l.createdAt,
-              updated_at: l.updatedAt ?? null,
-            });
-            const listTodosPath = getListTodosPath(l.id);
-            if (fs.existsSync(listTodosPath)) {
-              try {
-                const rawTodos = fs.readFileSync(listTodosPath, 'utf-8');
-                const doc = JSON.parse(rawTodos) as { version: 2; todos: EditorTodo[] };
-                if (doc && Array.isArray(doc.todos)) {
-                  let idx = 0;
-                  for (const t of doc.todos) {
-                    insertTodo.run({
-                      list_id: l.id,
-                      id: t.id,
-                      text: t.text,
-                      completed: t.completed ? 1 : 0,
-                      indent: Number(t.indent ?? 0),
-                      order_index: idx++,
-                    });
-                  }
-                }
-              } catch (e) {
-                // ignore this list on failure
-              }
-            }
-          }
-          // selected list
-          database
-            .prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)')
-            .run('selectedListId', indexDoc.selectedListId ?? '');
-        });
-        tx();
-        return;
-      }
-    } catch (e) {
-      // fall through to legacy
-    }
-  }
-
-  // Legacy single-file migration
-  const legacyPath = getLegacyTodosPath();
-  if (fs.existsSync(legacyPath)) {
-    try {
-      const rawLegacy = fs.readFileSync(legacyPath, 'utf-8');
-      const parsed = JSON.parse(rawLegacy);
-      const insertList = database.prepare(
-        'INSERT OR REPLACE INTO lists (id, name, created_at, updated_at) VALUES (@id, @name, @created_at, @updated_at)'
-      );
-      const insertTodo = database.prepare(
-        'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)'
-      );
-      const tx = database.transaction(() => {
-        if (Array.isArray(parsed)) {
-          const id = `${Date.now()}`;
-          const now = new Date().toISOString();
-          insertList.run({ id, name: 'My Todos', created_at: now, updated_at: now });
-          let idx = 0;
-          for (const t of parsed as EditorTodo[]) {
-            insertTodo.run({
-              list_id: id,
-              id: t.id,
-              text: t.text,
-              completed: t.completed ? 1 : 0,
-              indent: Number(t.indent ?? 0),
-              order_index: idx++,
-            });
-          }
-          database.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('selectedListId', id);
-        } else if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).lists)) {
-          const lists = (parsed as any).lists as Array<{ id?: string; name?: string; createdAt?: string; updatedAt?: string; todos?: EditorTodo[] }>;
-          for (let i = 0; i < lists.length; i++) {
-            const l = lists[i];
-            const id = typeof l.id === 'string' ? l.id : String(i + 1);
-            insertList.run({
-              id,
-              name: typeof l.name === 'string' ? l.name : `List ${i + 1}`,
-              created_at: l.createdAt || new Date().toISOString(),
-              updated_at: l.updatedAt || l.createdAt || null,
-            });
-            let idx = 0;
-            for (const t of Array.isArray(l.todos) ? l.todos : []) {
-              insertTodo.run({
-                list_id: id,
-                id: t.id,
-                text: t.text,
-                completed: t.completed ? 1 : 0,
-                indent: Number(t.indent ?? 0),
-                order_index: idx++,
-              });
-            }
-          }
-          const sel = (parsed as any).selectedListId ?? '';
-          database.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('selectedListId', sel);
-        }
-      });
-      tx();
-    } catch (e) {
-      // ignore
-    }
-  }
 }
 
 export function loadListsIndex(): ListsIndexV2 {
@@ -273,14 +163,17 @@ export function loadListTodos(listId: string): { version: 2; todos: EditorTodo[]
 export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTodo[] }): { success: boolean; error?: string } {
   const database = openDatabase();
   try {
+    console.log(`[DB] Saving todos for list ${listId}:`, JSON.stringify(doc, null, 2));
     const del = database.prepare('DELETE FROM todos WHERE list_id = ?');
     const ins = database.prepare(
       'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)'
     );
     const tx = database.transaction(() => {
+      console.log(`[DB] Deleting existing todos for list ${listId}`);
       del.run(listId);
       let idx = 0;
       for (const t of doc.todos) {
+        console.log(`[DB] Inserting todo:`, { list_id: listId, id: t.id, text: t.text, completed: t.completed, indent: t.indent, order_index: idx });
         ins.run({
           list_id: listId,
           id: t.id,
@@ -291,10 +184,17 @@ export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTo
         });
       }
     });
+    console.log(`[DB] Executing transaction for list ${listId}`);
     tx();
+    console.log(`[DB] Transaction completed for list ${listId}`);
+    
+    // Force a WAL checkpoint to ensure data is written to disk
+    database.pragma('wal_checkpoint(PASSIVE)');
+    
+    console.log(`[DB] Successfully saved ${doc.todos.length} todos for list ${listId}`);
     return { success: true };
   } catch (e: any) {
+    console.error(`[DB] Error saving todos for list ${listId}:`, e);
     return { success: false, error: e?.message || String(e) };
   }
 }
-

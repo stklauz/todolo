@@ -15,8 +15,10 @@ export default function useTodosState() {
   const saveTimerRef = React.useRef<number | null>(null);
   const todosSaveTimerRef = React.useRef<number | null>(null);
   const selectedListIdRef = React.useRef<string | null>(null);
+  const listsRef = React.useRef<TodoList[]>([]);
   const loadedListsRef = React.useRef<Set<string>>(new Set());
   selectedListIdRef.current = selectedListId;
+  React.useEffect(() => { listsRef.current = lists; }, [lists]);
 
   // Load lists (index) on mount
   React.useEffect(() => {
@@ -70,13 +72,43 @@ export default function useTodosState() {
           lists: lists.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
           selectedListId: selectedListId ?? undefined,
         } as const;
-        void saveListsIndex(indexDoc);
+        saveListsIndex(indexDoc).catch((error) => {
+          debugLogger.log('error', 'Failed to save lists index', error);
+        });
       } catch {}
     }, 800);
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
   }, [lists, selectedListId]);
+
+  // Flush lists index immediately on window close/blur/hidden, to avoid losing debounced changes
+  React.useEffect(() => {
+    const flushIndex = () => {
+      try {
+        const snapshot = listsRef.current;
+        const sel = selectedListIdRef.current;
+        if (!snapshot || snapshot.length === 0) return;
+        const indexDoc = {
+          version: 2 as const,
+          lists: snapshot.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
+          selectedListId: sel ?? undefined,
+        };
+        saveListsIndex(indexDoc).catch((error) => {
+          debugLogger.log('error', 'Failed to save lists index', error);
+        });
+      } catch {}
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flushIndex(); };
+    window.addEventListener('beforeunload', flushIndex);
+    window.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', flushIndex);
+    return () => {
+      window.removeEventListener('beforeunload', flushIndex);
+      window.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', flushIndex);
+    };
+  }, []);
 
   // Smart save function with different strategies
   const saveWithStrategy = React.useCallback((type: 'immediate' | 'debounced', delay = 200) => {
@@ -90,7 +122,8 @@ export default function useTodosState() {
     debugLogger.log('info', `Saving todos with ${type} strategy`, { 
       listId: selectedListId, 
       todoCount: selected.todos.length,
-      delay: type === 'debounced' ? delay : 0
+      delay: type === 'debounced' ? delay : 0,
+      todos: selected.todos
     });
     
     if (type === 'immediate') {
@@ -100,14 +133,18 @@ export default function useTodosState() {
         todosSaveTimerRef.current = null;
       }
       // Save immediately for critical operations
-      void saveListTodos(selectedListId, doc);
+      saveListTodos(selectedListId, doc).catch((error) => {
+        debugLogger.log('error', 'Failed to save todos immediately', error);
+      });
     } else {
       // Debounced save
       if (todosSaveTimerRef.current) {
         window.clearTimeout(todosSaveTimerRef.current);
       }
       todosSaveTimerRef.current = window.setTimeout(() => {
-        void saveListTodos(selectedListId, doc);
+        saveListTodos(selectedListId, doc).catch((error) => {
+          debugLogger.log('error', 'Failed to save todos with debounce', error);
+        });
         todosSaveTimerRef.current = null;
       }, delay);
     }
@@ -293,7 +330,9 @@ export default function useTodosState() {
         const seed = [{ id: firstId, text: '', completed: false, indent: 0 }];
         setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: seed } : l)));
         loadedListsRef.current.add(selectedListId);
-        void saveListTodos(selectedListId, { version: 2, todos: seed });
+        saveListTodos(selectedListId, { version: 2, todos: seed }).catch((error) => {
+          debugLogger.log('error', 'Failed to save seed todos', error);
+        });
         debugLogger.log('info', 'Created new empty list with seed todo', { selectedListId });
       } else {
         setLists((prev) => prev.map((l) => (l.id === selectedListId ? { ...l, todos: todosNorm } : l)));
@@ -319,6 +358,25 @@ export default function useTodosState() {
       }
     };
   }, []);
+
+  // Ensure pending debounced saves flush on app/window close or hide
+  React.useEffect(() => {
+    const flushSaves = () => {
+      // Force an immediate save of current list's todos
+      saveWithStrategy('immediate');
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flushSaves();
+    };
+    window.addEventListener('beforeunload', flushSaves);
+    window.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', flushSaves);
+    return () => {
+      window.removeEventListener('beforeunload', flushSaves);
+      window.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', flushSaves);
+    };
+  }, [saveWithStrategy]);
 
   function addList(): string {
     const id = crypto?.randomUUID?.() || String(Date.now() + Math.random());

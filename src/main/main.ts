@@ -10,7 +10,6 @@
  */
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
-import fs from 'fs';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import {
@@ -18,62 +17,25 @@ import {
   saveListsIndex as dbSaveListsIndex,
   loadListTodos as dbLoadListTodos,
   saveListTodos as dbSaveListTodos,
+  closeDatabase,
 } from './db';
 
-// Storage helpers (legacy single-file and new per-list layout)
-const getUserDataDir = () => app.getPath('userData');
-const getLegacyTodosPath = () => path.join(getUserDataDir(), 'todos.json');
-const getDataDir = () => path.join(getUserDataDir(), 'data');
-const getListsIndexPath = () => path.join(getDataDir(), 'lists.json');
-const getListTodosPath = (listId: string) => path.join(getDataDir(), `list-${listId}.json`);
-const ensureDataDir = () => {
-  const dir = getDataDir();
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-};
+// In development, point userData to the same directory name as production
+// so the SQLite DB file is shared between dev and packaged app.
+// Must run before any userData path is consumed.
+if (process.env.NODE_ENV === 'development') {
+  try {
+    const prodLikeUserData = path.join(app.getPath('appData'), 'Todolo');
+    app.setPath('userData', prodLikeUserData);
+    console.log(`[STORAGE] userData path (dev) -> ${prodLikeUserData}`);
+  } catch (e) {
+    console.warn('[STORAGE] Unable to set dev userData path', e);
+  }
+}
 
 // Auto-update logic removed per user request.
 
 let mainWindow: BrowserWindow | null = null;
-
-// IPC handlers for todo operations
-ipcMain.on('save-todos', async (event, todos) => {
-  const startTime = performance.now();
-  try {
-    console.log(`[PERF] Starting save-todos operation`);
-    const target = getLegacyTodosPath();
-    const tmp = `${target}.tmp`;
-    await fs.promises.writeFile(tmp, JSON.stringify(todos));
-    await fs.promises.rename(tmp, target);
-    const duration = performance.now() - startTime;
-    console.log(`[PERF] save-todos completed in ${duration.toFixed(2)}ms`);
-    event.reply('save-todos', { success: true });
-  } catch (error) {
-    const duration = performance.now() - startTime;
-    console.error(`[PERF] save-todos failed after ${duration.toFixed(2)}ms:`, error);
-    event.reply('save-todos', { success: false, error });
-  }
-});
-
-ipcMain.handle('load-todos', async () => {
-  const startTime = performance.now();
-  try {
-    console.log(`[PERF] Starting load-todos operation`);
-    if (fs.existsSync(getLegacyTodosPath())) {
-      const data = await fs.promises.readFile(getLegacyTodosPath(), 'utf-8');
-      const result = JSON.parse(data);
-      const duration = performance.now() - startTime;
-      console.log(`[PERF] load-todos completed in ${duration.toFixed(2)}ms`);
-      return result;
-    }
-    const duration = performance.now() - startTime;
-    console.log(`[PERF] load-todos completed (no file) in ${duration.toFixed(2)}ms`);
-    return [];
-  } catch (error) {
-    const duration = performance.now() - startTime;
-    console.error(`[PERF] load-todos failed after ${duration.toFixed(2)}ms:`, error);
-    return [];
-  }
-});
 
 // New IPC: per-list storage (SQLite-backed)
 ipcMain.handle('load-lists', async () => {
@@ -125,9 +87,11 @@ ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) 
   const startTime = performance.now();
   try {
     console.log(`[PERF] Starting save-list-todos operation for list ${listId} (sqlite)`);
+    console.log(`[DEBUG] Todos to save:`, JSON.stringify(todosDoc, null, 2));
     const res = dbSaveListTodos(listId, todosDoc);
     const duration = performance.now() - startTime;
     console.log(`[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`);
+    console.log(`[DEBUG] Save result:`, res);
     return res;
   } catch (error) {
     const duration = performance.now() - startTime;
@@ -228,6 +192,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  // Ensure database is properly closed and all data is persisted
+  closeDatabase();
 });
 
 app
