@@ -1,6 +1,7 @@
 import React from 'react';
 import type { TodoList } from '../types';
 import { IoAddOutline } from 'react-icons/io5';
+import { ReactComponent as TodoloLogo } from '../../../../../assets/logo/todolo.svg';
 const styles = require('../styles/Sidebar.module.css');
 
 type Props = {
@@ -33,7 +34,7 @@ export default function ListSidebar({
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
-        <strong>Todolo</strong>
+        <TodoloLogo className={styles.logo} />
         <button type="button" onClick={onAdd} title="Add list" className={styles.iconBtn} aria-label="Add list">
           <IoAddOutline size={18} />
         </button>

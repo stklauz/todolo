@@ -181,7 +181,7 @@ export default function TodoApp(): React.ReactElement {
 
   // selected list info
   const selectedList = lists.find((l) => l.id === selectedListId) || null;
-  const selectedListName = selectedList?.name || 'Todolo';
+  const selectedListName = selectedList?.name || 'My List';
 
   const [editingListId, setEditingListId] = React.useState<string | null>(null);
   const [editingName, setEditingName] = React.useState<string>("");
@@ -252,7 +252,7 @@ export default function TodoApp(): React.ReactElement {
               className={`${styles.title} ${styles.titleClickable}`}
               onClick={() => {
                 const targetId = selectedList?.id ?? lists[0]?.id ?? null;
-                const currentName = selectedList?.name ?? lists[0]?.name ?? 'Todolo';
+                const currentName = selectedList?.name ?? lists[0]?.name ?? 'My List';
                 if (targetId) startRename(targetId, currentName);
               }}
               title="Click to rename"
@@ -348,7 +348,7 @@ function ActionsRow({ createdAt, updatedAt, canDelete, onDelete }: ActionsRowPro
                 if (canDelete) onDelete();
               }}
               disabled={!canDelete}
-              title={canDelete ? 'Delete this list' : "Can't delete your last list"}
+              title={canDelete ? 'Delete this list' : "Can't delete your only list"}
             >
               Delete list
             </button>

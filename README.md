@@ -40,11 +40,11 @@ npm run package
 
 Installers and bundles are output to `release/build/`.
 
-Icons are loaded from `assets/` — replace these with your own artwork before publishing:
+Icons are loaded from `assets/icons/` — replace these with your own artwork before publishing:
 
-- macOS app icon: `assets/icon.icns`
-- Windows app/installer icon: `assets/icon.ico`
-- Linux icon: `assets/icon.png`
+- macOS app icon: `assets/icons/icon.icns`
+- Windows app/installer icon: `assets/icons/icon.ico`
+- Linux icon: `assets/icons/icon.png`
 
 ## Data & Privacy
 

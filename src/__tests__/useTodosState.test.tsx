@@ -115,7 +115,7 @@ describe('useTodosState', () => {
     expect(result.current.selectedListId).toBe('list-2');
   });
 
-  it('should not delete last list', async () => {
+  it('should not delete only list', async () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
