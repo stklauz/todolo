@@ -58,7 +58,7 @@ export const TodoRow = React.memo(
       const indentClass = indentLevel > 0 ? (styles as any)[`indent${indentLevel}`] || '' : '';
       return (
         <div
-          className={`${styles.row} ${indentClass} ${isDropTarget ? styles.dropTarget : ''}`}
+          className={`${styles.row} ${isDropTarget ? styles.dropTarget : ''}`}
           onDragOver={(e) => {
             debugLog('Row drag over', { value, isDropTarget, eventType: e.type });
             e.preventDefault();
@@ -82,7 +82,7 @@ export const TodoRow = React.memo(
             title="Drag to reorder"
             role="button"
             aria-label="Drag to reorder"
-            className={styles.draggable}
+            className={`${styles.draggable} ${indentClass}`}
             draggable
             onDragStart={(e) => {
               debugLog('Span drag start', { value, eventType: e.type });

@@ -48,9 +48,9 @@
 }
 
 /* Indentation levels (applied to the whole row) */
-.indent1 { padding-left: 16px; }
-.indent2 { padding-left: 32px; }
-.indent3 { padding-left: 48px; }
+.indent1 { padding-left: 1.75rem !important; }
+.indent2 { padding-left: 3.5rem !important; }
+.indent3 { padding-left: 5.25rem !important; }
 
 .row:hover { 
   background: #f8fafc; /* slate-50 */ 
@@ -59,7 +59,6 @@
 .draggable { 
   display: inline-flex; 
   align-items: center; 
-  gap: 8px; 
   cursor: grab; 
   width: 100%; 
   padding: 4px;
