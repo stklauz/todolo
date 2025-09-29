@@ -1,4 +1,5 @@
 # Todolo
+<img width="1136" height="840" alt="Screenshot 2025-09-29 at 08 41 33" src="https://github.com/user-attachments/assets/eb6472af-786d-4d38-b9df-a67a4fb80334" />
 
 A minimal desktop todo app built with Electron and React. Your data stays local, no accounts, no cloud.
 
