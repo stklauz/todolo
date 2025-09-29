@@ -12,6 +12,24 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+
+// Separate Dev and Prod databases by using different userData paths.
+// Development uses a dedicated Dev directory; production uses Electron defaults.
+// Must run before any userData path is consumed.
+if (!app.isPackaged) {
+  try {
+    const devUserData = path.join(app.getPath('appData'), `${app.getName()}-Dev`);
+    app.setPath('userData', devUserData);
+    console.log(`[STORAGE] userData path (dev) -> ${devUserData}`);
+  } catch (e) {
+    console.warn('[STORAGE] Unable to set dev userData path', e);
+  }
+} else {
+  console.log(`[STORAGE] userData path (prod) -> ${app.getPath('userData')}`);
+}
+
+// Import DB module only after userData path is finalized to avoid any
+// accidental early reads of the default path inside the module.
 import {
   loadListsIndex as dbLoadListsIndex,
   saveListsIndex as dbSaveListsIndex,
@@ -21,19 +39,6 @@ import {
   saveAppSettings as dbSaveAppSettings,
   closeDatabase,
 } from './db';
-
-// In development, point userData to the same directory name as production
-// so the SQLite DB file is shared between dev and packaged app.
-// Must run before any userData path is consumed.
-if (process.env.NODE_ENV === 'development') {
-  try {
-    const prodLikeUserData = path.join(app.getPath('appData'), 'Todolo');
-    app.setPath('userData', prodLikeUserData);
-    console.log(`[STORAGE] userData path (dev) -> ${prodLikeUserData}`);
-  } catch (e) {
-    console.warn('[STORAGE] Unable to set dev userData path', e);
-  }
-}
 
 // Auto-update logic removed per user request.
 
@@ -217,6 +222,7 @@ const createWindow = async () => {
  */
 
 app.on('window-all-closed', () => {
+  console.log('[APP] All windows closed');
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
   if (process.platform !== 'darwin') {
@@ -225,7 +231,14 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  console.log('[APP] App is quitting, closing database...');
   // Ensure database is properly closed and all data is persisted
+  closeDatabase();
+});
+
+// Handle app termination on macOS
+app.on('will-quit', (event) => {
+  console.log('[APP] App will quit, ensuring database is closed...');
   closeDatabase();
 });
 

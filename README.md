@@ -57,6 +57,15 @@ Your todos are saved in a local SQLite database:
 
 No cloud, no accounts, no internet required.
 
+### Development vs Production Data
+
+- Development (`npm start`) stores data in a separate app folder so it never mixes with your installed app data.
+  - **macOS**: `~/Library/Application Support/Todolo-Dev/`
+  - **Windows**: `%APPDATA%/Todolo-Dev/`
+  - **Linux**: `~/.config/Todolo-Dev/`
+- Production (packaged/installed app) uses the regular folders listed above (`Todolo`).
+- Result: Dev and Prod run from different directories and use different databases by default.
+
 ## Tech Stack
 
 - Electron + React + TypeScript

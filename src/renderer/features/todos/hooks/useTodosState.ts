@@ -11,6 +11,7 @@ type State = {
 export default function useTodosState() {
   const [lists, setLists] = React.useState<TodoList[]>([]);
   const [selectedListId, setSelectedListId] = React.useState<string | null>(null);
+  const [indexLoaded, setIndexLoaded] = React.useState(false);
   const idCounterRef = React.useRef(1);
   const saveTimerRef = React.useRef<number | null>(null);
   const todosSaveTimerRef = React.useRef<number | null>(null);
@@ -23,9 +24,10 @@ export default function useTodosState() {
   // Load lists (index) on mount
   React.useEffect(() => {
     const load = async () => {
-      debugLogger.log('info', 'Initializing todos state - loading lists');
+      
       try {
         const index = await loadListsIndex();
+        
         const normalizedLists: TodoList[] = (index.lists || []).map((list, li) => ({
           id: String(list.id),
           name: typeof list.name === 'string' ? list.name : `List ${li + 1}`,
@@ -39,28 +41,49 @@ export default function useTodosState() {
             ? index.selectedListId!
             : normalizedLists[0]?.id ?? null,
         );
-        debugLogger.log('info', 'Todos state initialized', { 
-          listCount: normalizedLists.length,
-          selectedListId: index.selectedListId 
-        });
+        
       } catch (e) {
-        debugLogger.log('error', 'Failed to initialize todos state', e);
+        
+      } finally {
+        setIndexLoaded(true);
       }
     };
     load();
   }, []);
 
-  // Ensure at least one list exists
+  // Ensure at least one list exists (guard against StrictMode double-invoke)
+  const initialListCreatedRef = React.useRef(false);
+  const listCreationInProgressRef = React.useRef(false);
   React.useEffect(() => {
-    if (lists.length === 0) {
+    // Only create a list after the index load completes
+    if (!indexLoaded) return;
+    // Only create a list if we have NO lists AND haven't already created one AND not currently creating one
+    if (lists.length === 0 && !initialListCreatedRef.current && !listCreationInProgressRef.current) {
+      
+      initialListCreatedRef.current = true;
+      listCreationInProgressRef.current = true;
       const id = crypto?.randomUUID?.() || String(Date.now());
-      setLists([{ id, name: 'My Todos', todos: [] }]);
+      const newList = { id, name: 'My Todos', todos: [], createdAt: new Date().toISOString() } as TodoList;
+      setLists([newList]);
       setSelectedListId(id);
-    } else if (!selectedListId) {
+      // Save immediately to ensure persistence
+      const indexDoc = { version: 2 as const, lists: [{ id: newList.id, name: newList.name, createdAt: newList.createdAt!, updatedAt: newList.updatedAt }], selectedListId: id };
+      saveListsIndex(indexDoc).then(() => {
+        
+        listCreationInProgressRef.current = false;
+      }).catch((error) => {
+        
+        debugLogger.log('error', 'Failed to save initial list', error);
+        listCreationInProgressRef.current = false;
+      });
+    } else if (!selectedListId && lists.length > 0) {
+      
       setSelectedListId(lists[0].id);
+    } else {
+      
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lists.length]);
+  }, [indexLoaded, lists.length]);
 
   // Debounced save of lists index (names/order/selection, not todos)
   React.useEffect(() => {
@@ -72,6 +95,7 @@ export default function useTodosState() {
           lists: lists.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
           selectedListId: selectedListId ?? undefined,
         } as const;
+        
         saveListsIndex(indexDoc).catch((error) => {
           debugLogger.log('error', 'Failed to save lists index', error);
         });
@@ -81,6 +105,21 @@ export default function useTodosState() {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
   }, [lists, selectedListId]);
+
+  // Ensure initial selection is persisted immediately after it is determined
+  // so the same list opens after restart.
+  React.useEffect(() => {
+    if (!selectedListId || lists.length === 0) return;
+    try {
+      const indexDoc = {
+        version: 2 as const,
+        lists: lists.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
+        selectedListId,
+      };
+      
+      saveListsIndex(indexDoc).catch(() => {});
+    } catch {}
+  }, [selectedListId, lists.length]);
 
   // Flush lists index immediately on window close/blur/hidden, to avoid losing debounced changes
   React.useEffect(() => {
@@ -113,11 +152,15 @@ export default function useTodosState() {
   // Smart save function with different strategies
   const saveWithStrategy = React.useCallback((type: 'immediate' | 'debounced', delay = 200) => {
     if (!selectedListId) return;
-    
+    // Gate: don't save until this list's todos have been loaded at least once
+    if (!loadedListsRef.current.has(selectedListId)) return;
+
     const selected = lists.find((l) => l.id === selectedListId);
     if (!selected) return;
-    
+
     const doc = { version: 2, todos: selected.todos } as const;
+    
+    
     
     debugLogger.log('info', `Saving todos with ${type} strategy`, { 
       listId: selectedListId, 
@@ -184,18 +227,23 @@ export default function useTodosState() {
 
   // Mutations
   function updateTodo(id: number, text: string) {
+    
     setSelectedTodos((prev) => {
       const updated = prev.map((t) => {
         if (t.id === id) {
           // Only update if text actually changed
           if (t.text === text) return t;
+          
           return { ...t, text };
         }
         return t;
       });
-      // Only trigger save if something actually changed
-      if (updated !== prev) {
+      // Only trigger save if something actually changed AND the text is not empty
+      if (updated !== prev && text.trim() !== '') {
+        
         saveWithStrategy('debounced', 200);
+      } else if (updated !== prev && text.trim() === '') {
+        
       }
       return updated;
     });
@@ -284,9 +332,19 @@ export default function useTodosState() {
   }
   function addTodoAtEnd(text: string): number {
     const id = nextId();
-    setSelectedTodos((prev) => [...prev, { id, text, completed: false, indent: 0 }]);
-    // Add operations should be immediate
-    saveWithStrategy('immediate');
+    console.log(`[UI] addTodoAtEnd called - id: ${id}, text: "${text}"`);
+    setSelectedTodos((prev) => {
+      const newTodo = { id, text, completed: false, indent: 0 };
+      console.log(`[UI] Adding new todo:`, newTodo);
+      return [...prev, newTodo];
+    });
+    // Only save if the text is not empty - empty todos should not be saved
+    if (text.trim() !== '') {
+      console.log(`[UI] Saving new todo with non-empty text: "${text}"`);
+      saveWithStrategy('immediate');
+    } else {
+      console.log(`[UI] Skipping save for empty todo text`);
+    }
     return id;
   }
 
@@ -383,8 +441,19 @@ export default function useTodosState() {
     const idx = lists.length + 1;
     const name = `List ${idx}`;
     const now = new Date().toISOString();
-    setLists((prev) => [...prev, { id, name, todos: [], createdAt: now, updatedAt: now }]);
+    const newList = { id, name, todos: [], createdAt: now, updatedAt: now };
+    setLists((prev) => [...prev, newList]);
     setSelectedListId(id);
+    // Persist new list immediately to avoid FK/selection races on restart
+    try {
+      const snapshot = [...listsRef.current, newList];
+      const indexDoc = {
+        version: 2 as const,
+        lists: snapshot.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
+        selectedListId: id,
+      };
+      saveListsIndex(indexDoc).catch(() => {});
+    } catch {}
     return id;
   }
   function deleteSelectedList() {
@@ -414,6 +483,18 @@ export default function useTodosState() {
     setSelectedListId(id);
     // List switching should be immediate
     saveWithStrategy('immediate');
+    // Persist selection in index immediately to keep it across restarts
+    try {
+      const snapshot = listsRef.current;
+      if (snapshot && snapshot.length > 0) {
+        const indexDoc = {
+          version: 2 as const,
+          lists: snapshot.map((l) => ({ id: l.id, name: l.name, createdAt: l.createdAt!, updatedAt: l.updatedAt })),
+          selectedListId: id ?? undefined,
+        };
+        saveListsIndex(indexDoc).catch(() => {});
+      }
+    } catch {}
   }, [saveWithStrategy]);
 
   return {
