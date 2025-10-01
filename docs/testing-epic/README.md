@@ -35,6 +35,24 @@ Notes for Solo Scope
 - Keep negative-path UX assertions minimal until visible error UI exists.
 - Target a couple realistic migration/corruption cases only.
 - CI/reporting upgrades can wait until releases are automated.
+ - Tech debt: when reorganizing tests (post T5), consider moving Jest setup out of `__tests__` and removing the ignore rule.
 
 Tasks
 - See individual task docs in `docs/testing-epic/tasks` with updated priorities and scope.
+
+## Conventions for New Tests
+- Tests run with `jsdom`; prefer Testing Library over shallow renders.
+- Avoid console noise: any `console.log/warn/error` is muted globally; assert on logs via spies only when required.
+- Rely on Jest hygiene: `clearMocks`, `resetMocks`, and `restoreMocks` are enabled; do not depend on mock state across tests.
+- Keep `src/__tests__/setup.ts` test-free; use it only for environment prep and global mocks.
+- Prefer explicit user-facing assertions (text/role) over implementation details.
+
+### Asserting console output in a specific test
+- Use a local spy in the test and capture calls:
+  - `const spy = jest.spyOn(console, 'error').mockImplementation(() => {});`
+  - Run the code, then `expect(spy).toHaveBeenCalledWith(expect.stringMatching(/message/));`
+  - No manual restore needed thanks to `restoreMocks: true`.
+
+### Overriding the global electron mock
+- The global `window.electron` mock is `configurable`, so tests can replace it when needed:
+  - `Object.defineProperty(window, 'electron', { configurable: true, value: { ipcRenderer: { invoke: jest.fn() } } });`

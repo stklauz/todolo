@@ -1,4 +1,4 @@
-// Test setup file
+// Global test setup (no tests here)
 import '@testing-library/jest-dom';
 
 // Mock audio files
@@ -15,11 +15,12 @@ Object.defineProperty(window, 'electron', {
     },
   },
   writable: true,
+  configurable: true,
 });
 
-// Add a dummy test to prevent Jest from complaining
-describe('Setup', () => {
-  it('should run setup', () => {
-    expect(true).toBe(true);
-  });
+// Suppress console noise during tests; restored via restoreMocks/reset in Jest config
+beforeEach(() => {
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });

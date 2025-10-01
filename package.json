@@ -68,6 +68,9 @@
       "release/app/node_modules",
       "src"
     ],
+    "clearMocks": true,
+    "resetMocks": true,
+    "restoreMocks": true,
     "haste": {
       "throwOnModuleCollision": false
     },
@@ -96,7 +99,8 @@
     },
     "testPathIgnorePatterns": [
       "release/app/dist",
-      ".erb/dll"
+      ".erb/dll",
+      "<rootDir>/src/__tests__/setup.ts"
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
