@@ -17,3 +17,9 @@ Acceptance Criteria
 
 Deliverables
 - New or updated tests under `src/__tests__/` that assert negative-path UX behavior for both load and save failures.
+
+Follow-ups from T4
+- Consolidate overlap with existing `src/__tests__/storage.test.ts` once broader coverage stabilizes (reduce duplication/noise). Consider as part of T5/T6 maintenance.
+- Broaden API coverage to `saveAppSettings` with IPC contract + failure/malformed cases (tie-in with T5/T6 negative-path UX assertions).
+- Expand malformed payload shapes for `loadListsIndex` and `loadListTodos` (e.g., non-array `lists`, missing `version`, malformed `todos` items) to support T7 robustness.
+- Add positive-path debug/perf logging assertions for storage operations when debug mode is enabled (complements T3 – Debug Logger coverage).
