@@ -32,16 +32,24 @@ describe('Debug Logger', () => {
   test('should measure timing correctly', () => {
     debugLogger.enable();
     
+    // Deterministic timing via mocked performance.now
+    const nowSpy = jest.spyOn(performance, 'now');
+    // Call order:
+    // 1) enable() log timestamp
+    // 2) startTiming() start mark
+    // 3) startTiming() log timestamp
+    // 4) endTiming() end mark
+    // 5) endTiming() log timestamp
+    nowSpy
+      .mockReturnValueOnce(100)  // start mark
+      .mockReturnValueOnce(101)  // start log
+      .mockReturnValueOnce(105)  // end mark (duration = 5)
+      .mockReturnValueOnce(106); // end log
+
     const markId = debugLogger.startTiming('test-operation');
-    // Simulate some work
-    const start = performance.now();
-    while (performance.now() - start < 1) {
-      // Busy wait for ~1ms
-    }
     const duration = debugLogger.endTiming(markId, 'test-operation');
     
-    expect(duration).toBeGreaterThan(0);
-    expect(duration).toBeLessThan(10); // Should be less than 10ms
+    expect(duration).toBe(5);
     
     const logs = debugLogger.getLogs();
     const perfLogs = logs.filter(log => log.level === 'perf');
@@ -50,11 +58,26 @@ describe('Debug Logger', () => {
 
   test('should measure async operations', async () => {
     debugLogger.enable();
-    
-    const result = await debugLogger.measureAsync('async-test', async () => {
-      await new Promise(resolve => setTimeout(resolve, 1));
+    // Use fake timers and deterministic performance.now
+    jest.useFakeTimers();
+    const nowSpy = jest.spyOn(performance, 'now');
+    // Call order similar to sync case, but around async timing
+    nowSpy
+      .mockReturnValueOnce(200)  // start mark
+      .mockReturnValueOnce(201)  // start log
+      .mockReturnValueOnce(205)  // end mark (duration = 5)
+      .mockReturnValueOnce(206); // end log
+
+    const promise = debugLogger.measureAsync('async-test', async () => {
+      await new Promise(resolve => setTimeout(resolve, 5));
       return 'test-result';
     });
+
+    // Advance fake timers to resolve the promise
+    await Promise.resolve(); // flush microtask queue
+    jest.advanceTimersByTime(5);
+    const result = await promise;
+    jest.useRealTimers();
     
     expect(result).toBe('test-result');
     
