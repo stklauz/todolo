@@ -9,6 +9,7 @@ Scope
 - Debug logger tests
 - Storage API tests
 - Jest configuration and test setup
+ - Interaction spec as source of truth (see: docs/interaction.md)
 
 Out of Scope
 - End-to-end tests with real Electron main process
@@ -46,6 +47,7 @@ Tasks
 - Rely on Jest hygiene: `clearMocks`, `resetMocks`, and `restoreMocks` are enabled; do not depend on mock state across tests.
 - Keep `src/__tests__/setup.ts` test-free; use it only for environment prep and global mocks.
 - Prefer explicit user-facing assertions (text/role) over implementation details.
+ - Align behaviors with the interaction spec in `docs/interaction.md` when writing or updating tests.
 
 ### Asserting console output in a specific test
 - Use a local spy in the test and capture calls:

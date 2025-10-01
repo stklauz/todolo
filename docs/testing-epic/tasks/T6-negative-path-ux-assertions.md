@@ -13,6 +13,7 @@ Acceptance Criteria
 - Load failure: app renders core UI and logs the error.
 - Limit scope to one failing save and one failing load scenario.
 - Document expected UX behavior and mark UI signals as TODO if not yet implemented.
+ - Anchor negative-path expectations to `docs/interaction.md` rules where applicable (e.g., Enter on empty does nothing; cannot delete the last empty todo; empty todo checkbox disabled).
 
 Deliverables
 - New or updated tests under `src/__tests__/` that assert negative-path UX behavior for both load and save failures.
