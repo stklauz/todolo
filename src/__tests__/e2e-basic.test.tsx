@@ -12,6 +12,7 @@ describe('E2E Basic Flow Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Mock successful storage operations by default
+    mockStorage.loadAppSettings.mockResolvedValue({ hideCompletedItems: true });
     mockStorage.loadListsIndex.mockResolvedValue({
       version: 2,
       lists: [],
@@ -34,8 +35,7 @@ describe('E2E Basic Flow Tests', () => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
       });
 
-      // Should render the main app structure
-      expect(screen.getByText('Todolo')).toBeInTheDocument();
+      // Should render the main app structure (sidebar with add list button)
       expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
     });
 
@@ -62,8 +62,10 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       // Should load existing data (the todo might not be visible in the DOM immediately)
-      // Just verify that the storage calls were made correctly
-      expect(mockStorage.loadListTodos).toHaveBeenCalled();
+      // Verify the storage call occurred
+      await waitFor(() => {
+        expect(mockStorage.loadListTodos).toHaveBeenCalled();
+      });
     });
   });
 
@@ -128,8 +130,8 @@ describe('E2E Basic Flow Tests', () => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
       });
 
-      // App should still render
-      expect(screen.getByText('Todolo')).toBeInTheDocument();
+      // App should still render core UI
+      expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
     });
   });
 
@@ -160,8 +162,8 @@ describe('E2E Basic Flow Tests', () => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
       });
 
-      // Should fall back to default behavior
-      expect(screen.getByText('Todolo')).toBeInTheDocument();
+      // Should fall back to default behavior and render core UI
+      expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
     });
   });
 });
