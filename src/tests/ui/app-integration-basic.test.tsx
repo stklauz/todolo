@@ -1,11 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import TodoApp from '../renderer/features/todos/components/TodoApp';
-import * as storage from '../renderer/features/todos/api/storage';
+import TodoApp from '../../renderer/features/todos/components/TodoApp';
+import * as storage from '../../renderer/features/todos/api/storage';
 
 // Mock the storage module
-jest.mock('../renderer/features/todos/api/storage');
+jest.mock('../../renderer/features/todos/api/storage');
 const mockStorage = storage as jest.Mocked<typeof storage>;
 
 describe('E2E Basic Flow Tests', () => {
@@ -77,9 +78,11 @@ describe('E2E Basic Flow Tests', () => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
       });
 
-      // Find the textarea and add a todo
+      // Find the textarea and add a todo (user-typed)
       const textarea = screen.getByRole('textbox');
-      fireEvent.change(textarea, { target: { value: 'Test todo' } });
+      const user = userEvent.setup();
+      await user.click(textarea);
+      await user.type(textarea, 'Test todo');
 
       // Wait for debounced save
       await waitFor(() => {
@@ -97,7 +100,9 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       const textarea = screen.getByRole('textbox');
-      fireEvent.change(textarea, { target: { value: 'Test todo' } });
+      const user = userEvent.setup();
+      await user.click(textarea);
+      await user.type(textarea, 'Test todo');
 
       // Should not crash on save failure
       await waitFor(() => {

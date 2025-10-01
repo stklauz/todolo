@@ -23,3 +23,9 @@ Follow-ups from T4
 - Broaden API coverage to `saveAppSettings` with IPC contract + failure/malformed cases (tie-in with T5/T6 negative-path UX assertions).
 - Expand malformed payload shapes for `loadListsIndex` and `loadListTodos` (e.g., non-array `lists`, missing `version`, malformed `todos` items) to support T7 robustness.
 - Add positive-path debug/perf logging assertions for storage operations when debug mode is enabled (complements T3 – Debug Logger coverage).
+
+Notes
+- Carry-over from T5 review to cover here:
+  - Enter on empty todo does nothing (no insert, no save, focus unchanged).
+  - Backspace constraints: deleting an empty todo outdents first; cannot delete the last remaining todo.
+  - Must always have at least one todo per list (an empty one is allowed; its checkbox must be disabled).

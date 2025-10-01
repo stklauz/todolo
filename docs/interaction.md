@@ -36,3 +36,6 @@ Keyboard
 App:
 - Closing the app and opening it again should bring your latest changes, so you dont lose any work. That means each time a todo or list is added, edited or deleted, each action should be saved.
 - The app has settings, such as displaying / hidding completed items.
+
+Rename mode
+- When starting a list rename (e.g., after creating a list), the title input gains focus and todo inputs do not automatically steal focus. Keyboard interactions that would normally move focus between todos (like inserting a new line) should not override the title editing focus until rename completes or is cancelled.
