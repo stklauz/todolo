@@ -37,3 +37,10 @@
 ### Versioning
 - IPC object shapes continue using `version: 2` for compatibility.
 
+### Renderer Validation
+- The renderer validates incoming payloads defensively:
+  - Lists index must have `version: 2` and `lists` as an array.
+  - Each list item must include `id`, `name`, and `createdAt` as strings; invalid items are filtered out with a warn log.
+  - `selectedListId` is only preserved if it refers to a remaining valid list; otherwise it is cleared.
+  - List todos must have `version: 2` and `todos` as an array; malformed payloads fall back to `{ version: 2, todos: [] }` with a warn log.
+  - Any IPC error returns safe defaults without throwing.

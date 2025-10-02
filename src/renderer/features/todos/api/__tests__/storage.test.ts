@@ -16,6 +16,7 @@ describe('Storage API (minimal)', () => {
   afterEach(() => {
     // Ensure no state persists across tests
     debugLogger.clear();
+    debugLogger.disable();
   });
 
   describe('loadListsIndex', () => {
@@ -57,6 +58,22 @@ describe('Storage API (minimal)', () => {
 
       const result = await loadListsIndex();
       expect(result).toEqual({ version: 2, lists: [], selectedListId: undefined });
+    });
+
+    test('wrong version: valid shape but version != 2 → safe default and warn', async () => {
+      debugLogger.enable();
+      const mockInvoke = getInvokeMock();
+      mockInvoke.mockResolvedValue({
+        version: 3,
+        lists: [{ id: 'x', name: 'X', createdAt: '2024-01-01T00:00:00.000Z' }],
+        selectedListId: 'x',
+      } as any);
+
+      const result = await loadListsIndex();
+      expect(result).toEqual({ version: 2, lists: [], selectedListId: undefined });
+      const warns = debugLogger.getLogs().filter((l) => l.level === 'warn');
+      const operations = warns.map((e) => e.operation).join(' | ');
+      expect(operations).toContain('Malformed lists index payload');
     });
   });
 
@@ -135,6 +152,30 @@ describe('Storage API (minimal)', () => {
       const res = await loadListTodos('x');
       expect(mockInvoke).toHaveBeenCalledWith('load-list-todos', 'x');
       expect(res).toEqual({ version: 2, todos: [] });
+    });
+
+    test('malformed payload: wrong type for todos → safe default and warn', async () => {
+      debugLogger.enable();
+      const mockInvoke = getInvokeMock();
+      mockInvoke.mockResolvedValue({ version: 2, todos: 'nope' } as any);
+
+      const res = await loadListTodos('list-123');
+      expect(res).toEqual({ version: 2, todos: [] });
+      const warns = debugLogger.getLogs().filter((l) => l.level === 'warn');
+      const operations = warns.map((e) => e.operation).join(' | ');
+      expect(operations).toContain('Malformed todos payload');
+    });
+
+    test('wrong version: version != 2 with valid todos → safe default and warn', async () => {
+      debugLogger.enable();
+      const mockInvoke = getInvokeMock();
+      mockInvoke.mockResolvedValue({ version: 3, todos: [] } as any);
+
+      const res = await loadListTodos('list-abc');
+      expect(res).toEqual({ version: 2, todos: [] });
+      const warns = debugLogger.getLogs().filter((l) => l.level === 'warn');
+      const operations = warns.map((e) => e.operation).join(' | ');
+      expect(operations).toContain('Malformed todos payload');
     });
   });
 });
