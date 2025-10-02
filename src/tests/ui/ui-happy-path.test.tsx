@@ -1,33 +1,18 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import userEvent from '@testing-library/user-event';
+// user-event is provided via setupUser() from test utils
 
-import TodoApp from '../../renderer/features/todos/components/TodoApp';
 import * as storage from '../../renderer/features/todos/api/storage';
+import { renderAppWithDefaults, setupDefaultMocks, mockStorage, setupUser } from '../utils/ui';
 
-// Mock the storage module
+// Mock the storage module (util relies on the same module reference)
 jest.mock('../../renderer/features/todos/api/storage');
-const mockStorage = storage as jest.Mocked<typeof storage>;
 
 describe('UI Happy Path – user interactions', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.clearAllMocks();
-    // Stable default storage mocks
-    mockStorage.loadAppSettings.mockResolvedValue({ hideCompletedItems: true });
-    // One existing list selected to avoid first-run creation noise
-    mockStorage.loadListsIndex.mockResolvedValue({
-      version: 2,
-      lists: [{ id: 'list-1', name: 'My Todos', createdAt: '2024-01-01T00:00:00.000Z' }],
-      selectedListId: 'list-1',
-    });
-    // Provide a single empty todo to avoid seed/save on first load
-    mockStorage.loadListTodos.mockResolvedValue({ version: 2, todos: [
-      { id: 1, text: '', completed: false, indent: 0 },
-    ] });
-    mockStorage.saveListsIndex.mockResolvedValue(true);
-    mockStorage.saveListTodos.mockResolvedValue(true);
+    setupDefaultMocks();
   });
 
   afterEach(() => {
@@ -35,7 +20,7 @@ describe('UI Happy Path – user interactions', () => {
   });
 
   it('allows typing a todo and adding a new line with Enter, saving debounced changes once', async () => {
-    render(<TodoApp />);
+    renderAppWithDefaults();
 
     // Wait for initialization
     await waitFor(() => expect(mockStorage.loadListsIndex).toHaveBeenCalled());
@@ -47,7 +32,7 @@ describe('UI Happy Path – user interactions', () => {
     expect(screen.getAllByLabelText('Todo text').length).toBeGreaterThanOrEqual(1);
 
     // Interact using user-event with fake timers support
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const user = setupUser();
 
     const input = screen.getByLabelText('Todo text');
     await user.click(input);
@@ -86,12 +71,12 @@ describe('UI Happy Path – user interactions', () => {
   });
 
   it('debounces across continuous typing and saves once after pause', async () => {
-    render(<TodoApp />);
+    renderAppWithDefaults();
 
     await waitFor(() => expect(mockStorage.loadListsIndex).toHaveBeenCalled());
     await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const user = setupUser();
     const input = screen.getByLabelText('Todo text');
     await user.click(input);
     await user.type(input, 'Buy');
@@ -107,12 +92,12 @@ describe('UI Happy Path – user interactions', () => {
   });
 
   it('can create a new list, type a todo, and insert with Enter (debounced + immediate saves)', async () => {
-    render(<TodoApp />);
+    renderAppWithDefaults();
 
     await waitFor(() => expect(mockStorage.loadListsIndex).toHaveBeenCalled());
     await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const user = setupUser();
 
     // Create/select list via sidebar action
     const addListBtn = screen.getByRole('button', { name: /add list/i });
