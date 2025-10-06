@@ -14,7 +14,8 @@ export type Channels =
   | 'save-app-settings'
   | 'toggle-debug-mode'
   | 'duplicate-list'
-  | 'set-selected-list-meta';
+  | 'set-selected-list-meta'
+  | 'delete-list';
 
 const electronHandler = {
   ipcRenderer: {

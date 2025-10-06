@@ -1,6 +1,5 @@
 import path from 'path';
 import { app } from 'electron';
-import fs from 'fs';
 import crypto from 'crypto';
 
 // We use better-sqlite3 for fast, local, embedded storage in the main process
@@ -37,24 +36,20 @@ let db: DB | null = null;
 
 const getUserDataDir = () => app.getPath('userData');
 
-function getDbPath() {
-  // Always use the Electron userData directory; no env overrides in any mode.
-  const dir = getUserDataDir();
-  const dbPath = path.join(dir, 'todolo.db');
-  // Use Electron userData directory for storage
-
-  // Ensure the target directory exists
-  try {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      // created userData directory
-    }
-  } catch (error) {
-    console.error(`[DB] Failed to create directory ${dir}:`, error);
-    throw new Error(`Cannot create database directory: ${dir}`);
+function safeJoinUserData(filename: string): string {
+  if (filename !== 'todolo.db') {
+    throw new Error('Invalid filename for database');
   }
+  const base = path.resolve(getUserDataDir());
+  const full = path.resolve(base, filename);
+  if (!full.startsWith(base + path.sep)) {
+    throw new Error('Unsafe database path');
+  }
+  return full;
+}
 
-  // database path resolved
+function getDbPath() {
+  const dbPath = safeJoinUserData('todolo.db');
   return dbPath;
 }
 
@@ -186,12 +181,30 @@ export function saveListsIndex(index: ListsIndexV2): {
 } {
   const database = openDatabase();
   try {
+    // Observability: summarize incoming index save
+    try {
+      const incomingIds = index.lists.map((l) => l.id);
+      console.log(
+        `[DB] saveListsIndex called with ${incomingIds.length} lists; selected=${index.selectedListId ?? 'none'}`,
+      );
+    } catch {}
+
     const existing = new Set<string>(
       database
         .prepare('SELECT id FROM lists')
         .all()
         .map((r: any) => r.id),
     );
+    // Compute which existing lists are NOT present in the incoming index document
+    // We intentionally do not delete these here to avoid accidental data loss.
+    const requested = new Set(index.lists.map((l) => l.id));
+    const missing = Array.from(existing).filter((id) => !requested.has(id));
+    if (missing.length > 0) {
+      console.warn(
+        '[DB] saveListsIndex: deletions are disabled here; missing ids will NOT be deleted:',
+        missing,
+      );
+    }
     // Do NOT delete missing lists on index save to avoid
     // accidental data loss during startup/HMR when partial
     // state may be sent from the renderer.
@@ -231,8 +244,14 @@ export function saveListsIndex(index: ListsIndexV2): {
 
     // Force WAL checkpoint after each save to ensure data persistence
     database.pragma('wal_checkpoint(FULL)');
+    try {
+      console.log(
+        `[DB] saveListsIndex succeeded; upserted=${index.lists.length}; selected=${index.selectedListId ?? 'none'}`,
+      );
+    } catch {}
     return { success: true };
   } catch (e: any) {
+    console.error('[DB] saveListsIndex error:', e);
     return { success: false, error: e?.message || String(e) };
   }
 }
@@ -422,5 +441,38 @@ export function duplicateList(
   } catch (e) {
     console.error('[DB] Error duplicating list:', e);
     return { success: false, error: 'internal_error' };
+  }
+}
+
+export function deleteList(listId: string): {
+  success: boolean;
+  error?: string;
+} {
+  const database = openDatabase();
+  try {
+    if (!listId || typeof listId !== 'string') {
+      return { success: false, error: 'invalid_list_id' };
+    }
+    console.log('[DB] deleteList called', { listId });
+    const delTodos = database.prepare('DELETE FROM todos WHERE list_id = ?');
+    const delList = database.prepare('DELETE FROM lists WHERE id = ?');
+    const getSelected = database
+      .prepare('SELECT value FROM meta WHERE key = ?')
+      .get('selectedListId');
+    const clearMeta = database.prepare('DELETE FROM meta WHERE key = ?');
+    const tx = database.transaction(() => {
+      delTodos.run(listId);
+      delList.run(listId);
+      if (getSelected && String(getSelected.value) === listId) {
+        clearMeta.run('selectedListId');
+      }
+    });
+    tx();
+    database.pragma('wal_checkpoint(FULL)');
+    console.log('[DB] deleteList succeeded', { listId });
+    return { success: true };
+  } catch (e: any) {
+    console.error('[DB] deleteList error:', e);
+    return { success: false, error: e?.message || String(e) };
   }
 }

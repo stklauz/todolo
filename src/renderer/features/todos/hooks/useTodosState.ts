@@ -5,6 +5,7 @@ import {
   loadListTodos,
   saveListTodos,
   duplicateList as duplicateListApi,
+  deleteList as deleteListApi,
   setSelectedListMeta,
 } from '../api/storage';
 import type { EditorTodo, TodoList } from '../types';
@@ -547,6 +548,17 @@ export default function useTodosState() {
   }
   function deleteSelectedList() {
     if (!selectedListId) return;
+    // Fire-and-forget persistent delete in DB
+    deleteListApi(selectedListId).catch((error) => {
+      debugLogger.log('error', 'DB deleteSelectedList failed', {
+        selectedListId,
+        error,
+      });
+    });
+    debugLogger.log('info', 'deleteSelectedList called', {
+      selectedListId,
+      listCountBefore: listsRef.current.length,
+    });
     setLists((prev) => {
       const remaining = prev.filter((l) => l.id !== selectedListId);
       const nextSelected = remaining[0]?.id ?? null;
@@ -563,13 +575,25 @@ export default function useTodosState() {
           })),
           selectedListId: nextSelected ?? undefined,
         };
-        saveListsIndex(indexDoc).catch((error) => {
-          debugLogger.log(
-            'error',
-            'Failed to persist index after deleteSelectedList',
-            error,
-          );
-        });
+        saveListsIndex(indexDoc)
+          .then((ok) => {
+            debugLogger.log(
+              ok ? 'info' : 'error',
+              'Persisted index after deleteSelectedList',
+              {
+                success: ok,
+                listCountAfter: indexDoc.lists.length,
+                nextSelected,
+              },
+            );
+          })
+          .catch((error) => {
+            debugLogger.log(
+              'error',
+              'Failed to persist index after deleteSelectedList',
+              error,
+            );
+          });
       } catch {}
       return remaining;
     });
@@ -578,6 +602,14 @@ export default function useTodosState() {
   }
 
   function deleteList(id: string) {
+    // Fire-and-forget persistent delete in DB
+    deleteListApi(id).catch((error) => {
+      debugLogger.log('error', 'DB deleteList failed', { id, error });
+    });
+    debugLogger.log('info', 'deleteList called', {
+      id,
+      listCountBefore: listsRef.current.length,
+    });
     setLists((prev) => {
       const remaining = prev.filter((l) => l.id !== id);
       // if we deleted the selected list, update selection
@@ -598,13 +630,26 @@ export default function useTodosState() {
           })),
           selectedListId: nextSelected ?? undefined,
         };
-        saveListsIndex(indexDoc).catch((error) => {
-          debugLogger.log(
-            'error',
-            'Failed to persist index after deleteList',
-            error,
-          );
-        });
+        saveListsIndex(indexDoc)
+          .then((ok) => {
+            debugLogger.log(
+              ok ? 'info' : 'error',
+              'Persisted index after deleteList',
+              {
+                success: ok,
+                deletedId: id,
+                listCountAfter: indexDoc.lists.length,
+                nextSelected,
+              },
+            );
+          })
+          .catch((error) => {
+            debugLogger.log(
+              'error',
+              'Failed to persist index after deleteList',
+              error,
+            );
+          });
       } catch {}
       return remaining;
     });

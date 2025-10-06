@@ -4,6 +4,7 @@ import {
   loadListTodos,
   saveListTodos,
   duplicateList,
+  deleteList,
 } from '../renderer/features/todos/api/storage';
 
 // Mock the electron API
@@ -234,6 +235,27 @@ describe('Storage API', () => {
       const result = await duplicateList('source-list-id');
 
       expect(result).toEqual({ success: false, error: 'internal_error' });
+    });
+  });
+
+  describe('deleteList', () => {
+    it('should call delete-list IPC with id and return success', async () => {
+      mockInvoke.mockResolvedValue({ success: true });
+      const res = await deleteList('some-list-id');
+      expect(res).toEqual({ success: true });
+      expect(mockInvoke).toHaveBeenCalledWith('delete-list', 'some-list-id');
+    });
+
+    it('should return error when IPC fails', async () => {
+      mockInvoke.mockResolvedValue({ success: false, error: 'not_found' });
+      const res = await deleteList('bad-id');
+      expect(res).toEqual({ success: false, error: 'not_found' });
+    });
+
+    it('should return internal_error on exception', async () => {
+      mockInvoke.mockRejectedValue(new Error('boom'));
+      const res = await deleteList('x');
+      expect(res).toEqual({ success: false, error: 'internal_error' });
     });
   });
 });

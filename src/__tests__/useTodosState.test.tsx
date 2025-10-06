@@ -27,6 +27,8 @@ describe('useTodosState', () => {
       newListId: 'new-list-id',
     });
     mockStorage.setSelectedListMeta.mockResolvedValue();
+    // New persistent delete API
+    mockStorage.deleteList.mockResolvedValue({ success: true });
   });
 
   it('should initialize with empty state', async () => {

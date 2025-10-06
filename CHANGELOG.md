@@ -5,6 +5,15 @@ All notable changes to Todolo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-10-06
+
+### Fixed
+- Lists now delete persistently: added explicit DB + IPC delete path to remove lists and their todos. Prevents deleted lists from reappearing on restart.
+
+### Added
+- Targeted logs for delete flow across UI, storage, and DB for observability.
+- Tests for delete behavior: UI integration test driving the delete button, and storage IPC tests for the new delete endpoint.
+
 ## [1.2.0] - 2025-10-06
 
 ### Added

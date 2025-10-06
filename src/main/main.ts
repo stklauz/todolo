@@ -23,6 +23,7 @@ import {
   loadAppSettings as dbLoadAppSettings,
   saveAppSettings as dbSaveAppSettings,
   duplicateList as dbDuplicateList,
+  deleteList as dbDeleteList,
   setSelectedListMeta as dbSetSelectedListMeta,
   closeDatabase,
 } from './db';
@@ -198,6 +199,27 @@ ipcMain.handle(
     }
   },
 );
+
+ipcMain.handle('delete-list', async (_event, listId: unknown) => {
+  const startTime = performance.now();
+  try {
+    console.log(`[PERF] Starting delete-list operation (sqlite)`);
+    if (typeof listId !== 'string' || listId.trim() === '') {
+      return { success: false, error: 'invalid_list_id' } as const;
+    }
+    const res = dbDeleteList(listId);
+    const duration = performance.now() - startTime;
+    console.log(`[PERF] delete-list completed in ${duration.toFixed(2)}ms`);
+    return res;
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    console.error(
+      `[PERF] delete-list failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
+    return { success: false, error: 'internal_error' } as const;
+  }
+});
 
 ipcMain.handle('set-selected-list-meta', async (_event, listId: unknown) => {
   const startTime = performance.now();

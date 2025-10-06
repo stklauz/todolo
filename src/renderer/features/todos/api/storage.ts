@@ -272,3 +272,28 @@ export async function setSelectedListMeta(
     }
   });
 }
+
+export async function deleteList(
+  listId: string,
+): Promise<{ success: boolean } | { success: false; error: string }> {
+  return debugLogger.measureAsync('storage.deleteList', async () => {
+    try {
+      debugLogger.log('info', 'Deleting list', { listId });
+      const res = (await window.electron.ipcRenderer.invoke(
+        'delete-list',
+        listId,
+      )) as { success: boolean; error?: string };
+      debugLogger.log(res.success ? 'info' : 'error', 'Delete list result', {
+        listId,
+        success: res.success,
+        error: res.success ? undefined : res.error,
+      });
+      return res.success
+        ? { success: true }
+        : { success: false, error: res.error || 'unknown_error' };
+    } catch (error) {
+      debugLogger.log('error', 'Failed to delete list', { listId, error });
+      return { success: false, error: 'internal_error' };
+    }
+  });
+}
