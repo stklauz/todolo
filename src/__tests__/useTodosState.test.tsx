@@ -22,6 +22,11 @@ describe('useTodosState', () => {
     });
     mockStorage.saveListsIndex.mockResolvedValue(true);
     mockStorage.saveListTodos.mockResolvedValue(true);
+    mockStorage.duplicateList.mockResolvedValue({
+      success: true,
+      newListId: 'new-list-id',
+    });
+    mockStorage.setSelectedListMeta.mockResolvedValue();
   });
 
   it('should initialize with empty state', async () => {
@@ -260,5 +265,132 @@ describe('useTodosState', () => {
 
     const todosAfter = result.current.getSelectedTodos();
     expect(todosAfter[0].indent).toBe(1);
+  });
+
+  it('should duplicate list successfully', async () => {
+    const mockLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+    ];
+    const mockUpdatedLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: 'new-list-id',
+        name: 'Original List (Copy)',
+        createdAt: '2024-01-02T00:00:00.000Z',
+      },
+    ];
+
+    mockStorage.loadListsIndex
+      .mockResolvedValueOnce({
+        version: 2,
+        lists: mockLists,
+        selectedListId: '1',
+      })
+      .mockResolvedValueOnce({
+        version: 2,
+        lists: mockUpdatedLists,
+        selectedListId: 'new-list-id',
+      });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('1');
+    });
+
+    expect(newListId).toBe('new-list-id');
+    expect(mockStorage.duplicateList).toHaveBeenCalledWith('1', undefined);
+    expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(2); // Once on init, once after duplicate
+    expect(mockStorage.setSelectedListMeta).toHaveBeenCalledWith('new-list-id');
+  });
+
+  it('should duplicate list with custom name', async () => {
+    const mockLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+    ];
+    const mockUpdatedLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: 'new-list-id',
+        name: 'My Custom Name',
+        createdAt: '2024-01-02T00:00:00.000Z',
+      },
+    ];
+
+    mockStorage.loadListsIndex
+      .mockResolvedValueOnce({
+        version: 2,
+        lists: mockLists,
+        selectedListId: '1',
+      })
+      .mockResolvedValueOnce({
+        version: 2,
+        lists: mockUpdatedLists,
+        selectedListId: 'new-list-id',
+      });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('1', 'My Custom Name');
+    });
+
+    expect(newListId).toBe('new-list-id');
+    expect(mockStorage.duplicateList).toHaveBeenCalledWith(
+      '1',
+      'My Custom Name',
+    );
+  });
+
+  it('should return null when duplication fails', async () => {
+    mockStorage.duplicateList.mockResolvedValue({
+      success: false,
+      error: 'not_found',
+    });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('non-existent');
+    });
+
+    expect(newListId).toBe(null);
+    expect(mockStorage.duplicateList).toHaveBeenCalledWith(
+      'non-existent',
+      undefined,
+    );
+    expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(1); // Only on init, not after failed duplicate
+  });
+
+  it('should handle duplication errors gracefully', async () => {
+    mockStorage.duplicateList.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('1');
+    });
+
+    expect(newListId).toBe(null);
   });
 });

@@ -12,7 +12,9 @@ export type Channels =
   | 'save-list-todos'
   | 'load-app-settings'
   | 'save-app-settings'
-  | 'toggle-debug-mode';
+  | 'toggle-debug-mode'
+  | 'duplicate-list'
+  | 'set-selected-list-meta';
 
 const electronHandler = {
   ipcRenderer: {

@@ -215,3 +215,60 @@ export async function saveAppSettings(settings: AppSettings): Promise<boolean> {
     }
   });
 }
+
+type DuplicateListResult =
+  | { success: true; newListId: string }
+  | {
+      success: false;
+      error: 'invalid_source_id' | 'not_found' | 'internal_error';
+    };
+
+export async function duplicateList(
+  sourceListId: string,
+  newListName?: string,
+): Promise<DuplicateListResult> {
+  return debugLogger.measureAsync('storage.duplicateList', async () => {
+    try {
+      debugLogger.log('info', 'Duplicating list', {
+        sourceListId,
+        newListName,
+      });
+      const result = (await window.electron.ipcRenderer.invoke(
+        'duplicate-list',
+        sourceListId,
+        newListName,
+      )) as DuplicateListResult;
+      debugLogger.log(
+        result.success ? 'info' : 'error',
+        'Duplicate list result',
+        result,
+      );
+      return result;
+    } catch (e) {
+      debugLogger.log('error', 'Error duplicating list', {
+        sourceListId,
+        error: e,
+      });
+      return { success: false, error: 'internal_error' };
+    }
+  });
+}
+
+export async function setSelectedListMeta(
+  listId: string | null,
+): Promise<void> {
+  return debugLogger.measureAsync('storage.setSelectedListMeta', async () => {
+    try {
+      debugLogger.log('info', 'Setting selected list meta', { listId });
+      await window.electron.ipcRenderer.invoke(
+        'set-selected-list-meta',
+        listId,
+      );
+    } catch (error) {
+      debugLogger.log('error', 'Failed to set selected list meta', {
+        listId,
+        error,
+      });
+    }
+  });
+}

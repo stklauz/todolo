@@ -4,6 +4,8 @@ import {
   saveListsIndex,
   loadListTodos,
   saveListTodos,
+  duplicateList as duplicateListApi,
+  setSelectedListMeta,
 } from '../api/storage';
 import type { EditorTodo, TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
@@ -594,6 +596,41 @@ export default function useTodosState() {
     [saveWithStrategy],
   );
 
+  function duplicateList(
+    sourceListId: string,
+    newListName?: string,
+  ): Promise<string | null> {
+    return new Promise((resolve) => {
+      duplicateListApi(sourceListId, newListName)
+        .then((result) => {
+          if (result.success && result.newListId) {
+            loadListsIndex()
+              .then((index) => {
+                const normalizedLists = (index.lists || []).map((list, li) => ({
+                  id: String(list.id),
+                  name:
+                    typeof list.name === 'string'
+                      ? list.name
+                      : `List ${li + 1}`,
+                  todos: [],
+                  createdAt: list.createdAt,
+                  updatedAt: list.updatedAt,
+                }));
+                setLists(normalizedLists);
+                // Persist selection via index and meta for redundancy
+                setSelectedListIdWithSave(result.newListId);
+                setSelectedListMeta(result.newListId).catch(() => {});
+                resolve(result.newListId);
+              })
+              .catch(() => resolve(null));
+          } else {
+            resolve(null);
+          }
+        })
+        .catch(() => resolve(null));
+    });
+  }
+
   return {
     lists,
     setLists,
@@ -611,5 +648,6 @@ export default function useTodosState() {
     addList,
     deleteSelectedList,
     deleteList,
+    duplicateList,
   } as const;
 }

@@ -3,6 +3,7 @@ import {
   saveListsIndex,
   loadListTodos,
   saveListTodos,
+  duplicateList,
 } from '../renderer/features/todos/api/storage';
 
 // Mock the electron API
@@ -177,6 +178,62 @@ describe('Storage API', () => {
       const result = await saveListTodos('list-1', { version: 2, todos: [] });
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('duplicateList', () => {
+    it('should duplicate list successfully', async () => {
+      const mockResult = { success: true, newListId: 'new-list-id' };
+      mockInvoke.mockResolvedValue(mockResult);
+
+      const result = await duplicateList('source-list-id');
+
+      expect(result).toEqual(mockResult);
+      expect(mockInvoke).toHaveBeenCalledWith(
+        'duplicate-list',
+        'source-list-id',
+        undefined,
+      );
+    });
+
+    it('should duplicate list with custom name', async () => {
+      const mockResult = { success: true, newListId: 'new-list-id' };
+      mockInvoke.mockResolvedValue(mockResult);
+
+      const result = await duplicateList('source-list-id', 'My Custom Name');
+
+      expect(result).toEqual(mockResult);
+      expect(mockInvoke).toHaveBeenCalledWith(
+        'duplicate-list',
+        'source-list-id',
+        'My Custom Name',
+      );
+    });
+
+    it('should return error when source list not found', async () => {
+      const mockResult = { success: false, error: 'not_found' };
+      mockInvoke.mockResolvedValue(mockResult);
+
+      const result = await duplicateList('non-existent-id');
+
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should return error when source list id is invalid', async () => {
+      const mockResult = { success: false, error: 'invalid_source_id' };
+      mockInvoke.mockResolvedValue(mockResult);
+
+      const result = await duplicateList('');
+
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should return internal error when exception occurs', async () => {
+      mockInvoke.mockRejectedValue(new Error('Network error'));
+
+      const result = await duplicateList('source-list-id');
+
+      expect(result).toEqual({ success: false, error: 'internal_error' });
     });
   });
 });

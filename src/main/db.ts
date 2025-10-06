@@ -121,8 +121,14 @@ function applyMigrations(database: DB) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );`;
+  // Support fast ordered reads of todos by (list_id, order_index)
+  const createTodosListOrderIdx = `
+    CREATE INDEX IF NOT EXISTS todos_list_order_idx
+    ON todos(list_id, order_index);
+  `;
+
   database.exec(
-    `${createMeta}${createLists}${createTodos}${createAppSettings}`,
+    `${createMeta}${createLists}${createTodos}${createTodosListOrderIdx}${createAppSettings}`,
   );
 }
 
@@ -366,5 +372,55 @@ export function setSelectedListMeta(listId: string | null): void {
     }
   } catch (e: any) {
     console.error('[DB] Error setting selectedListId in meta:', e);
+  }
+}
+
+export function duplicateList(
+  sourceListId: string,
+  newListName?: string,
+):
+  | { success: true; newListId: string }
+  | {
+      success: false;
+      error: 'invalid_source_id' | 'not_found' | 'internal_error';
+    } {
+  const database = openDatabase();
+  try {
+    if (!sourceListId || typeof sourceListId !== 'string') {
+      return { success: false, error: 'invalid_source_id' };
+    }
+    const safeName =
+      typeof newListName === 'string' && newListName.trim() !== ''
+        ? newListName.trim().slice(0, 200)
+        : undefined;
+    // Only select what we need for naming
+    const sourceList = database
+      .prepare('SELECT name FROM lists WHERE id = ?')
+      .get(sourceListId);
+    if (!sourceList) return { success: false, error: 'not_found' };
+    const newListId = crypto.randomUUID();
+    const finalName = safeName || `${sourceList.name} (Copy)`;
+    const now = new Date().toISOString();
+    const tx = database.transaction(() => {
+      database
+        .prepare(
+          'INSERT INTO lists (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
+        )
+        .run(newListId, finalName, now, now);
+      // Set-based copy for performance: fewer JS/DB round-trips
+      const copyTodos = database.prepare(
+        `INSERT INTO todos (list_id, id, text, completed, indent, order_index)
+         SELECT @newListId, id, text, completed, indent, order_index
+         FROM todos
+         WHERE list_id = @sourceListId
+         ORDER BY order_index`,
+      );
+      copyTodos.run({ newListId, sourceListId });
+    });
+    tx();
+    return { success: true, newListId };
+  } catch (e) {
+    console.error('[DB] Error duplicating list:', e);
+    return { success: false, error: 'internal_error' };
   }
 }

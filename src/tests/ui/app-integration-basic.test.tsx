@@ -25,6 +25,11 @@ describe('E2E Basic Flow Tests', () => {
     });
     mockStorage.saveListsIndex.mockResolvedValue(true);
     mockStorage.saveListTodos.mockResolvedValue(true);
+    mockStorage.duplicateList.mockResolvedValue({
+      success: true,
+      newListId: 'duplicated-list-id',
+    });
+    mockStorage.setSelectedListMeta.mockResolvedValue();
   });
 
   describe('Basic App Flow', () => {
@@ -187,6 +192,179 @@ describe('E2E Basic Flow Tests', () => {
       expect(
         screen.getByRole('button', { name: /add list/i }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe('Duplicate List Feature', () => {
+    it('should show duplicate list menu item and handle duplication', async () => {
+      const existingLists = [
+        {
+          id: 'list-1',
+          name: 'Work Tasks',
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+
+      mockStorage.loadListsIndex
+        .mockResolvedValueOnce({
+          version: 2,
+          lists: existingLists,
+          selectedListId: 'list-1',
+        })
+        .mockResolvedValueOnce({
+          version: 2,
+          lists: [
+            ...existingLists,
+            {
+              id: 'duplicated-list-id',
+              name: 'Work Tasks (Copy)',
+              createdAt: '2024-01-02T00:00:00.000Z',
+            },
+          ],
+          selectedListId: 'duplicated-list-id',
+        });
+
+      render(<TodoApp />);
+
+      await waitFor(() => {
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled();
+      });
+
+      // Wait for the menu button to be available
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: /list actions/i }),
+        ).toBeInTheDocument();
+      });
+
+      // Find and click the menu button
+      const menuButton = screen.getByRole('button', { name: /list actions/i });
+      const user = userEvent.setup();
+      await user.click(menuButton);
+
+      // Check that duplicate list menu item exists
+      const duplicateButton = screen.getByTestId('menu-duplicate-list');
+      expect(duplicateButton).toBeInTheDocument();
+      expect(duplicateButton).toHaveTextContent('Duplicate list');
+
+      // Click duplicate list
+      await user.click(duplicateButton);
+
+      // Verify the duplicate function was called
+      await waitFor(() => {
+        expect(mockStorage.duplicateList).toHaveBeenCalledWith(
+          'list-1',
+          undefined,
+        );
+      });
+
+      // Verify that the lists were reloaded after duplication
+      await waitFor(() => {
+        expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('should show duplicate button and handle duplication', async () => {
+      const existingLists = [
+        {
+          id: 'list-1',
+          name: 'Work Tasks',
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+
+      mockStorage.loadListsIndex.mockResolvedValue({
+        version: 2,
+        lists: existingLists,
+        selectedListId: 'list-1',
+      });
+
+      render(<TodoApp />);
+
+      // Wait for the app to fully load and render the menu button
+      await waitFor(() => {
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: /list actions/i }),
+        ).toBeInTheDocument();
+      });
+
+      // Open menu
+      const menuButton = screen.getByRole('button', { name: /list actions/i });
+      const user = userEvent.setup();
+      await user.click(menuButton);
+
+      // Verify duplicate button exists and is not disabled initially
+      const duplicateButton = screen.getByTestId('menu-duplicate-list');
+      expect(duplicateButton).toBeInTheDocument();
+      expect(duplicateButton).not.toBeDisabled();
+
+      // Click duplicate
+      await user.click(duplicateButton);
+
+      // Verify the duplicate function was called
+      await waitFor(() => {
+        expect(mockStorage.duplicateList).toHaveBeenCalledWith(
+          'list-1',
+          undefined,
+        );
+      });
+    });
+
+    it('should handle duplicate list failure gracefully', async () => {
+      const existingLists = [
+        {
+          id: 'list-1',
+          name: 'Work Tasks',
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
+
+      mockStorage.loadListsIndex.mockResolvedValue({
+        version: 2,
+        lists: existingLists,
+        selectedListId: 'list-1',
+      });
+
+      mockStorage.duplicateList.mockResolvedValue({
+        success: false,
+        error: 'not_found',
+      });
+
+      render(<TodoApp />);
+
+      await waitFor(() => {
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled();
+      });
+
+      // Wait for the menu button to be available
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', { name: /list actions/i }),
+        ).toBeInTheDocument();
+      });
+
+      // Open menu and click duplicate
+      const menuButton = screen.getByRole('button', { name: /list actions/i });
+      const user = userEvent.setup();
+      await user.click(menuButton);
+
+      const duplicateButton = screen.getByTestId('menu-duplicate-list');
+      await user.click(duplicateButton);
+
+      // Verify the duplicate function was called
+      await waitFor(() => {
+        expect(mockStorage.duplicateList).toHaveBeenCalledWith(
+          'list-1',
+          undefined,
+        );
+      });
+
+      // Should not reload lists on failure
+      expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -22,6 +22,8 @@ import {
   saveListTodos as dbSaveListTodos,
   loadAppSettings as dbLoadAppSettings,
   saveAppSettings as dbSaveAppSettings,
+  duplicateList as dbDuplicateList,
+  setSelectedListMeta as dbSetSelectedListMeta,
   closeDatabase,
 } from './db';
 
@@ -166,6 +168,53 @@ ipcMain.handle('save-app-settings', async (_event, settings: any) => {
       error,
     );
     return { success: false, error: String(error) };
+  }
+});
+
+ipcMain.handle(
+  'duplicate-list',
+  async (_event, sourceListId: unknown, newListName?: unknown) => {
+    const startTime = performance.now();
+    try {
+      console.log(`[PERF] Starting duplicate-list operation (sqlite)`);
+      if (typeof sourceListId !== 'string' || sourceListId.trim() === '') {
+        return { success: false, error: 'invalid_source_id' } as const;
+      }
+      const safeName =
+        typeof newListName === 'string' ? newListName : undefined;
+      const result = dbDuplicateList(sourceListId, safeName);
+      const duration = performance.now() - startTime;
+      console.log(
+        `[PERF] duplicate-list completed in ${duration.toFixed(2)}ms`,
+      );
+      return result;
+    } catch (error) {
+      const duration = performance.now() - startTime;
+      console.error(
+        `[PERF] duplicate-list failed after ${duration.toFixed(2)}ms:`,
+        error,
+      );
+      return { success: false, error: 'internal_error' } as const;
+    }
+  },
+);
+
+ipcMain.handle('set-selected-list-meta', async (_event, listId: unknown) => {
+  const startTime = performance.now();
+  try {
+    console.log(`[PERF] Starting set-selected-list-meta operation (sqlite)`);
+    const safeListId = typeof listId === 'string' ? listId : null;
+    dbSetSelectedListMeta(safeListId);
+    const duration = performance.now() - startTime;
+    console.log(
+      `[PERF] set-selected-list-meta completed in ${duration.toFixed(2)}ms`,
+    );
+  } catch (error) {
+    const duration = performance.now() - startTime;
+    console.error(
+      `[PERF] set-selected-list-meta failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
   }
 });
 

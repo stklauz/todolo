@@ -28,12 +28,17 @@ export default function TodoApp(): React.ReactElement {
     insertTodoBelow,
     addList,
     deleteList,
+    duplicateList,
   } = useTodosState();
 
   // App settings state
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
   });
+
+  // Duplicate list state
+  const [isDuplicating, setIsDuplicating] = React.useState(false);
+  const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
 
   // Load app settings on mount
   React.useEffect(() => {
@@ -325,6 +330,20 @@ export default function TodoApp(): React.ReactElement {
     isEditingRef.current = false;
   }
 
+  const handleDuplicate = async () => {
+    if (isDuplicating || !selectedListId) return;
+    try {
+      setIsDuplicating(true);
+      setStatusMessage('Duplicating…');
+      const newId = await duplicateList(selectedListId);
+      setStatusMessage(
+        newId ? 'List duplicated' : "Couldn't duplicate this list. Try again.",
+      );
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   // no debug globals/logs
 
   return (
@@ -407,6 +426,8 @@ export default function TodoApp(): React.ReactElement {
               updatedAt={selectedList.updatedAt}
               canDelete={lists.length > 1}
               onDelete={() => deleteList(selectedList.id)}
+              onDuplicate={handleDuplicate}
+              isDuplicating={isDuplicating}
               appSettings={appSettings}
               onUpdateAppSettings={updateAppSettings}
             />
@@ -453,6 +474,21 @@ export default function TodoApp(): React.ReactElement {
           setInputRef={setInputRef}
         />
       </div>
+
+      {/* ARIA live region for status messages */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          overflow: 'hidden',
+          clip: 'rect(1px, 1px, 1px, 1px)',
+        }}
+      >
+        {statusMessage}
+      </div>
     </div>
   );
 }
@@ -462,6 +498,8 @@ type ActionsRowProps = {
   updatedAt?: string;
   canDelete: boolean;
   onDelete: () => void;
+  onDuplicate: () => void;
+  isDuplicating: boolean;
   appSettings: AppSettings;
   onUpdateAppSettings: (settings: AppSettings) => void;
 };
@@ -471,6 +509,8 @@ function ActionsRow({
   updatedAt,
   canDelete,
   onDelete,
+  onDuplicate,
+  isDuplicating,
   appSettings,
   onUpdateAppSettings,
 }: ActionsRowProps) {
@@ -523,8 +563,22 @@ function ActionsRow({
           <div className={styles.menuDivider} />
           <button
             type="button"
+            className={styles.menuItem}
+            role="menuitem"
+            data-testid="menu-duplicate-list"
+            onClick={() => {
+              setOpen(false);
+              onDuplicate();
+            }}
+            disabled={isDuplicating}
+          >
+            Duplicate list
+          </button>
+          <button
+            type="button"
             className={styles.menuItemDanger}
             role="menuitem"
+            data-testid="menu-delete-list"
             onClick={() => {
               setOpen(false);
               if (canDelete) onDelete();
