@@ -15,11 +15,10 @@ LLM-Friendly Spec (Authoritative)
   - IPC: src/main/main.ts
   - Storage: src/renderer/features/todos/api/storage.ts
   - State: src/renderer/features/todos/hooks/useTodosState.ts
-  - UI: src/renderer/features/todos/components/ListSidebar.tsx
+  - UI: src/renderer/features/todos/components/TodoApp.tsx (title actions), src/renderer/features/todos/components/ListSidebar.tsx (list display)
 - IPC Contract: duplicate-list(sourceListId: string, newListName?: string) →
   - Success: { success: true, newListId: string }
   - Failure: { success: false, error: ErrorCode }
 - ErrorCode: 'invalid_source_id' | 'not_found' | 'internal_error'
 - Determinism: copy todos reusing id and order_index under the new list_id.
-- UX: Context menu entry "Duplicate list" above "Delete list"; disable while duplicating; ARIA live announces status.
-
+- UX: Title actions menu shows "Duplicate list" above "Delete list"; disable while duplicating; ARIA live announces status.
