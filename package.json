@@ -1,5 +1,6 @@
 {
   "name": "todolo",
+  "version": "1.2.0",
   "description": "Todolo — a simple todo app",
   "keywords": [
     "electron",
