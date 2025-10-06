@@ -7,8 +7,10 @@ You are an AI assistant helping with the Todolo project. Follow these developmen
 2. Always include tests with your suggestions
 3. Include proper error handling and input validation
 4. Keep changes small and incremental
+5. Prefer simpler solutions over clever ones when equivalent
 
 ## Core Development Principles
+- Favor low complexity while maintaining quality, performance, and clarity
 - Think in slices: deliver a safe, testable increment first
 - Prefer composition and small functions; keep boundaries clean
 - Start from reuse: search for existing helpers before writing new ones
@@ -39,6 +41,7 @@ You are an AI assistant helping with the Todolo project. Follow these developmen
 - No unnecessary duplication - extract shared utilities immediately
 - Clear, descriptive variable and function names
 - Proper error handling with helpful error messages
+- Organize files/code according to framework/library best practices
 
 ## Project Context
 - This is an Electron-based todo application

@@ -311,6 +311,195 @@ describe('useTodosState', () => {
     expect(mockStorage.setSelectedListMeta).toHaveBeenCalledWith('new-list-id');
   });
 
+  it('should duplicate list with completed todos properly mirrored', async () => {
+    const mockLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+    ];
+
+    // Mock the source list with some completed todos
+    const sourceTodos = [
+      { id: 1, text: 'Task 1', completed: true, indent: 0 },
+      { id: 2, text: 'Task 2', completed: false, indent: 0 },
+      { id: 3, text: 'Task 3', completed: true, indent: 0 },
+    ];
+
+    // Mock the duplicated list todos (should mirror the source)
+    const duplicatedTodos = [
+      { id: 1, text: 'Task 1', completed: true, indent: 0 },
+      { id: 2, text: 'Task 2', completed: false, indent: 0 },
+      { id: 3, text: 'Task 3', completed: true, indent: 0 },
+    ];
+
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: mockLists,
+      selectedListId: '1',
+    });
+
+    // Mock loadListTodos for the duplicated list
+    mockStorage.loadListTodos.mockResolvedValue({
+      version: 2,
+      todos: duplicatedTodos,
+    });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('1');
+    });
+
+    expect(newListId).toBe('new-list-id');
+    expect(mockStorage.duplicateList).toHaveBeenCalledWith('1', undefined);
+    expect(mockStorage.loadListTodos).toHaveBeenCalledWith('new-list-id');
+    expect(mockStorage.setSelectedListMeta).toHaveBeenCalledWith('new-list-id');
+
+    // Verify the duplicated list has the correct todos with completion status
+    const duplicatedList = result.current.lists.find(
+      (l) => l.id === 'new-list-id',
+    );
+    expect(duplicatedList).toBeDefined();
+    expect(duplicatedList?.todos).toHaveLength(3);
+    expect(duplicatedList?.todos[0].completed).toBe(true);
+    expect(duplicatedList?.todos[1].completed).toBe(false);
+    expect(duplicatedList?.todos[2].completed).toBe(true);
+  });
+
+  it('should mirror completion when toggled then immediately duplicated', async () => {
+    // Start with one list selected
+    const mockLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+    ];
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: mockLists,
+      selectedListId: '1',
+    });
+
+    // When duplicating, the hook will load todos for the new list id
+    mockStorage.loadListTodos.mockResolvedValue({ version: 2, todos: [] });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    // Build current list state entirely through the public API
+    act(() => {
+      result.current.addTodoAtEnd('Task 1');
+      result.current.addTodoAtEnd('Task 2');
+    });
+
+    // Toggle completion of the 'Task 1' todo (not the seed)
+    act(() => {
+      const todos = result.current.getSelectedTodos();
+      const task1 = todos.find((t) => t.text === 'Task 1');
+      expect(task1).toBeDefined();
+      result.current.toggleTodo(task1!.id);
+    });
+
+    // Prepare duplicated list payload to mirror current state
+    const currentTodos = result.current.getSelectedTodos();
+    mockStorage.loadListTodos.mockResolvedValueOnce({
+      version: 2,
+      todos: currentTodos.map((t) => ({
+        id: t.id,
+        text: t.text,
+        completed: t.completed,
+        indent: t.indent as number,
+      })),
+    });
+
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('1');
+    });
+
+    expect(newListId).toBe('new-list-id');
+
+    const duplicated = result.current.lists.find((l) => l.id === 'new-list-id');
+    expect(duplicated).toBeDefined();
+    expect((duplicated?.todos || []).length).toBeGreaterThanOrEqual(2);
+    // Because seed behavior may exist, assert by matching by text
+    const byText: Record<string, boolean> = Object.fromEntries(
+      (duplicated?.todos || []).map((t) => [t.text, t.completed]),
+    );
+    expect(byText['Task 1']).toBe(true);
+    expect(byText['Task 2']).toBe(false);
+  });
+
+  it('should force save before duplicating current list to prevent race conditions', async () => {
+    const mockLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+    ];
+
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: mockLists,
+      selectedListId: '1',
+    });
+
+    // Mock loadListTodos for the duplicated list
+    mockStorage.loadListTodos.mockResolvedValue({
+      version: 2,
+      todos: [
+        { id: 1, text: 'Task 1', completed: true, indent: 0 },
+        { id: 2, text: 'Task 2', completed: false, indent: 0 },
+      ],
+    });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    // Mock saveListTodos to control resolution and assert ordering
+    let resolveSave!: () => void;
+    const savePromise = new Promise<boolean>((resolve) => {
+      resolveSave = () => resolve(true);
+    });
+    const saveListTodosSpy = jest.fn().mockImplementation(() => savePromise);
+    mockStorage.saveListTodos = saveListTodosSpy as any;
+
+    const duplicateSpy = jest
+      .spyOn(mockStorage, 'duplicateList')
+      .mockResolvedValue({ success: true, newListId: 'new-list-id' });
+
+    let newListId: string | null = null;
+    const dupPromise = act(async () => {
+      newListId = await result.current.duplicateList('1');
+    });
+
+    // Ensure duplicate isn't invoked before save resolves
+    expect(duplicateSpy).not.toHaveBeenCalled();
+
+    // Resolve save and allow flow to continue
+    resolveSave();
+    await dupPromise;
+
+    expect(newListId).toBe('new-list-id');
+    expect(mockStorage.duplicateList).toHaveBeenCalledWith('1', undefined);
+
+    // Verify that save was called and awaited before duplicate
+    expect(saveListTodosSpy).toHaveBeenCalled();
+    expect(duplicateSpy).toHaveBeenCalledWith('1', undefined);
+
+    // Verify the duplicated list has the correct todos
+    const duplicatedList = result.current.lists.find(
+      (l) => l.id === 'new-list-id',
+    );
+    expect(duplicatedList).toBeDefined();
+    expect(duplicatedList?.todos).toHaveLength(2);
+    expect(duplicatedList?.todos[0].completed).toBe(true);
+    expect(duplicatedList?.todos[1].completed).toBe(false);
+  });
+
   it('should duplicate list with custom name', async () => {
     const mockLists = [
       { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },

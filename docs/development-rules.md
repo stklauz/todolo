@@ -3,6 +3,8 @@
 Use this as a simple, implementation‑doc checklist. Keep changes small, incremental, and well‑tested.
 
 ## Quick Checklist (TL;DR)
+- Prefer the simplest solution that meets requirements; minimize complexity.
+- Keep files and code organized per framework/library best practices.
 - Define the problem and success criteria.
 - Reuse existing code/utilities; avoid duplication.
 - Design minimal interfaces and data flow; name things clearly.
@@ -14,6 +16,8 @@ Use this as a simple, implementation‑doc checklist. Keep changes small, increm
 - Run tests; remove dead code and noisy logs.
 
 ## Style (How to Code in this project)
+- Bias toward clarity over cleverness; optimize for readability and maintainability.
+- Organize code following the conventions of the tool you’re using (React/Electron/Jest/TS).
 - Think in slices: deliver a safe, testable increment first.
 - Prefer composition and small functions; keep boundaries clean.
 - Start from reuse: search for existing helpers before writing new ones.

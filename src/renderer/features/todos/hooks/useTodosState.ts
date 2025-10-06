@@ -211,7 +211,6 @@ export default function useTodosState() {
         listId: selectedListId,
         todoCount: selected.todos.length,
         delay: type === 'debounced' ? delay : 0,
-        todos: selected.todos,
       });
 
       if (type === 'immediate') {
@@ -243,6 +242,36 @@ export default function useTodosState() {
     },
     [lists, selectedListId],
   );
+
+  // Deterministic flush of current list todos: cancels debounce and awaits save
+  const flushCurrentTodos = React.useCallback(async (): Promise<boolean> => {
+    const listId = selectedListIdRef.current;
+    if (!listId) return false;
+    if (!loadedListsRef.current.has(listId)) return false;
+    const snapshot = listsRef.current.find((l) => l.id === listId);
+    if (!snapshot) return false;
+
+    // Cancel any pending debounced save
+    if (todosSaveTimerRef.current) {
+      window.clearTimeout(todosSaveTimerRef.current);
+      todosSaveTimerRef.current = null;
+    }
+
+    try {
+      debugLogger.log('info', 'Flushing todos (awaiting save)', {
+        listId,
+        todoCount: snapshot.todos.length,
+      });
+      const ok = await saveListTodos(listId, {
+        version: 2,
+        todos: snapshot.todos,
+      });
+      return ok;
+    } catch (error) {
+      debugLogger.log('error', 'Failed to flush todos', { listId, error });
+      return false;
+    }
+  }, []);
 
   // Helpers
   const nextId = () => {
@@ -689,35 +718,82 @@ export default function useTodosState() {
     newListName?: string,
   ): Promise<string | null> {
     return new Promise((resolve) => {
-      duplicateListApi(sourceListId, newListName)
-        .then((result) => {
-          if (result.success && result.newListId) {
-            // Instead of reloading all lists from storage, just add the new list to current state
-            // This prevents deleted lists from reappearing
-            const sourceList = lists.find((l) => l.id === sourceListId);
-            if (sourceList) {
-              const newList = {
-                id: result.newListId,
-                name: newListName || `${sourceList.name} (Copy)`,
-                todos: [],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-              setLists((prev) => [...prev, newList]);
-              // Persist selection via index and meta for redundancy
-              setSelectedListIdWithSave(result.newListId);
-              setSelectedListMeta(result.newListId).catch(() => {});
-              // Selection and meta are persisted; no full index reload here to avoid
-              // reintroducing deleted lists due to save timing.
-              resolve(result.newListId);
+      // Ensure any pending saves for the source list are completed deterministically
+      // to prevent race conditions where recent changes haven't been saved yet
+      const sourceList = lists.find((l) => l.id === sourceListId);
+      const proceed = async () => {
+        duplicateListApi(sourceListId, newListName)
+          .then(async (result) => {
+            if (result.success && result.newListId) {
+              // Instead of reloading all lists from storage, just add the new list to current state
+              // This prevents deleted lists from reappearing
+              if (sourceList) {
+                // Load the todos for the newly duplicated list to ensure completed items are mirrored
+                try {
+                  const fetched = await loadListTodos(result.newListId);
+                  const todosNorm: EditorTodo[] = (fetched.todos || []).map(
+                    (t: any, i: number) => ({
+                      id: typeof t.id === 'number' ? t.id : i + 1,
+                      text: typeof t.text === 'string' ? t.text : '',
+                      completed: Boolean(t.completed),
+                      indent: typeof t.indent === 'number' ? t.indent : 0,
+                    }),
+                  );
+
+                  const newList = {
+                    id: result.newListId,
+                    name: newListName || `${sourceList.name} (Copy)`,
+                    todos: todosNorm,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  };
+                  setLists((prev) => [...prev, newList]);
+                  // Mark the list as loaded in cache to prevent unnecessary reloads
+                  loadedListsRef.current.add(result.newListId);
+                  // Persist selection via index and meta for redundancy
+                  setSelectedListIdWithSave(result.newListId);
+                  setSelectedListMeta(result.newListId).catch(() => {});
+                  // Selection and meta are persisted; no full index reload here to avoid
+                  // reintroducing deleted lists due to save timing.
+                  resolve(result.newListId);
+                } catch (error) {
+                  console.error(
+                    'Failed to load todos for duplicated list:',
+                    error,
+                  );
+                  // Fallback to empty todos if loading fails
+                  const newList = {
+                    id: result.newListId,
+                    name: newListName || `${sourceList.name} (Copy)`,
+                    todos: [],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  };
+                  setLists((prev) => [...prev, newList]);
+                  setSelectedListIdWithSave(result.newListId);
+                  setSelectedListMeta(result.newListId).catch(() => {});
+                  resolve(result.newListId);
+                }
+              } else {
+                resolve(null);
+              }
             } else {
               resolve(null);
             }
-          } else {
-            resolve(null);
-          }
-        })
-        .catch(() => resolve(null));
+          })
+          .catch(() => resolve(null));
+      };
+
+      // If duplicating the selected and loaded list, flush before proceeding
+      const needsFlush =
+        !!sourceList &&
+        selectedListId === sourceListId &&
+        loadedListsRef.current.has(sourceListId);
+      if (needsFlush) {
+        flushCurrentTodos().finally(proceed);
+      } else {
+        proceed();
+      }
     });
   }
 
@@ -739,5 +815,6 @@ export default function useTodosState() {
     deleteSelectedList,
     deleteList,
     duplicateList,
+    flushCurrentTodos,
   } as const;
 }

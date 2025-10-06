@@ -3,6 +3,8 @@
 You are GitHub Copilot helping with the Todolo Electron application. Follow these rules:
 
 ## Development Rules Compliance
+- Prefer the least complex approach that fully meets requirements
+- Keep files/components organized by framework conventions (React/Electron/Jest/TS)
 - Write tests as you build (happy path, edges, failures)
 - Reuse existing code/utilities; avoid duplication
 - Design minimal interfaces and data flow; name things clearly

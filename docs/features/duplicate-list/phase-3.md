@@ -26,6 +26,7 @@ Status: ✅ COMPLETED
   - Success log with sourceListId, newListId, todoCount, durationMs
   - Error log with duration and stack trace
 - ✅ IPC: Enhanced error logging with concise messages and stack traces
+ - ✅ Renderer: Removed logging of full todos content during saves; log ids and counts only
 
 ### Performance
 - ✅ Soft expectation: ~1k todos duplicated in <200ms on typical machines
@@ -36,6 +37,13 @@ Status: ✅ COMPLETED
 - ✅ ErrorCode table is stable and referenced in tests
 - ✅ UI test selectors (data-testid) remain stable: menu-duplicate-list, menu-delete-list
 - ✅ All existing tests continue to pass with enhanced logging
+ - ✅ Added deterministic flush before duplicate in renderer state; tests assert duplicate awaits flush
+
+### Renderer State (Race Fix)
+- Added `flushCurrentTodos()` in `useTodosState`:
+  - Cancels pending debounced saves and awaits `saveListTodos` for the selected list
+  - Used by `duplicateList` when duplicating the currently selected and loaded list
+- Removed previous timing delay heuristic in favor of deterministic flush
 
 ## Logging Format
 
@@ -53,4 +61,3 @@ Status: ✅ COMPLETED
 ```
 [IPC] duplicate-list failed after <ms>ms: <error message> <stack trace>
 ```
-
