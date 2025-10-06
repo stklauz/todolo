@@ -1,1 +1,4 @@
-npm test --silent -- --bail
+#!/usr/bin/env sh
+
+# Lint, typecheck, and run tests before committing.
+npm test --silent -- --bail || exit 1

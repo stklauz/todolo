@@ -16,11 +16,11 @@ Out of Scope
 - Visual regression testing
 
 Priorities and Order (Solo-Optimized)
-1) T1 – Test Setup & Jest Hygiene (P0)
-2) T2 – Stabilize Timing in Debug Tests (P0)
-3) T4 – Storage API Unit Tests (minimal) (P0)
-4) T5 – UI Behavior Tests (single happy path) (P0)
-5) T6 – Negative-Path UX Assertions (minimal) (P1)
+1) T1 – Test Setup & Jest Hygiene (P0) :check:
+2) T2 – Stabilize Timing in Debug Tests (P0) :check:
+3) T4 – Storage API Unit Tests (minimal) (P0) :check:
+4) T5 – UI Behavior Tests (single happy path) (P0) :check:
+5) T6 – Negative-Path UX Assertions (minimal) (P1) :check:
 6) T7 – Migration/Corruption Robustness (targeted) (P2)
 7) T3 – Expand Debug Logger Coverage (deferred depth) (P3)
 8) T8 – CI Stability & Reporting Enhancements (deferred) (P3)
