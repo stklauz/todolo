@@ -1,4 +1,9 @@
-import { loadListsIndex, saveListTodos, loadAppSettings, loadListTodos } from '../storage';
+import {
+  loadListsIndex,
+  saveListTodos,
+  loadAppSettings,
+  loadListTodos,
+} from '../storage';
 import { debugLogger } from '../../../../utils/debug';
 
 // Helper to access the global invoke mock configured in test setup
@@ -46,7 +51,11 @@ describe('Storage API (minimal)', () => {
 
       const result = await loadListsIndex();
 
-      expect(result).toEqual({ version: 2, lists: [], selectedListId: undefined });
+      expect(result).toEqual({
+        version: 2,
+        lists: [],
+        selectedListId: undefined,
+      });
       const errors = debugLogger.getLogs().filter((l) => l.level === 'error');
       const operations = errors.map((e) => e.operation).join(' | ');
       expect(operations).toContain('Failed to load lists index');
@@ -57,7 +66,11 @@ describe('Storage API (minimal)', () => {
       mockInvoke.mockResolvedValue({ version: 3, lists: 'nope' } as any);
 
       const result = await loadListsIndex();
-      expect(result).toEqual({ version: 2, lists: [], selectedListId: undefined });
+      expect(result).toEqual({
+        version: 2,
+        lists: [],
+        selectedListId: undefined,
+      });
     });
 
     test('wrong version: valid shape but version != 2 → safe default and warn', async () => {
@@ -70,7 +83,11 @@ describe('Storage API (minimal)', () => {
       } as any);
 
       const result = await loadListsIndex();
-      expect(result).toEqual({ version: 2, lists: [], selectedListId: undefined });
+      expect(result).toEqual({
+        version: 2,
+        lists: [],
+        selectedListId: undefined,
+      });
       const warns = debugLogger.getLogs().filter((l) => l.level === 'warn');
       const operations = warns.map((e) => e.operation).join(' | ');
       expect(operations).toContain('Malformed lists index payload');

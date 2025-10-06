@@ -12,8 +12,11 @@ export interface DebugLogEntry {
 
 class DebugLogger {
   private isEnabled = false;
+
   private logs: DebugLogEntry[] = [];
+
   private maxLogs = 1000; // Keep last 1000 entries
+
   private performanceMarks = new Map<string, number>();
 
   enable() {
@@ -49,13 +52,14 @@ class DebugLogger {
 
     // Also log to console for immediate feedback
     const message = `[DEBUG ${level.toUpperCase()}] ${operation}`;
-    const consoleMethod = level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
+    const consoleMethod =
+      level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
     console[consoleMethod](message, details || '');
   }
 
   startTiming(operation: string): string {
     if (!this.isEnabled) return '';
-    
+
     const markId = `${operation}_${Date.now()}_${Math.random()}`;
     this.performanceMarks.set(markId, performance.now());
     this.log('perf', `Started: ${operation}`);
@@ -70,10 +74,12 @@ class DebugLogger {
 
     const duration = performance.now() - startTime;
     this.performanceMarks.delete(markId);
-    
+
     const opName = operation || markId.split('_')[0];
-    this.log('perf', `Completed: ${opName}`, { duration: `${duration.toFixed(2)}ms` });
-    
+    this.log('perf', `Completed: ${opName}`, {
+      duration: `${duration.toFixed(2)}ms`,
+    });
+
     return duration;
   }
 
@@ -106,13 +112,19 @@ class DebugLogger {
   }
 
   getLogsByOperation(operation: string): DebugLogEntry[] {
-    return this.logs.filter(log => log.operation.includes(operation));
+    return this.logs.filter((log) => log.operation.includes(operation));
   }
 
-  getPerformanceSummary(): Record<string, { count: number; totalTime: number; avgTime: number }> {
-    const summary: Record<string, { count: number; totalTime: number; avgTime: number }> = {};
-    
-    this.logs.forEach(log => {
+  getPerformanceSummary(): Record<
+    string,
+    { count: number; totalTime: number; avgTime: number }
+  > {
+    const summary: Record<
+      string,
+      { count: number; totalTime: number; avgTime: number }
+    > = {};
+
+    this.logs.forEach((log) => {
       if (log.level === 'perf' && log.details?.duration) {
         const operation = log.operation.replace(/^(Started|Completed):\s*/, '');
         if (!summary[operation]) {
@@ -124,7 +136,7 @@ class DebugLogger {
     });
 
     // Calculate averages
-    Object.keys(summary).forEach(operation => {
+    Object.keys(summary).forEach((operation) => {
       const stats = summary[operation];
       stats.avgTime = stats.totalTime / stats.count;
     });
@@ -135,12 +147,16 @@ class DebugLogger {
   exportLogs(): string {
     const summary = this.getPerformanceSummary();
     const logs = this.getLogs();
-    
-    return JSON.stringify({
-      summary,
-      logs: logs.slice(-100), // Last 100 entries
-      timestamp: new Date().toISOString(),
-    }, null, 2);
+
+    return JSON.stringify(
+      {
+        summary,
+        logs: logs.slice(-100), // Last 100 entries
+        timestamp: new Date().toISOString(),
+      },
+      null,
+      2,
+    );
   }
 
   clear() {
@@ -154,12 +170,18 @@ export const debugLogger = new DebugLogger();
 
 // Performance monitoring decorators
 export function measurePerformance(operation: string) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor,
+  ) {
     const method = descriptor.value;
-    
+
     descriptor.value = function (...args: any[]) {
       if (debugLogger.isDebugEnabled()) {
-        return debugLogger.measureSync(`${operation}.${propertyName}`, () => method.apply(this, args));
+        return debugLogger.measureSync(`${operation}.${propertyName}`, () =>
+          method.apply(this, args),
+        );
       }
       return method.apply(this, args);
     };
@@ -167,12 +189,18 @@ export function measurePerformance(operation: string) {
 }
 
 export function measureAsyncPerformance(operation: string) {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyName: string,
+    descriptor: PropertyDescriptor,
+  ) {
     const method = descriptor.value;
-    
+
     descriptor.value = function (...args: any[]) {
       if (debugLogger.isDebugEnabled()) {
-        return debugLogger.measureAsync(`${operation}.${propertyName}`, () => method.apply(this, args));
+        return debugLogger.measureAsync(`${operation}.${propertyName}`, () =>
+          method.apply(this, args),
+        );
       }
       return method.apply(this, args);
     };

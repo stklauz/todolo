@@ -29,7 +29,7 @@ describe('useTodosState', () => {
 
     // Wait for effects to complete
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
     // Should have default list created
@@ -43,7 +43,7 @@ describe('useTodosState', () => {
 
     await act(async () => {
       // Wait for the effect to run
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.lists).toHaveLength(1);
@@ -53,7 +53,11 @@ describe('useTodosState', () => {
 
   it('should load existing lists', async () => {
     const mockLists = [
-      { id: 'list-1', name: 'Test List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: 'list-1',
+        name: 'Test List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
     mockStorage.loadListsIndex.mockResolvedValue({
       version: 2,
@@ -64,7 +68,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.lists).toHaveLength(1);
@@ -76,17 +80,19 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const initialLength = result.current.lists.length;
-    
+
     act(() => {
       result.current.addList();
     });
 
     expect(result.current.lists).toHaveLength(initialLength + 1);
-    expect(result.current.lists[initialLength].name).toBe(`List ${initialLength + 1}`);
+    expect(result.current.lists[initialLength].name).toBe(
+      `List ${initialLength + 1}`,
+    );
   });
 
   it('should delete list', async () => {
@@ -103,7 +109,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     act(() => {
@@ -119,11 +125,11 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const initialLength = result.current.lists.length;
-    
+
     act(() => {
       result.current.deleteList(result.current.lists[0].id);
     });
@@ -143,7 +149,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     act(() => {
@@ -166,7 +172,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     act(() => {
@@ -189,7 +195,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     let newId: number;
@@ -215,7 +221,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     act(() => {
@@ -238,7 +244,7 @@ describe('useTodosState', () => {
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     act(() => {

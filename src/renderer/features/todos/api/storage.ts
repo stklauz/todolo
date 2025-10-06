@@ -4,7 +4,12 @@ import { debugLogger } from '../../../utils/debug';
 // v2 index file format
 export type ListsIndexV2 = {
   version: 2;
-  lists: Array<{ id: string; name: string; createdAt: string; updatedAt?: string }>;
+  lists: Array<{
+    id: string;
+    name: string;
+    createdAt: string;
+    updatedAt?: string;
+  }>;
   selectedListId?: string;
 };
 
@@ -14,7 +19,9 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
   return debugLogger.measureAsync('storage.loadListsIndex', async () => {
     try {
       debugLogger.log('info', 'Loading lists index');
-      const result = (await window.electron.ipcRenderer.invoke('load-lists')) as ListsIndexV2;
+      const result = (await window.electron.ipcRenderer.invoke(
+        'load-lists',
+      )) as ListsIndexV2;
       if (
         result &&
         typeof result === 'object' &&
@@ -33,10 +40,14 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
           );
         });
         if (validLists.length !== rawLists.length) {
-          debugLogger.log('warn', 'Lists index contained invalid items; filtered', {
-            original: rawLists.length,
-            kept: validLists.length,
-          });
+          debugLogger.log(
+            'warn',
+            'Lists index contained invalid items; filtered',
+            {
+              original: rawLists.length,
+              kept: validLists.length,
+            },
+          );
         }
         // Ensure selectedListId points to a valid list
         const validIds = new Set(validLists.map((l: any) => l.id));
@@ -55,11 +66,17 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
         return sanitized;
       }
       // Validation failed without throwing: log a warning for visibility
-      debugLogger.log('warn', 'Malformed lists index payload received; using safe default', {
-        receivedType: typeof result,
-        version: (result as any)?.version,
-        listsType: Array.isArray((result as any)?.lists) ? 'array' : typeof (result as any)?.lists,
-      });
+      debugLogger.log(
+        'warn',
+        'Malformed lists index payload received; using safe default',
+        {
+          receivedType: typeof result,
+          version: (result as any)?.version,
+          listsType: Array.isArray((result as any)?.lists)
+            ? 'array'
+            : typeof (result as any)?.lists,
+        },
+      );
     } catch (error) {
       debugLogger.log('error', 'Failed to load lists index', error);
     }
@@ -70,13 +87,18 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
 export async function saveListsIndex(doc: ListsIndexV2): Promise<boolean> {
   return debugLogger.measureAsync('storage.saveListsIndex', async () => {
     try {
-      debugLogger.log('info', 'Saving lists index', { 
+      debugLogger.log('info', 'Saving lists index', {
         listCount: doc.lists.length,
-        selectedListId: doc.selectedListId 
+        selectedListId: doc.selectedListId,
       });
-      const res = (await window.electron.ipcRenderer.invoke('save-lists', doc)) as any;
+      const res = (await window.electron.ipcRenderer.invoke(
+        'save-lists',
+        doc,
+      )) as any;
       const success = !!res?.success;
-      debugLogger.log(success ? 'info' : 'error', 'Lists index save result', { success });
+      debugLogger.log(success ? 'info' : 'error', 'Lists index save result', {
+        success,
+      });
       return success;
     } catch (error) {
       debugLogger.log('error', 'Failed to save lists index', error);
@@ -89,25 +111,34 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
   return debugLogger.measureAsync('storage.loadListTodos', async () => {
     try {
       debugLogger.log('info', 'Loading list todos', { listId });
-      const res = (await window.electron.ipcRenderer.invoke('load-list-todos', listId)) as ListTodosV2;
+      const res = (await window.electron.ipcRenderer.invoke(
+        'load-list-todos',
+        listId,
+      )) as ListTodosV2;
       if (
         res &&
         typeof res === 'object' &&
         (res as any).version === 2 &&
         Array.isArray((res as any).todos)
       ) {
-        debugLogger.log('info', 'List todos loaded successfully', { 
-          listId, 
-          todoCount: res.todos.length 
+        debugLogger.log('info', 'List todos loaded successfully', {
+          listId,
+          todoCount: res.todos.length,
         });
         return res;
       }
       // Validation failed without throwing: log a warning for visibility
-      debugLogger.log('warn', 'Malformed todos payload received; using safe default', {
-        listId,
-        version: (res as any)?.version,
-        todosType: Array.isArray((res as any)?.todos) ? 'array' : typeof (res as any)?.todos,
-      });
+      debugLogger.log(
+        'warn',
+        'Malformed todos payload received; using safe default',
+        {
+          listId,
+          version: (res as any)?.version,
+          todosType: Array.isArray((res as any)?.todos)
+            ? 'array'
+            : typeof (res as any)?.todos,
+        },
+      );
     } catch (error) {
       debugLogger.log('error', 'Failed to load list todos', { listId, error });
     }
@@ -115,18 +146,25 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
   });
 }
 
-export async function saveListTodos(listId: string, doc: ListTodosV2): Promise<boolean> {
+export async function saveListTodos(
+  listId: string,
+  doc: ListTodosV2,
+): Promise<boolean> {
   return debugLogger.measureAsync('storage.saveListTodos', async () => {
     try {
-      debugLogger.log('info', 'Saving list todos', { 
-        listId, 
-        todoCount: doc.todos.length 
+      debugLogger.log('info', 'Saving list todos', {
+        listId,
+        todoCount: doc.todos.length,
       });
-      const res = (await window.electron.ipcRenderer.invoke('save-list-todos', listId, doc)) as any;
+      const res = (await window.electron.ipcRenderer.invoke(
+        'save-list-todos',
+        listId,
+        doc,
+      )) as any;
       const success = !!res?.success;
-      debugLogger.log(success ? 'info' : 'error', 'List todos save result', { 
-        listId, 
-        success 
+      debugLogger.log(success ? 'info' : 'error', 'List todos save result', {
+        listId,
+        success,
       });
       return success;
     } catch (error) {
@@ -140,8 +178,14 @@ export async function loadAppSettings(): Promise<AppSettings> {
   return debugLogger.measureAsync('storage.loadAppSettings', async () => {
     try {
       debugLogger.log('info', 'Loading app settings');
-      const result = (await window.electron.ipcRenderer.invoke('load-app-settings')) as AppSettings;
-      if (result && typeof result === 'object' && typeof result.hideCompletedItems === 'boolean') {
+      const result = (await window.electron.ipcRenderer.invoke(
+        'load-app-settings',
+      )) as AppSettings;
+      if (
+        result &&
+        typeof result === 'object' &&
+        typeof result.hideCompletedItems === 'boolean'
+      ) {
         debugLogger.log('info', 'App settings loaded successfully', result);
         return result;
       }
@@ -156,9 +200,14 @@ export async function saveAppSettings(settings: AppSettings): Promise<boolean> {
   return debugLogger.measureAsync('storage.saveAppSettings', async () => {
     try {
       debugLogger.log('info', 'Saving app settings', settings);
-      const res = (await window.electron.ipcRenderer.invoke('save-app-settings', settings)) as any;
+      const res = (await window.electron.ipcRenderer.invoke(
+        'save-app-settings',
+        settings,
+      )) as any;
       const success = !!res?.success;
-      debugLogger.log(success ? 'info' : 'error', 'App settings save result', { success });
+      debugLogger.log(success ? 'info' : 'error', 'App settings save result', {
+        success,
+      });
       return success;
     } catch (error) {
       debugLogger.log('error', 'Failed to save app settings', error);

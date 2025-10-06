@@ -13,7 +13,8 @@
     "resolveJsonModule": true,
     "allowJs": true,
     "outDir": ".erb/dll",
-    "isolatedModules": true
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
   "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
 }

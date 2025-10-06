@@ -21,7 +21,10 @@ function Content() {
     };
 
     // Listen for IPC message from main process and get cleanup function
-    const cleanup = window.electron.ipcRenderer.on('toggle-debug-mode', handleToggleDebug);
+    const cleanup = window.electron.ipcRenderer.on(
+      'toggle-debug-mode',
+      handleToggleDebug,
+    );
 
     return cleanup;
   }, [isDebugVisible]);
@@ -30,12 +33,12 @@ function Content() {
     <>
       <div className="drag-region" />
       <TodoApp />
-      <DebugPanel 
-        isVisible={isDebugVisible} 
+      <DebugPanel
+        isVisible={isDebugVisible}
         onClose={() => {
           setIsDebugVisible(false);
           debugLogger.disable();
-        }} 
+        }}
       />
     </>
   );
@@ -45,7 +48,7 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={ <Content /> } />
+        <Route path="/" element={<Content />} />
       </Routes>
     </Router>
   );

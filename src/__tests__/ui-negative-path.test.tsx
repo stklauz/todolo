@@ -6,7 +6,11 @@ import userEvent from '@testing-library/user-event';
 import TodoApp from '../renderer/features/todos/components/TodoApp';
 import * as storage from '../renderer/features/todos/api/storage';
 import { debugLogger } from '../renderer/utils/debug';
-import { renderAppWithDefaults, setupDefaultMocks, setupUser } from '../tests/utils/ui';
+import {
+  renderAppWithDefaults,
+  setupDefaultMocks,
+  setupUser,
+} from '../tests/utils/ui';
 
 // Mock the storage module
 jest.mock('../renderer/features/todos/api/storage');
@@ -33,7 +37,9 @@ describe('UI Negative Path – minimal assertions', () => {
   it('load failure: renders core UI and does not crash (TODO: visible error UI)', async () => {
     // Simulate failing index load — app should seed a new list and persist index
     setupDefaultMocks({
-      loadListsIndex: jest.fn().mockRejectedValueOnce(new Error('disk unavailable')),
+      loadListsIndex: jest
+        .fn()
+        .mockRejectedValueOnce(new Error('disk unavailable')),
     } as any);
 
     render(<TodoApp />);
@@ -47,13 +53,15 @@ describe('UI Negative Path – minimal assertions', () => {
     expect(inputs.length).toBeGreaterThanOrEqual(1);
 
     // Checkbox for an empty todo must be disabled (interaction rule)
-    const checkbox = await screen.findByRole('checkbox', { name: /toggle completed/i });
+    const checkbox = await screen.findByRole('checkbox', {
+      name: /toggle completed/i,
+    });
     expect(checkbox).toBeDisabled();
 
     // Persistence: index should be saved at least once when seeding after failure
     await waitFor(() => expect(mockStorage.saveListsIndex).toHaveBeenCalled());
     expect(mockStorage.saveListsIndex).toHaveBeenCalledWith(
-      expect.objectContaining({ version: 2 })
+      expect.objectContaining({ version: 2 }),
     );
   });
 
@@ -69,7 +77,9 @@ describe('UI Negative Path – minimal assertions', () => {
         // which would break `.catch` usage in the implementation
         saveListTodos: jest.fn().mockRejectedValue(new Error('write failed')),
       } as any);
-      await waitFor(() => expect(mockStorage.loadListsIndex).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
       await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
       const user = setupUser();
@@ -83,7 +93,9 @@ describe('UI Negative Path – minimal assertions', () => {
       // Args: list id and doc shape
       const call = mockStorage.saveListTodos.mock.calls[0];
       expect(call[0]).toEqual(expect.any(String));
-      expect(call[1]).toEqual(expect.objectContaining({ version: 2, todos: expect.any(Array) }));
+      expect(call[1]).toEqual(
+        expect.objectContaining({ version: 2, todos: expect.any(Array) }),
+      );
 
       // With debug enabled, save failure paths log via console.error
       expect(console.error).toHaveBeenCalled();
@@ -137,7 +149,9 @@ describe('UI Negative Path – minimal assertions', () => {
     // Delete is immediate when it happens; ensure we did not attempt a save
     expect(mockStorage.saveListTodos).not.toHaveBeenCalled();
     // And checkbox remains disabled for the empty todo
-    const checkbox = screen.getByRole('checkbox', { name: /toggle completed/i });
+    const checkbox = screen.getByRole('checkbox', {
+      name: /toggle completed/i,
+    });
     expect(checkbox).toBeDisabled();
   });
 });

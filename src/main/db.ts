@@ -19,7 +19,12 @@ export type EditorTodo = {
 
 export type ListsIndexV2 = {
   version: 2;
-  lists: Array<{ id: string; name: string; createdAt: string; updatedAt?: string }>;
+  lists: Array<{
+    id: string;
+    name: string;
+    createdAt: string;
+    updatedAt?: string;
+  }>;
   selectedListId?: string;
 };
 
@@ -116,24 +121,34 @@ function applyMigrations(database: DB) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );`;
-  database.exec(`${createMeta}${createLists}${createTodos}${createAppSettings}`);
+  database.exec(
+    `${createMeta}${createLists}${createTodos}${createAppSettings}`,
+  );
 }
 
 export function loadListsIndex(): ListsIndexV2 {
   const database = openDatabase();
   const lists = database
-    .prepare('SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM lists ORDER BY created_at ASC')
+    .prepare(
+      'SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM lists ORDER BY created_at ASC',
+    )
     .all();
-  let selectedRow = database.prepare('SELECT value FROM meta WHERE key = ?').get('selectedListId');
+  let selectedRow = database
+    .prepare('SELECT value FROM meta WHERE key = ?')
+    .get('selectedListId');
 
   // Seed a default list if DB is completely empty to avoid UI arriving with nothing
   if (!lists || lists.length === 0) {
-    const id = (crypto as any).randomUUID ? (crypto as any).randomUUID() : String(Date.now());
+    const id = (crypto as any).randomUUID
+      ? (crypto as any).randomUUID()
+      : String(Date.now());
     const now = new Date().toISOString();
     const upsertList = database.prepare(
       'INSERT OR REPLACE INTO lists (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
     );
-    const setMeta = database.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+    const setMeta = database.prepare(
+      'INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)',
+    );
     const tx = database.transaction(() => {
       upsertList.run(id, 'My Todos', now, now);
       setMeta.run('selectedListId', id);
@@ -154,11 +169,15 @@ export function loadListsIndex(): ListsIndexV2 {
   return {
     version: 2,
     lists,
-    selectedListId: selectedRow && selectedRow.value ? String(selectedRow.value) : undefined,
+    selectedListId:
+      selectedRow && selectedRow.value ? String(selectedRow.value) : undefined,
   };
 }
 
-export function saveListsIndex(index: ListsIndexV2): { success: boolean; error?: string } {
+export function saveListsIndex(index: ListsIndexV2): {
+  success: boolean;
+  error?: string;
+} {
   const database = openDatabase();
   try {
     const existing = new Set<string>(
@@ -175,11 +194,13 @@ export function saveListsIndex(index: ListsIndexV2): { success: boolean; error?:
        ON CONFLICT(id) DO UPDATE SET \
          name=excluded.name, \
          created_at=excluded.created_at, \
-         updated_at=excluded.updated_at'
+         updated_at=excluded.updated_at',
     );
     // const delTodos = database.prepare('DELETE FROM todos WHERE list_id = ?');
     // const delList = database.prepare('DELETE FROM lists WHERE id = ?');
-    const setMeta = database.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+    const setMeta = database.prepare(
+      'INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)',
+    );
     const tx = database.transaction(() => {
       // Deletions intentionally disabled here; handle explicit deletions elsewhere.
       for (const l of index.lists) {
@@ -201,7 +222,7 @@ export function saveListsIndex(index: ListsIndexV2): { success: boolean; error?:
       }
     });
     tx();
-    
+
     // Force WAL checkpoint after each save to ensure data persistence
     database.pragma('wal_checkpoint(FULL)');
     return { success: true };
@@ -210,7 +231,10 @@ export function saveListsIndex(index: ListsIndexV2): { success: boolean; error?:
   }
 }
 
-export function loadListTodos(listId: string): { version: 2; todos: EditorTodo[] } {
+export function loadListTodos(listId: string): {
+  version: 2;
+  todos: EditorTodo[];
+} {
   const database = openDatabase();
   const rows = database
     .prepare(
@@ -227,27 +251,35 @@ export function loadListTodos(listId: string): { version: 2; todos: EditorTodo[]
   return { version: 2, todos };
 }
 
-export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTodo[] }): { success: boolean; error?: string } {
+export function saveListTodos(
+  listId: string,
+  doc: { version: 2; todos: EditorTodo[] },
+): { success: boolean; error?: string } {
   const database = openDatabase();
   try {
     // replace list todos atomically
     const del = database.prepare('DELETE FROM todos WHERE list_id = ?');
     const ins = database.prepare(
-      'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)'
+      'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)',
     );
     const ensureList = database.prepare('SELECT id FROM lists WHERE id = ?');
     const createList = database.prepare(
-      'INSERT INTO lists (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)'
+      'INSERT INTO lists (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
     );
-    const countExisting = database.prepare('SELECT COUNT(*) as c FROM todos WHERE list_id = ?');
+    const countExisting = database.prepare(
+      'SELECT COUNT(*) as c FROM todos WHERE list_id = ?',
+    );
 
     // If DB already has rows and incoming doc looks like a seed/placeholder (<=1 empty row), skip to avoid wiping data
     try {
       const row = countExisting.get(listId) as any;
       const existingCount = Number(row?.c ?? 0);
-      const looksLikeSeed = Array.isArray(doc.todos)
-        && doc.todos.length <= 1
-        && doc.todos.every((t) => String(t.text ?? '').trim() === '' && !t.completed);
+      const looksLikeSeed =
+        Array.isArray(doc.todos) &&
+        doc.todos.length <= 1 &&
+        doc.todos.every(
+          (t) => String(t.text ?? '').trim() === '' && !t.completed,
+        );
       if (existingCount > 0 && looksLikeSeed) {
         // skip seed save when existing data present
         return { success: true };
@@ -287,18 +319,30 @@ export function saveListTodos(listId: string, doc: { version: 2; todos: EditorTo
 
 export function loadAppSettings(): AppSettings {
   const database = openDatabase();
-  const hideCompletedRow = database.prepare('SELECT value FROM app_settings WHERE key = ?').get('hideCompletedItems');
+  const hideCompletedRow = database
+    .prepare('SELECT value FROM app_settings WHERE key = ?')
+    .get('hideCompletedItems');
   return {
-    hideCompletedItems: hideCompletedRow ? hideCompletedRow.value === 'true' : true,
+    hideCompletedItems: hideCompletedRow
+      ? hideCompletedRow.value === 'true'
+      : true,
   };
 }
 
-export function saveAppSettings(settings: AppSettings): { success: boolean; error?: string } {
+export function saveAppSettings(settings: AppSettings): {
+  success: boolean;
+  error?: string;
+} {
   const database = openDatabase();
   try {
-    const upsert = database.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
+    const upsert = database.prepare(
+      'INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)',
+    );
     const tx = database.transaction(() => {
-      upsert.run('hideCompletedItems', settings.hideCompletedItems ? 'true' : 'false');
+      upsert.run(
+        'hideCompletedItems',
+        settings.hideCompletedItems ? 'true' : 'false',
+      );
     });
     tx();
     return { success: true };
@@ -313,7 +357,9 @@ export function setSelectedListMeta(listId: string | null): void {
   const database = openDatabase();
   try {
     if (listId && listId !== '') {
-      const setMeta = database.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)');
+      const setMeta = database.prepare(
+        'INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)',
+      );
       setMeta.run('selectedListId', listId);
       // Ensure durability similar to other writes
       database.pragma('wal_checkpoint(FULL)');

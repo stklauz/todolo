@@ -1,13 +1,13 @@
-import React from "react";
+import React from 'react';
+import { IoEllipsisHorizontal } from 'react-icons/io5';
 import ListSidebar from './ListSidebar';
 import TodoList from './TodoList';
-import { IoEllipsisHorizontal } from 'react-icons/io5';
-const styles = require('../styles/TodoApp.module.css');
 import type { EditorTodo, Section, AppSettings } from '../types';
 import useTodosState from '../hooks/useTodosState';
 import useDragReorder from '../hooks/useDragReorder';
 import { loadAppSettings, saveAppSettings } from '../api/storage';
 
+const styles = require('../styles/TodoApp.module.css');
 
 // TodoApp: An editor-like list of todos spanning multiple lists
 // - Each todo is an input you can type in
@@ -31,7 +31,9 @@ export default function TodoApp(): React.ReactElement {
   } = useTodosState();
 
   // App settings state
-  const [appSettings, setAppSettings] = React.useState<AppSettings>({ hideCompletedItems: true });
+  const [appSettings, setAppSettings] = React.useState<AppSettings>({
+    hideCompletedItems: true,
+  });
 
   // Load app settings on mount
   React.useEffect(() => {
@@ -39,10 +41,13 @@ export default function TodoApp(): React.ReactElement {
   }, []);
 
   // Function to update app settings
-  const updateAppSettings = React.useCallback(async (newSettings: AppSettings) => {
-    setAppSettings(newSettings);
-    await saveAppSettings(newSettings);
-  }, []);
+  const updateAppSettings = React.useCallback(
+    async (newSettings: AppSettings) => {
+      setAppSettings(newSettings);
+      await saveAppSettings(newSettings);
+    },
+    [],
+  );
 
   const allTodos: EditorTodo[] = getSelectedTodos();
   const todos: EditorTodo[] = appSettings.hideCompletedItems
@@ -64,14 +69,17 @@ export default function TodoApp(): React.ReactElement {
       let allChildrenCompleted = true;
       for (let i = idx + 1; i < todos.length; i++) {
         if (Number(todos[i].indent ?? 0) === 0) break;
-        if (!todos[i].completed) { allChildrenCompleted = false; break; }
+        if (!todos[i].completed) {
+          allChildrenCompleted = false;
+          break;
+        }
       }
       return cur.completed && allChildrenCompleted ? 'completed' : 'active';
     }
     // child: completed only if child and parent are completed
     let parentCompleted = false;
     for (let i = idx - 1; i >= 0; i--) {
-      if ((Number(todos[i].indent ?? 0)) === 0) {
+      if (Number(todos[i].indent ?? 0) === 0) {
         parentCompleted = !!todos[i].completed;
         break;
       }
@@ -107,17 +115,17 @@ export default function TodoApp(): React.ReactElement {
   // mutations are provided by useTodosState (updateTodo/toggleTodo)
 
   // Insert a new todo after the given index and focus it
-  function insertBelowAndFocus(index: number, text = "") {
+  function insertBelowAndFocus(index: number, text = '') {
     // If we're filtering completed items, we need to find the correct position in the full list
     if (appSettings.hideCompletedItems) {
       // Find the target todo in the visible list
       const target = todos[index];
       if (!target) return;
-      
+
       // Find its position in the full list
       const fullIndex = allTodos.findIndex((t) => t.id === target.id);
       if (fullIndex < 0) return;
-      
+
       // Insert after the found position in the full list
       const id = insertTodoBelow(fullIndex, text);
       focusNextIdRef.current = id;
@@ -135,35 +143,39 @@ export default function TodoApp(): React.ReactElement {
       const target = todos[index];
       if (!target) return;
       const targetId = target.id;
-      setLists((prev) => prev.map((l) => {
-        if (l.id !== selectedListId) return l;
-        const fullIdx = l.todos.findIndex((t) => t.id === targetId);
-        if (fullIdx === -1) return l;
-        const next = [...l.todos];
-        next.splice(fullIdx, 1);
-        if (next.length === 0) {
-          focusNextIdRef.current = null;
-        } else {
-          const focusIdx = Math.max(0, fullIdx - 1);
-          const focusTarget = next[focusIdx] ?? next[0];
-          if (focusTarget) focusNextIdRef.current = focusTarget.id;
-        }
-        return { ...l, todos: next, updatedAt: new Date().toISOString() };
-      }));
+      setLists((prev) =>
+        prev.map((l) => {
+          if (l.id !== selectedListId) return l;
+          const fullIdx = l.todos.findIndex((t) => t.id === targetId);
+          if (fullIdx === -1) return l;
+          const next = [...l.todos];
+          next.splice(fullIdx, 1);
+          if (next.length === 0) {
+            focusNextIdRef.current = null;
+          } else {
+            const focusIdx = Math.max(0, fullIdx - 1);
+            const focusTarget = next[focusIdx] ?? next[0];
+            if (focusTarget) focusNextIdRef.current = focusTarget.id;
+          }
+          return { ...l, todos: next, updatedAt: new Date().toISOString() };
+        }),
+      );
     } else {
       // No filtering, use index directly
-      setLists((prev) => prev.map((l) => {
-        if (l.id !== selectedListId) return l;
-        const next = [...l.todos];
-        next.splice(index, 1);
-        if (next.length === 0) {
-          focusNextIdRef.current = null;
-        } else {
-          const target = next[Math.max(0, index - 1)] ?? next[0];
-          if (target) focusNextIdRef.current = target.id;
-        }
-        return { ...l, todos: next, updatedAt: new Date().toISOString() };
-      }));
+      setLists((prev) =>
+        prev.map((l) => {
+          if (l.id !== selectedListId) return l;
+          const next = [...l.todos];
+          next.splice(index, 1);
+          if (next.length === 0) {
+            focusNextIdRef.current = null;
+          } else {
+            const target = next[Math.max(0, index - 1)] ?? next[0];
+            if (target) focusNextIdRef.current = target.id;
+          }
+          return { ...l, todos: next, updatedAt: new Date().toISOString() };
+        }),
+      );
     }
   }
 
@@ -238,7 +250,7 @@ export default function TodoApp(): React.ReactElement {
   React.useEffect(() => {
     // Don't interfere with title editing
     if (isEditingRef.current) return;
-    
+
     const id = focusNextIdRef.current;
     if (id != null) {
       const el = inputByIdRef.current.get(id);
@@ -252,11 +264,11 @@ export default function TodoApp(): React.ReactElement {
   }, [todos]);
 
   const [editingListId, setEditingListId] = React.useState<string | null>(null);
-  const [editingName, setEditingName] = React.useState<string>("");
+  const [editingName, setEditingName] = React.useState<string>('');
   const inputJustFocusedRef = React.useRef(false);
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const isEditingRef = React.useRef(false);
-  
+
   // Focus the input when editing starts (only when editingListId changes)
   React.useEffect(() => {
     if (editingListId === selectedListId && titleInputRef.current) {
@@ -297,7 +309,13 @@ export default function TodoApp(): React.ReactElement {
       isEditingRef.current = false;
       return;
     }
-    setLists((prev) => prev.map((l) => (l.id === editingListId ? { ...l, name, updatedAt: new Date().toISOString() } : l)));
+    setLists((prev) =>
+      prev.map((l) =>
+        l.id === editingListId
+          ? { ...l, name, updatedAt: new Date().toISOString() }
+          : l,
+      ),
+    );
     setEditingListId(null);
     isEditingRef.current = false;
   }
@@ -372,7 +390,8 @@ export default function TodoApp(): React.ReactElement {
               className={`${styles.title} ${styles.titleClickable}`}
               onClick={() => {
                 const targetId = selectedList?.id ?? lists[0]?.id ?? null;
-                const currentName = selectedList?.name ?? lists[0]?.name ?? 'My List';
+                const currentName =
+                  selectedList?.name ?? lists[0]?.name ?? 'My List';
                 if (targetId) {
                   startRename(targetId, currentName);
                 }
@@ -396,34 +415,44 @@ export default function TodoApp(): React.ReactElement {
         {selectedList && (
           <div className={styles.subtitleRow}>
             <div className={styles.subtitle}>
-              {selectedList.createdAt ? <span>Created {new Date(selectedList.createdAt).toLocaleDateString()} </span> : null}
-              {selectedList.updatedAt ? <span>• Updated {new Date(selectedList.updatedAt).toLocaleDateString()}</span> : null}
+              {selectedList.createdAt ? (
+                <span>
+                  Created{' '}
+                  {new Date(selectedList.createdAt).toLocaleDateString()}{' '}
+                </span>
+              ) : null}
+              {selectedList.updatedAt ? (
+                <span>
+                  • Updated{' '}
+                  {new Date(selectedList.updatedAt).toLocaleDateString()}
+                </span>
+              ) : null}
             </div>
           </div>
         )}
 
-      <TodoList
-        todos={todos}
-        updateTodo={updateTodo}
-        toggleTodo={toggleTodo}
-        insertBelowAndFocus={insertBelowAndFocus}
-        handleTodoKeyDown={handleTodoKeyDown}
-        changeIndent={changeIndent}
-        removeAt={removeAtAndManageFocus}
-        dragInfo={dragInfo}
-        handleDragStart={handleDragStart}
-        handleDragEnd={handleDragEnd}
-        handleDragOver={handleDragOver}
-        handleDragLeave={handleDragLeave}
-        handleDropOn={handleDropOn}
-        dropTargetId={dropTargetId}
-        dropAtSectionEnd={dropAtSectionEnd}
-        handleDragOverEndZone={handleDragOverEndZone}
-        handleDragLeaveEndZone={handleDragLeaveEndZone}
-        handleDropAtEnd={handleDropAtEnd}
-        setInputRef={setInputRef}
-      />
-    </div>
+        <TodoList
+          todos={todos}
+          updateTodo={updateTodo}
+          toggleTodo={toggleTodo}
+          insertBelowAndFocus={insertBelowAndFocus}
+          handleTodoKeyDown={handleTodoKeyDown}
+          changeIndent={changeIndent}
+          removeAt={removeAtAndManageFocus}
+          dragInfo={dragInfo}
+          handleDragStart={handleDragStart}
+          handleDragEnd={handleDragEnd}
+          handleDragOver={handleDragOver}
+          handleDragLeave={handleDragLeave}
+          handleDropOn={handleDropOn}
+          dropTargetId={dropTargetId}
+          dropAtSectionEnd={dropAtSectionEnd}
+          handleDragOverEndZone={handleDragOverEndZone}
+          handleDragLeaveEndZone={handleDragLeaveEndZone}
+          handleDropAtEnd={handleDropAtEnd}
+          setInputRef={setInputRef}
+        />
+      </div>
     </div>
   );
 }
@@ -437,7 +466,14 @@ type ActionsRowProps = {
   onUpdateAppSettings: (settings: AppSettings) => void;
 };
 
-function ActionsRow({ createdAt, updatedAt, canDelete, onDelete, appSettings, onUpdateAppSettings }: ActionsRowProps) {
+function ActionsRow({
+  createdAt,
+  updatedAt,
+  canDelete,
+  onDelete,
+  appSettings,
+  onUpdateAppSettings,
+}: ActionsRowProps) {
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef<HTMLButtonElement | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
@@ -494,7 +530,9 @@ function ActionsRow({ createdAt, updatedAt, canDelete, onDelete, appSettings, on
               if (canDelete) onDelete();
             }}
             disabled={!canDelete}
-            title={canDelete ? 'Delete this list' : "Can't delete your only list"}
+            title={
+              canDelete ? 'Delete this list' : "Can't delete your only list"
+            }
           >
             Delete list
           </button>

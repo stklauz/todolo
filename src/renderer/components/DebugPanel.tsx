@@ -10,7 +10,9 @@ interface DebugPanelProps {
 const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
   const [logs, setLogs] = useState<DebugLogEntry[]>([]);
   const [filter, setFilter] = useState<string>('');
-  const [selectedTab, setSelectedTab] = useState<'logs' | 'performance'>('logs');
+  const [selectedTab, setSelectedTab] = useState<'logs' | 'performance'>(
+    'logs',
+  );
 
   useEffect(() => {
     if (!isVisible) return;
@@ -26,9 +28,10 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
     return () => clearInterval(interval);
   }, [isVisible]);
 
-  const filteredLogs = logs.filter(log => 
-    log.operation.toLowerCase().includes(filter.toLowerCase()) ||
-    log.level.toLowerCase().includes(filter.toLowerCase())
+  const filteredLogs = logs.filter(
+    (log) =>
+      log.operation.toLowerCase().includes(filter.toLowerCase()) ||
+      log.level.toLowerCase().includes(filter.toLowerCase()),
   );
 
   const performanceSummary = debugLogger.getPerformanceSummary();
@@ -58,20 +61,26 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
       <div className="debug-panel-header">
         <h3>Debug Panel</h3>
         <div className="debug-panel-controls">
-          <button onClick={exportLogs} className="debug-btn">Export Logs</button>
-          <button onClick={clearLogs} className="debug-btn">Clear</button>
-          <button onClick={onClose} className="debug-btn debug-btn-close">×</button>
+          <button onClick={exportLogs} className="debug-btn">
+            Export Logs
+          </button>
+          <button onClick={clearLogs} className="debug-btn">
+            Clear
+          </button>
+          <button onClick={onClose} className="debug-btn debug-btn-close">
+            ×
+          </button>
         </div>
       </div>
 
       <div className="debug-panel-tabs">
-        <button 
+        <button
           className={`debug-tab ${selectedTab === 'logs' ? 'active' : ''}`}
           onClick={() => setSelectedTab('logs')}
         >
           Logs ({logs.length})
         </button>
-        <button 
+        <button
           className={`debug-tab ${selectedTab === 'performance' ? 'active' : ''}`}
           onClick={() => setSelectedTab('performance')}
         >
@@ -91,19 +100,24 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
             />
           </div>
           <div className="debug-logs">
-            {filteredLogs.slice(-50).reverse().map((log, index) => (
-              <div key={index} className={`debug-log debug-log-${log.level}`}>
-                <span className="debug-log-time">
-                  {new Date(log.timestamp).toLocaleTimeString()}
-                </span>
-                <span className="debug-log-operation">{log.operation}</span>
-                {log.details && (
-                  <span className="debug-log-details">
-                    {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+            {filteredLogs
+              .slice(-50)
+              .reverse()
+              .map((log, index) => (
+                <div key={index} className={`debug-log debug-log-${log.level}`}>
+                  <span className="debug-log-time">
+                    {new Date(log.timestamp).toLocaleTimeString()}
                   </span>
-                )}
-              </div>
-            ))}
+                  <span className="debug-log-operation">{log.operation}</span>
+                  {log.details && (
+                    <span className="debug-log-details">
+                      {typeof log.details === 'string'
+                        ? log.details
+                        : JSON.stringify(log.details)}
+                    </span>
+                  )}
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -116,16 +130,18 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
               <p>No performance data available</p>
             ) : (
               <div className="performance-stats">
-                {Object.entries(performanceSummary).map(([operation, stats]) => (
-                  <div key={operation} className="performance-stat">
-                    <div className="performance-operation">{operation}</div>
-                    <div className="performance-metrics">
-                      <span>Count: {stats.count}</span>
-                      <span>Total: {stats.totalTime.toFixed(2)}ms</span>
-                      <span>Avg: {stats.avgTime.toFixed(2)}ms</span>
+                {Object.entries(performanceSummary).map(
+                  ([operation, stats]) => (
+                    <div key={operation} className="performance-stat">
+                      <div className="performance-operation">{operation}</div>
+                      <div className="performance-metrics">
+                        <span>Count: {stats.count}</span>
+                        <span>Total: {stats.totalTime.toFixed(2)}ms</span>
+                        <span>Avg: {stats.avgTime.toFixed(2)}ms</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             )}
           </div>

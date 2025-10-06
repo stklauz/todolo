@@ -1,4 +1,8 @@
 #!/usr/bin/env sh
 
-# Lint, typecheck, and run tests before committing.
+# Lint (non-blocking if not present)
+npm run lint || exit 1
+npm run typecheck || exit 1
+
+# Tests
 npm test --silent -- --bail || exit 1

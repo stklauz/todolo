@@ -2,14 +2,20 @@ const fs = require('fs');
 const path = require('path');
 
 const rootPkgPath = path.join(__dirname, '../..', 'package.json');
-const appPkgPath = path.join(__dirname, '../..', 'release', 'app', 'package.json');
+const appPkgPath = path.join(
+  __dirname,
+  '../..',
+  'release',
+  'app',
+  'package.json',
+);
 
 function readJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
 function writeJson(p, obj) {
-  const content = JSON.stringify(obj, null, 2) + '\n';
+  const content = `${JSON.stringify(obj, null, 2)}\n`;
   fs.writeFileSync(p, content, 'utf8');
 }
 
@@ -41,7 +47,9 @@ function main() {
 
   // Stage the change when used during `npm version`
   try {
-    require('child_process').execSync(`git add ${appPkgPath}`, { stdio: 'ignore' });
+    require('child_process').execSync(`git add ${appPkgPath}`, {
+      stdio: 'ignore',
+    });
   } catch (_) {
     // ignore if git not available
   }

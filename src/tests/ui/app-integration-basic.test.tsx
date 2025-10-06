@@ -37,12 +37,18 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       // Should render the main app structure (sidebar with add list button)
-      expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add list/i }),
+      ).toBeInTheDocument();
     });
 
     it('should load existing data on startup', async () => {
       const existingLists = [
-        { id: 'list-1', name: 'Work Tasks', createdAt: '2024-01-01T00:00:00.000Z' },
+        {
+          id: 'list-1',
+          name: 'Work Tasks',
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
       ];
 
       mockStorage.loadListsIndex.mockResolvedValue({
@@ -85,9 +91,12 @@ describe('E2E Basic Flow Tests', () => {
       await user.type(textarea, 'Test todo');
 
       // Wait for debounced save
-      await waitFor(() => {
-        expect(mockStorage.saveListTodos).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockStorage.saveListTodos).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
     });
 
     it('should handle save failures gracefully', async () => {
@@ -105,9 +114,12 @@ describe('E2E Basic Flow Tests', () => {
       await user.type(textarea, 'Test todo');
 
       // Should not crash on save failure
-      await waitFor(() => {
-        expect(mockStorage.saveListTodos).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockStorage.saveListTodos).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
     });
   });
 
@@ -136,7 +148,9 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       // App should still render core UI
-      expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add list/i }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -155,7 +169,9 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       // Should create default list
-      expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add list/i }),
+      ).toBeInTheDocument();
     });
 
     it('should handle corrupted data gracefully', async () => {
@@ -168,7 +184,9 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       // Should fall back to default behavior and render core UI
-      expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /add list/i }),
+      ).toBeInTheDocument();
     });
   });
 });

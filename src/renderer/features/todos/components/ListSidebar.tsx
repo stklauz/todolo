@@ -1,7 +1,8 @@
 import React from 'react';
-import type { TodoList } from '../types';
 import { IoAddOutline } from 'react-icons/io5';
+import type { TodoList } from '../types';
 import { ReactComponent as TodoloLogo } from '../../../../../assets/logo/todolo.svg';
+
 const styles = require('../styles/Sidebar.module.css');
 
 type Props = {
@@ -35,7 +36,13 @@ export default function ListSidebar({
     <aside className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
         <TodoloLogo className={styles.logo} />
-        <button type="button" onClick={onAdd} title="Add list" className={styles.iconBtn} aria-label="Add list">
+        <button
+          type="button"
+          onClick={onAdd}
+          title="Add list"
+          className={styles.iconBtn}
+          aria-label="Add list"
+        >
           <IoAddOutline size={18} />
         </button>
       </div>
@@ -46,7 +53,9 @@ export default function ListSidebar({
             onClick={() => onSelect(l.id)}
             className={`${styles.listItem} ${l.id === selectedListId ? styles.listItemActive : ''}`}
           >
-            <span className={styles.listName} title={l.name}>{l.name}</span>
+            <span className={styles.listName} title={l.name}>
+              {l.name}
+            </span>
           </div>
         ))}
       </div>

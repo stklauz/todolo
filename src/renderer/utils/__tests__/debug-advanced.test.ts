@@ -1,4 +1,8 @@
-import { debugLogger, measurePerformance, measureAsyncPerformance } from '../debug';
+import {
+  debugLogger,
+  measurePerformance,
+  measureAsyncPerformance,
+} from '../debug';
 
 describe('Debug Logger – advanced coverage', () => {
   beforeEach(() => {
@@ -25,7 +29,9 @@ describe('Debug Logger – advanced coverage', () => {
     const result = debugLogger.measureSync('sync-op', () => 42);
     expect(result).toBe(42);
 
-    const perfLogs = debugLogger.getLogs().filter((l) => l.level === 'perf' && l.operation.includes('sync-op'));
+    const perfLogs = debugLogger
+      .getLogs()
+      .filter((l) => l.level === 'perf' && l.operation.includes('sync-op'));
     expect(perfLogs).toHaveLength(2);
   });
 
@@ -42,12 +48,26 @@ describe('Debug Logger – advanced coverage', () => {
     }
 
     // Apply decorators manually to avoid relying on TS decorator transpilation
-    const syncDesc = Object.getOwnPropertyDescriptor(Example.prototype, 'compute')!;
-    measurePerformance('Example')(Example.prototype as any, 'compute', syncDesc as any);
+    const syncDesc = Object.getOwnPropertyDescriptor(
+      Example.prototype,
+      'compute',
+    )!;
+    measurePerformance('Example')(
+      Example.prototype as any,
+      'compute',
+      syncDesc as any,
+    );
     Object.defineProperty(Example.prototype, 'compute', syncDesc);
 
-    const asyncDesc = Object.getOwnPropertyDescriptor(Example.prototype, 'computeAsync')!;
-    measureAsyncPerformance('Example')(Example.prototype as any, 'computeAsync', asyncDesc as any);
+    const asyncDesc = Object.getOwnPropertyDescriptor(
+      Example.prototype,
+      'computeAsync',
+    )!;
+    measureAsyncPerformance('Example')(
+      Example.prototype as any,
+      'computeAsync',
+      asyncDesc as any,
+    );
     Object.defineProperty(Example.prototype, 'computeAsync', asyncDesc);
 
     jest.useFakeTimers();
@@ -73,7 +93,9 @@ describe('Debug Logger – advanced coverage', () => {
     const asyncResult = await p;
     expect(asyncResult).toBe(21);
 
-    const perfLogs = debugLogger.getLogs().filter((l) => l.level === 'perf' && l.operation.includes('Example'));
+    const perfLogs = debugLogger
+      .getLogs()
+      .filter((l) => l.level === 'perf' && l.operation.includes('Example'));
     expect(perfLogs).toHaveLength(4); // 2 for sync, 2 for async
   });
 

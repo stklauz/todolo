@@ -252,7 +252,13 @@ export default class MenuBuilder {
         ? subMenuViewDev
         : subMenuViewProd;
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp] as any[];
+    return [
+      subMenuAbout,
+      subMenuEdit,
+      subMenuView,
+      subMenuWindow,
+      subMenuHelp,
+    ] as any[];
   }
 
   buildDefaultTemplate() {
@@ -355,19 +361,19 @@ export default class MenuBuilder {
             },
           },
           {
-          label: 'Todolo Discussions',
-          click() {
-            shell.openExternal(
-              'https://github.com/stklauz/todolo/discussions',
-            );
+            label: 'Todolo Discussions',
+            click() {
+              shell.openExternal(
+                'https://github.com/stklauz/todolo/discussions',
+              );
+            },
           },
-        },
-        {
-          label: 'Search Issues',
-          click() {
-            shell.openExternal('https://github.com/stklauz/todolo/issues');
+          {
+            label: 'Search Issues',
+            click() {
+              shell.openExternal('https://github.com/stklauz/todolo/issues');
+            },
           },
-        },
         ],
       },
     ];

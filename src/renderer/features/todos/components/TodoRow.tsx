@@ -1,4 +1,5 @@
 import React from 'react';
+
 const styles = require('../styles/TodoList.module.css');
 
 // Debug mode - set to true to enable detailed logging
@@ -55,18 +56,27 @@ export const TodoRow = React.memo(
           checkboxRef.current.indeterminate = Boolean(indeterminate);
         }
       }, [indeterminate]);
-      const indentClass = indentLevel > 0 ? (styles as any)[`indent${indentLevel}`] || '' : '';
+      const indentClass =
+        indentLevel > 0 ? (styles as any)[`indent${indentLevel}`] || '' : '';
       return (
         <div
           className={`${styles.row} ${isDropTarget ? styles.dropTarget : ''}`}
           onDragOver={(e) => {
-            debugLog('Row drag over', { value, isDropTarget, eventType: e.type });
+            debugLog('Row drag over', {
+              value,
+              isDropTarget,
+              eventType: e.type,
+            });
             e.preventDefault();
             e.stopPropagation();
             onDragOver(e);
           }}
           onDragLeave={(e) => {
-            debugLog('Row drag leave', { value, isDropTarget, eventType: e.type });
+            debugLog('Row drag leave', {
+              value,
+              isDropTarget,
+              eventType: e.type,
+            });
             e.preventDefault();
             e.stopPropagation();
             onDragLeave();

@@ -4,7 +4,12 @@ import '@testing-library/jest-dom';
 // user-event is provided via setupUser() from test utils
 
 import * as storage from '../../renderer/features/todos/api/storage';
-import { renderAppWithDefaults, setupDefaultMocks, mockStorage, setupUser } from '../utils/ui';
+import {
+  renderAppWithDefaults,
+  setupDefaultMocks,
+  mockStorage,
+  setupUser,
+} from '../utils/ui';
 
 // Mock the storage module (util relies on the same module reference)
 jest.mock('../../renderer/features/todos/api/storage');
@@ -27,9 +32,13 @@ describe('UI Happy Path – user interactions', () => {
     await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
     // Core UI present
-    expect(screen.getByRole('button', { name: /add list/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /add list/i }),
+    ).toBeInTheDocument();
     // Invariant: there is always at least one todo input after load
-    expect(screen.getAllByLabelText('Todo text').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText('Todo text').length).toBeGreaterThanOrEqual(
+      1,
+    );
 
     // Interact using user-event with fake timers support
     const user = setupUser();
@@ -45,7 +54,9 @@ describe('UI Happy Path – user interactions', () => {
 
     // Flush the last millisecond to hit debounce
     jest.advanceTimersByTime(1);
-    await waitFor(() => expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(1),
+    );
 
     // Press Enter to add the next line (new todo below)
     await user.keyboard('{Enter}');
@@ -56,13 +67,19 @@ describe('UI Happy Path – user interactions', () => {
     expect((allInputs[0] as HTMLTextAreaElement).value).toBe('Buy milk');
     expect((allInputs[1] as HTMLTextAreaElement).value).toBe('');
     // Focus should move to the newly inserted row (allow effect to run)
-    await waitFor(() => expect(screen.getAllByLabelText('Todo text')[1]).toHaveFocus());
+    await waitFor(() =>
+      expect(screen.getAllByLabelText('Todo text')[1]).toHaveFocus(),
+    );
 
     // Insert operation saves immediately, so total calls should be 2
-    await waitFor(() => expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(2),
+    );
 
     // Spec alignment: checkbox disabled for empty todos; enabled for non-empty
-    const checkboxes = screen.getAllByRole('checkbox', { name: /toggle completed/i });
+    const checkboxes = screen.getAllByRole('checkbox', {
+      name: /toggle completed/i,
+    });
     expect(checkboxes.length).toBeGreaterThanOrEqual(2);
     // First row is non-empty -> enabled
     expect(checkboxes[0]).not.toBeDisabled();
@@ -88,7 +105,9 @@ describe('UI Happy Path – user interactions', () => {
     expect(mockStorage.saveListTodos).not.toHaveBeenCalled();
     // Finally hit 200ms idle
     jest.advanceTimersByTime(50);
-    await waitFor(() => expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(1),
+    );
   });
 
   it('can create a new list, type a todo, and insert with Enter (debounced + immediate saves)', async () => {
@@ -111,7 +130,9 @@ describe('UI Happy Path – user interactions', () => {
     // Debounced save after typing
     expect(mockStorage.saveListTodos).not.toHaveBeenCalled();
     jest.advanceTimersByTime(200);
-    await waitFor(() => expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(1),
+    );
 
     // Enter inserts new line and saves immediately (second call)
     await user.keyboard('{Enter}');
@@ -120,6 +141,8 @@ describe('UI Happy Path – user interactions', () => {
     expect((inputs[1] as HTMLTextAreaElement).value).toBe('');
     // Note: after Add list, the app enters rename mode which intentionally
     // prevents todo-focus stealing; skip focus assertion in this flow.
-    await waitFor(() => expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockStorage.saveListTodos).toHaveBeenCalledTimes(2),
+    );
   });
 });

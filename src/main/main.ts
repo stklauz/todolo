@@ -13,21 +13,6 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
-// Separate Dev and Prod databases by using different userData paths.
-// Development uses a dedicated Dev directory; production uses Electron defaults.
-// Must run before any userData path is consumed.
-if (!app.isPackaged) {
-  try {
-    const devUserData = path.join(app.getPath('appData'), `${app.getName()}-Dev`);
-    app.setPath('userData', devUserData);
-    console.log(`[STORAGE] userData path (dev) -> ${devUserData}`);
-  } catch (e) {
-    console.warn('[STORAGE] Unable to set dev userData path', e);
-  }
-} else {
-  console.log(`[STORAGE] userData path (prod) -> ${app.getPath('userData')}`);
-}
-
 // Import DB module only after userData path is finalized to avoid any
 // accidental early reads of the default path inside the module.
 import {
@@ -39,6 +24,24 @@ import {
   saveAppSettings as dbSaveAppSettings,
   closeDatabase,
 } from './db';
+
+// Separate Dev and Prod databases by using different userData paths.
+// Development uses a dedicated Dev directory; production uses Electron defaults.
+// Must run before any userData path is consumed.
+if (!app.isPackaged) {
+  try {
+    const devUserData = path.join(
+      app.getPath('appData'),
+      `${app.getName()}-Dev`,
+    );
+    app.setPath('userData', devUserData);
+    console.log(`[STORAGE] userData path (dev) -> ${devUserData}`);
+  } catch (e) {
+    console.warn('[STORAGE] Unable to set dev userData path', e);
+  }
+} else {
+  console.log(`[STORAGE] userData path (prod) -> ${app.getPath('userData')}`);
+}
 
 // Auto-update logic removed per user request.
 
@@ -55,7 +58,10 @@ ipcMain.handle('load-lists', async () => {
     return data;
   } catch (error) {
     const duration = performance.now() - startTime;
-    console.error(`[PERF] load-lists failed after ${duration.toFixed(2)}ms:`, error);
+    console.error(
+      `[PERF] load-lists failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
     return { version: 2, lists: [], selectedListId: undefined };
   }
 });
@@ -70,7 +76,10 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
     return res;
   } catch (error) {
     const duration = performance.now() - startTime;
-    console.error(`[PERF] save-lists failed after ${duration.toFixed(2)}ms:`, error);
+    console.error(
+      `[PERF] save-lists failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
     return { success: false, error: String(error) };
   }
 });
@@ -78,32 +87,47 @@ ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
 ipcMain.handle('load-list-todos', async (_event, listId: string) => {
   const startTime = performance.now();
   try {
-    console.log(`[PERF] Starting load-list-todos operation for list ${listId} (sqlite)`);
+    console.log(
+      `[PERF] Starting load-list-todos operation for list ${listId} (sqlite)`,
+    );
     const doc = dbLoadListTodos(listId);
     const duration = performance.now() - startTime;
     console.log(`[PERF] load-list-todos completed in ${duration.toFixed(2)}ms`);
     return doc;
   } catch (error) {
     const duration = performance.now() - startTime;
-    console.error(`[PERF] load-list-todos failed after ${duration.toFixed(2)}ms:`, error);
+    console.error(
+      `[PERF] load-list-todos failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
     return { version: 2, todos: [] };
   }
 });
 
-ipcMain.handle('save-list-todos', async (_event, listId: string, todosDoc: any) => {
-  const startTime = performance.now();
-  try {
-    console.log(`[PERF] Starting save-list-todos for list ${listId} (sqlite)`);
-    const res = dbSaveListTodos(listId, todosDoc);
-    const duration = performance.now() - startTime;
-    console.log(`[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`);
-    return res;
-  } catch (error) {
-    const duration = performance.now() - startTime;
-    console.error(`[PERF] save-list-todos failed after ${duration.toFixed(2)}ms:`, error);
-    return { success: false, error: String(error) };
-  }
-});
+ipcMain.handle(
+  'save-list-todos',
+  async (_event, listId: string, todosDoc: any) => {
+    const startTime = performance.now();
+    try {
+      console.log(
+        `[PERF] Starting save-list-todos for list ${listId} (sqlite)`,
+      );
+      const res = dbSaveListTodos(listId, todosDoc);
+      const duration = performance.now() - startTime;
+      console.log(
+        `[PERF] save-list-todos completed in ${duration.toFixed(2)}ms`,
+      );
+      return res;
+    } catch (error) {
+      const duration = performance.now() - startTime;
+      console.error(
+        `[PERF] save-list-todos failed after ${duration.toFixed(2)}ms:`,
+        error,
+      );
+      return { success: false, error: String(error) };
+    }
+  },
+);
 
 ipcMain.handle('load-app-settings', async () => {
   const startTime = performance.now();
@@ -111,11 +135,16 @@ ipcMain.handle('load-app-settings', async () => {
     console.log(`[PERF] Starting load-app-settings operation (sqlite)`);
     const data = dbLoadAppSettings();
     const duration = performance.now() - startTime;
-    console.log(`[PERF] load-app-settings completed in ${duration.toFixed(2)}ms`);
+    console.log(
+      `[PERF] load-app-settings completed in ${duration.toFixed(2)}ms`,
+    );
     return data;
   } catch (error) {
     const duration = performance.now() - startTime;
-    console.error(`[PERF] load-app-settings failed after ${duration.toFixed(2)}ms:`, error);
+    console.error(
+      `[PERF] load-app-settings failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
     return { hideCompletedItems: true };
   }
 });
@@ -126,11 +155,16 @@ ipcMain.handle('save-app-settings', async (_event, settings: any) => {
     console.log(`[PERF] Starting save-app-settings operation (sqlite)`);
     const res = dbSaveAppSettings(settings);
     const duration = performance.now() - startTime;
-    console.log(`[PERF] save-app-settings completed in ${duration.toFixed(2)}ms`);
+    console.log(
+      `[PERF] save-app-settings completed in ${duration.toFixed(2)}ms`,
+    );
     return res;
   } catch (error) {
     const duration = performance.now() - startTime;
-    console.error(`[PERF] save-app-settings failed after ${duration.toFixed(2)}ms:`, error);
+    console.error(
+      `[PERF] save-app-settings failed after ${duration.toFixed(2)}ms:`,
+      error,
+    );
     return { success: false, error: String(error) };
   }
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { TodoRow } from './TodoRow';
+import type { EditorTodo } from '../types';
 
 // Import audio file with fallback for tests
 let popSound: string;
@@ -9,7 +10,6 @@ try {
   popSound = 'mock-audio';
 }
 const styles = require('../styles/TodoList.module.css');
-import type { EditorTodo } from '../types';
 
 // Debug mode - set to true to enable detailed logging
 const DEBUG_DRAG_DROP = true;
@@ -24,7 +24,9 @@ type Props = {
   todos: EditorTodo[];
   updateTodo: (id: number, text: string) => void;
   toggleTodo: (id: number) => void;
-  handleTodoKeyDown: (id: number) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  handleTodoKeyDown: (
+    id: number,
+  ) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   insertBelowAndFocus: (index: number, text?: string) => void;
   changeIndent: (id: number, delta: number) => void;
   removeAt: (index: number) => void;
@@ -37,7 +39,10 @@ type Props = {
   handleDropOn: (targetId: number) => void;
   dropTargetId: number | null;
   dropAtSectionEnd: 'active' | 'completed' | null;
-  handleDragOverEndZone: (e: React.DragEvent, section: 'active' | 'completed') => void;
+  handleDragOverEndZone: (
+    e: React.DragEvent,
+    section: 'active' | 'completed',
+  ) => void;
   handleDragLeaveEndZone: (section: 'active' | 'completed') => void;
   handleDropAtEnd: (section: 'active' | 'completed') => void;
   setInputRef: (id: number, el: HTMLTextAreaElement | null) => void;
@@ -66,7 +71,9 @@ const TodoList = React.memo(function TodoList({
 }: Props) {
   // Keep latest todos in a ref so cached handlers can access fresh data
   const todosRef = React.useRef(todos);
-  React.useEffect(() => { todosRef.current = todos; }, [todos]);
+  React.useEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
 
   const idToIndex = React.useMemo(() => {
     const m = new Map<number, number>();
@@ -93,20 +100,31 @@ const TodoList = React.memo(function TodoList({
         }
         const effCompleted = t.completed && (!hasChild || allChildrenCompleted);
         section.set(t.id, effCompleted ? 'completed' : 'active');
-        indeterminate.set(t.id, hasChild && anyChildCompleted && !allChildrenCompleted);
+        indeterminate.set(
+          t.id,
+          hasChild && anyChildCompleted && !allChildrenCompleted,
+        );
       } else {
         // child: completed only if child and nearest parent are completed
         let parentCompleted = false;
         for (let j = i - 1; j >= 0; j--) {
-          if (Number(todos[j].indent ?? 0) === 0) { parentCompleted = !!todos[j].completed; break; }
+          if (Number(todos[j].indent ?? 0) === 0) {
+            parentCompleted = !!todos[j].completed;
+            break;
+          }
         }
-        section.set(t.id, t.completed && parentCompleted ? 'completed' : 'active');
+        section.set(
+          t.id,
+          t.completed && parentCompleted ? 'completed' : 'active',
+        );
         indeterminate.set(t.id, false);
       }
     }
     const active: EditorTodo[] = [];
     const completed: EditorTodo[] = [];
-    todos.forEach((t) => (section.get(t.id) === 'completed' ? completed.push(t) : active.push(t)));
+    todos.forEach((t) =>
+      section.get(t.id) === 'completed' ? completed.push(t) : active.push(t),
+    );
     return { indeterminate, section, active, completed } as const;
   }, [todos]);
 
@@ -124,96 +142,123 @@ const TodoList = React.memo(function TodoList({
   }, []);
 
   // Cache per-id handlers so TodoRow props remain stable across renders
-  const keydownByIdRef = React.useRef(new Map<number, (e: React.KeyboardEvent<HTMLTextAreaElement>) => void>());
-  const dragStartByIdRef = React.useRef(new Map<number, (e: React.DragEvent) => void>());
-  const dragOverByIdRef = React.useRef(new Map<number, (e: React.DragEvent) => void>());
+  const keydownByIdRef = React.useRef(
+    new Map<number, (e: React.KeyboardEvent<HTMLTextAreaElement>) => void>(),
+  );
+  const dragStartByIdRef = React.useRef(
+    new Map<number, (e: React.DragEvent) => void>(),
+  );
+  const dragOverByIdRef = React.useRef(
+    new Map<number, (e: React.DragEvent) => void>(),
+  );
   const dragLeaveByIdRef = React.useRef(new Map<number, () => void>());
   const dropOnByIdRef = React.useRef(new Map<number, () => void>());
 
   // Small wrapper to call changeIndent via parent prop without recreating closures
-  const handleIndent = React.useCallback((id: number, delta: number) => {
-    changeIndent(id, delta);
-  }, [changeIndent]);
+  const handleIndent = React.useCallback(
+    (id: number, delta: number) => {
+      changeIndent(id, delta);
+    },
+    [changeIndent],
+  );
 
-  const getKeydownHandler = React.useCallback((id: number) => {
-    const existing = keydownByIdRef.current.get(id);
-    if (existing) return existing;
-    const fn = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const list = todosRef.current;
-      const idx = list.findIndex((t) => t.id === id);
-      if (idx === -1) return;
-      const cur = list[idx];
-      if (event.key === 'Tab') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          // outdent
-          handleIndent(id, -1);
-        } else {
-          // only indent if there is a parent above
-          let hasParent = false;
-          for (let i = idx - 1; i >= 0; i--) {
-            if ((Number(list[i].indent ?? 0)) === 0) { hasParent = true; break; }
-          }
-          if (hasParent) handleIndent(id, +1);
-        }
-        return;
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        if (cur && cur.text.trim().length > 0) {
-          insertBelowAndFocus(idx);
-        }
-        return;
-      }
-      if (event.key === 'Backspace') {
-        const isEmpty = !cur || cur.text.length === 0;
-        if (isEmpty) {
+  const getKeydownHandler = React.useCallback(
+    (id: number) => {
+      const existing = keydownByIdRef.current.get(id);
+      if (existing) return existing;
+      const fn = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const list = todosRef.current;
+        const idx = list.findIndex((t) => t.id === id);
+        if (idx === -1) return;
+        const cur = list[idx];
+        if (event.key === 'Tab') {
           event.preventDefault();
-          const indent = Number(cur?.indent ?? 0);
-          if (indent > 0) {
+          if (event.shiftKey) {
+            // outdent
             handleIndent(id, -1);
-            return;
+          } else {
+            // only indent if there is a parent above
+            let hasParent = false;
+            for (let i = idx - 1; i >= 0; i--) {
+              if (Number(list[i].indent ?? 0) === 0) {
+                hasParent = true;
+                break;
+              }
+            }
+            if (hasParent) handleIndent(id, +1);
           }
-          if (list.length <= 1) return;
-          removeAt(idx);
+          return;
         }
-      }
-    };
-    keydownByIdRef.current.set(id, fn);
-    return fn;
-  }, [handleIndent, insertBelowAndFocus, removeAt]);
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (cur && cur.text.trim().length > 0) {
+            insertBelowAndFocus(idx);
+          }
+          return;
+        }
+        if (event.key === 'Backspace') {
+          const isEmpty = !cur || cur.text.length === 0;
+          if (isEmpty) {
+            event.preventDefault();
+            const indent = Number(cur?.indent ?? 0);
+            if (indent > 0) {
+              handleIndent(id, -1);
+              return;
+            }
+            if (list.length <= 1) return;
+            removeAt(idx);
+          }
+        }
+      };
+      keydownByIdRef.current.set(id, fn);
+      return fn;
+    },
+    [handleIndent, insertBelowAndFocus, removeAt],
+  );
 
-  const getDragStart = React.useCallback((id: number) => {
-    const ex = dragStartByIdRef.current.get(id);
-    if (ex) return ex;
-    const fn = (_e: React.DragEvent) => handleDragStart(id);
-    dragStartByIdRef.current.set(id, fn);
-    return fn;
-  }, [handleDragStart]);
+  const getDragStart = React.useCallback(
+    (id: number) => {
+      const ex = dragStartByIdRef.current.get(id);
+      if (ex) return ex;
+      const fn = (_e: React.DragEvent) => handleDragStart(id);
+      dragStartByIdRef.current.set(id, fn);
+      return fn;
+    },
+    [handleDragStart],
+  );
 
-  const getDragOver = React.useCallback((id: number) => {
-    const ex = dragOverByIdRef.current.get(id);
-    if (ex) return ex;
-    const fn = (e: React.DragEvent) => handleDragOver(e, id);
-    dragOverByIdRef.current.set(id, fn);
-    return fn;
-  }, [handleDragOver]);
+  const getDragOver = React.useCallback(
+    (id: number) => {
+      const ex = dragOverByIdRef.current.get(id);
+      if (ex) return ex;
+      const fn = (e: React.DragEvent) => handleDragOver(e, id);
+      dragOverByIdRef.current.set(id, fn);
+      return fn;
+    },
+    [handleDragOver],
+  );
 
-  const getDragLeave = React.useCallback((id: number) => {
-    const ex = dragLeaveByIdRef.current.get(id);
-    if (ex) return ex;
-    const fn = () => handleDragLeave(id);
-    dragLeaveByIdRef.current.set(id, fn);
-    return fn;
-  }, [handleDragLeave]);
+  const getDragLeave = React.useCallback(
+    (id: number) => {
+      const ex = dragLeaveByIdRef.current.get(id);
+      if (ex) return ex;
+      const fn = () => handleDragLeave(id);
+      dragLeaveByIdRef.current.set(id, fn);
+      return fn;
+    },
+    [handleDragLeave],
+  );
 
-  const getDropOn = React.useCallback((id: number) => {
-    const ex = dropOnByIdRef.current.get(id);
-    if (ex) return ex;
-    const fn = () => handleDropOn(id);
-    dropOnByIdRef.current.set(id, fn);
-    return fn;
-  }, [handleDropOn]);
+  const getDropOn = React.useCallback(
+    (id: number) => {
+      const ex = dropOnByIdRef.current.get(id);
+      if (ex) return ex;
+      const fn = () => handleDropOn(id);
+      dropOnByIdRef.current.set(id, fn);
+      return fn;
+    },
+    [handleDropOn],
+  );
 
   return (
     <>
@@ -221,66 +266,79 @@ const TodoList = React.memo(function TodoList({
         const isEmpty = todo.text.trim().length === 0;
         const toggleDisabled = isEmpty;
         return (
-        <TodoRow
-          key={todo.id}
-          value={todo.text}
-          checked={todo.completed}
-          indent={todo.indent ?? 0}
-          indeterminate={derived.indeterminate.get(todo.id) === true}
-          onToggle={() => {
-            if (toggleDisabled) return;
-            
-            // Play audio with better error handling
-            const audio = audioRef.current;
-            if (audio) {
-              try {
-                audio.currentTime = 0;
-                audio.play().catch((error) => {
-                  console.warn('Audio playback failed:', error);
-                });
-              } catch (error) {
-                console.warn('Audio error:', error);
+          <TodoRow
+            key={todo.id}
+            value={todo.text}
+            checked={todo.completed}
+            indent={todo.indent ?? 0}
+            indeterminate={derived.indeterminate.get(todo.id) === true}
+            onToggle={() => {
+              if (toggleDisabled) return;
+
+              // Play audio with better error handling
+              const audio = audioRef.current;
+              if (audio) {
+                try {
+                  audio.currentTime = 0;
+                  audio.play().catch((error) => {
+                    console.warn('Audio playback failed:', error);
+                  });
+                } catch (error) {
+                  console.warn('Audio error:', error);
+                }
               }
-            }
-            
-            const index = idToIndex.get(todo.id) ?? -1;
-            toggleTodo(todo.id);
-            // If this was the only active non-empty todo, create a new empty one and focus it
-            if (isSingleActive && !isEmpty && index !== -1) {
-              insertBelowAndFocus(index, '');
-            }
-          }}
-          toggleDisabled={toggleDisabled}
-          onChange={(e) => updateTodo(todo.id, e.target.value)}
-          onKeyDown={getKeydownHandler(todo.id)}
-          onDragStart={getDragStart(todo.id)}
-          onDragEnd={handleDragEnd}
-          onDragOver={getDragOver(todo.id)}
-          onDragLeave={getDragLeave(todo.id)}
-          onDrop={getDropOn(todo.id)}
-          isDropTarget={dropTargetId === todo.id}
-          ref={(el) => setInputRef(todo.id, el)}
-        />
+
+              const index = idToIndex.get(todo.id) ?? -1;
+              toggleTodo(todo.id);
+              // If this was the only active non-empty todo, create a new empty one and focus it
+              if (isSingleActive && !isEmpty && index !== -1) {
+                insertBelowAndFocus(index, '');
+              }
+            }}
+            toggleDisabled={toggleDisabled}
+            onChange={(e) => updateTodo(todo.id, e.target.value)}
+            onKeyDown={getKeydownHandler(todo.id)}
+            onDragStart={getDragStart(todo.id)}
+            onDragEnd={handleDragEnd}
+            onDragOver={getDragOver(todo.id)}
+            onDragLeave={getDragLeave(todo.id)}
+            onDrop={getDropOn(todo.id)}
+            isDropTarget={dropTargetId === todo.id}
+            ref={(el) => setInputRef(todo.id, el)}
+          />
         );
       })}
 
       {/* End drop zone for Active section */}
       <div
-        className={dropAtSectionEnd === 'active' ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
+        className={
+          dropAtSectionEnd === 'active'
+            ? `${styles.dropZone} ${styles.dropZoneActive}`
+            : styles.dropZone
+        }
         onDragOver={(e) => {
-          debugLog('Active end zone drag over', { eventType: e.type, dropAtSectionEnd });
+          debugLog('Active end zone drag over', {
+            eventType: e.type,
+            dropAtSectionEnd,
+          });
           e.preventDefault();
           e.stopPropagation();
           handleDragOverEndZone(e, 'active');
         }}
         onDragLeave={(e) => {
-          debugLog('Active end zone drag leave', { eventType: e.type, dropAtSectionEnd });
+          debugLog('Active end zone drag leave', {
+            eventType: e.type,
+            dropAtSectionEnd,
+          });
           e.preventDefault();
           e.stopPropagation();
           handleDragLeaveEndZone('active');
         }}
         onDrop={(e) => {
-          debugLog('Active end zone drop', { eventType: e.type, dropAtSectionEnd });
+          debugLog('Active end zone drop', {
+            eventType: e.type,
+            dropAtSectionEnd,
+          });
           e.preventDefault();
           e.stopPropagation();
           handleDropAtEnd('active');
@@ -315,21 +373,34 @@ const TodoList = React.memo(function TodoList({
 
       {/* End drop zone for Completed section (bottom of list) */}
       <div
-        className={dropAtSectionEnd === 'completed' ? `${styles.dropZone} ${styles.dropZoneActive}` : styles.dropZone}
+        className={
+          dropAtSectionEnd === 'completed'
+            ? `${styles.dropZone} ${styles.dropZoneActive}`
+            : styles.dropZone
+        }
         onDragOver={(e) => {
-          debugLog('Completed end zone drag over', { eventType: e.type, dropAtSectionEnd });
+          debugLog('Completed end zone drag over', {
+            eventType: e.type,
+            dropAtSectionEnd,
+          });
           e.preventDefault();
           e.stopPropagation();
           handleDragOverEndZone(e, 'completed');
         }}
         onDragLeave={(e) => {
-          debugLog('Completed end zone drag leave', { eventType: e.type, dropAtSectionEnd });
+          debugLog('Completed end zone drag leave', {
+            eventType: e.type,
+            dropAtSectionEnd,
+          });
           e.preventDefault();
           e.stopPropagation();
           handleDragLeaveEndZone('completed');
         }}
         onDrop={(e) => {
-          debugLog('Completed end zone drop', { eventType: e.type, dropAtSectionEnd });
+          debugLog('Completed end zone drop', {
+            eventType: e.type,
+            dropAtSectionEnd,
+          });
           e.preventDefault();
           e.stopPropagation();
           handleDropAtEnd('completed');
