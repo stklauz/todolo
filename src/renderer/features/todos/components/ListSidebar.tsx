@@ -18,6 +18,8 @@ type Props = {
   onChangeName: (name: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
+  // focus management
+  focusListId?: string | null;
 };
 
 export default function ListSidebar({
@@ -31,7 +33,32 @@ export default function ListSidebar({
   onChangeName,
   onCommitRename,
   onCancelRename,
+  focusListId,
 }: Props) {
+  const listItemRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Focus management effect
+  React.useEffect(() => {
+    if (focusListId) {
+      const element = listItemRefs.current.get(focusListId);
+      if (element) {
+        // Scroll into view first (if available)
+        if (typeof element.scrollIntoView === 'function') {
+          element.scrollIntoView({ block: 'nearest' });
+        }
+        // Then focus
+        element.focus();
+      }
+    }
+  }, [focusListId]);
+
+  const setListItemRef = (id: string, element: HTMLDivElement | null) => {
+    if (element) {
+      listItemRefs.current.set(id, element);
+    } else {
+      listItemRefs.current.delete(id);
+    }
+  };
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
@@ -50,7 +77,16 @@ export default function ListSidebar({
         {lists.map((l) => (
           <div
             key={l.id}
+            ref={(el) => setListItemRef(l.id, el)}
+            tabIndex={0}
+            role="button"
             onClick={() => onSelect(l.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(l.id);
+              }
+            }}
             className={`${styles.listItem} ${l.id === selectedListId ? styles.listItemActive : ''}`}
           >
             <span className={styles.listName} title={l.name}>

@@ -305,7 +305,7 @@ describe('useTodosState', () => {
 
     expect(newListId).toBe('new-list-id');
     expect(mockStorage.duplicateList).toHaveBeenCalledWith('1', undefined);
-    expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(2); // Once on init, once after duplicate
+    expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(1); // Only once on init, not after duplicate
     expect(mockStorage.setSelectedListMeta).toHaveBeenCalledWith('new-list-id');
   });
 

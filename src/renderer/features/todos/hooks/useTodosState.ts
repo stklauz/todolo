@@ -549,7 +549,28 @@ export default function useTodosState() {
     if (!selectedListId) return;
     setLists((prev) => {
       const remaining = prev.filter((l) => l.id !== selectedListId);
-      setSelectedListId(remaining[0]?.id ?? null);
+      const nextSelected = remaining[0]?.id ?? null;
+      setSelectedListId(nextSelected);
+      // Persist deletion immediately to avoid reappearing lists after other operations
+      try {
+        const indexDoc = {
+          version: 2 as const,
+          lists: remaining.map((l) => ({
+            id: l.id,
+            name: l.name,
+            createdAt: l.createdAt!,
+            updatedAt: l.updatedAt,
+          })),
+          selectedListId: nextSelected ?? undefined,
+        };
+        saveListsIndex(indexDoc).catch((error) => {
+          debugLogger.log(
+            'error',
+            'Failed to persist index after deleteSelectedList',
+            error,
+          );
+        });
+      } catch {}
       return remaining;
     });
     // Remove from cache when deleted
@@ -560,9 +581,31 @@ export default function useTodosState() {
     setLists((prev) => {
       const remaining = prev.filter((l) => l.id !== id);
       // if we deleted the selected list, update selection
-      setSelectedListId((sel) =>
-        sel === id ? (remaining[0]?.id ?? null) : sel,
-      );
+      let nextSelected: string | null = null;
+      setSelectedListId((sel) => {
+        nextSelected = sel === id ? (remaining[0]?.id ?? null) : sel;
+        return nextSelected;
+      });
+      // Persist deletion immediately to avoid reappearing lists after other operations
+      try {
+        const indexDoc = {
+          version: 2 as const,
+          lists: remaining.map((l) => ({
+            id: l.id,
+            name: l.name,
+            createdAt: l.createdAt!,
+            updatedAt: l.updatedAt,
+          })),
+          selectedListId: nextSelected ?? undefined,
+        };
+        saveListsIndex(indexDoc).catch((error) => {
+          debugLogger.log(
+            'error',
+            'Failed to persist index after deleteList',
+            error,
+          );
+        });
+      } catch {}
       return remaining;
     });
     // Remove from cache when deleted
@@ -604,25 +647,27 @@ export default function useTodosState() {
       duplicateListApi(sourceListId, newListName)
         .then((result) => {
           if (result.success && result.newListId) {
-            loadListsIndex()
-              .then((index) => {
-                const normalizedLists = (index.lists || []).map((list, li) => ({
-                  id: String(list.id),
-                  name:
-                    typeof list.name === 'string'
-                      ? list.name
-                      : `List ${li + 1}`,
-                  todos: [],
-                  createdAt: list.createdAt,
-                  updatedAt: list.updatedAt,
-                }));
-                setLists(normalizedLists);
-                // Persist selection via index and meta for redundancy
-                setSelectedListIdWithSave(result.newListId);
-                setSelectedListMeta(result.newListId).catch(() => {});
-                resolve(result.newListId);
-              })
-              .catch(() => resolve(null));
+            // Instead of reloading all lists from storage, just add the new list to current state
+            // This prevents deleted lists from reappearing
+            const sourceList = lists.find((l) => l.id === sourceListId);
+            if (sourceList) {
+              const newList = {
+                id: result.newListId,
+                name: newListName || `${sourceList.name} (Copy)`,
+                todos: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              setLists((prev) => [...prev, newList]);
+              // Persist selection via index and meta for redundancy
+              setSelectedListIdWithSave(result.newListId);
+              setSelectedListMeta(result.newListId).catch(() => {});
+              // Selection and meta are persisted; no full index reload here to avoid
+              // reintroducing deleted lists due to save timing.
+              resolve(result.newListId);
+            } else {
+              resolve(null);
+            }
           } else {
             resolve(null);
           }

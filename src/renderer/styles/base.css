@@ -38,6 +38,16 @@ body {
 
 input, textarea, select { font-family:inherit; }
 
+/* Spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Invisible draggable strip at the very top */
 .drag-region {
   -webkit-app-region: drag;

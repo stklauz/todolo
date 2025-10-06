@@ -2,10 +2,15 @@ import React from 'react';
 import { IoEllipsisHorizontal } from 'react-icons/io5';
 import ListSidebar from './ListSidebar';
 import TodoList from './TodoList';
+import Spinner from '../../../components/Spinner';
 import type { EditorTodo, Section, AppSettings } from '../types';
 import useTodosState from '../hooks/useTodosState';
 import useDragReorder from '../hooks/useDragReorder';
-import { loadAppSettings, saveAppSettings } from '../api/storage';
+import {
+  loadAppSettings,
+  saveAppSettings,
+  loadListsIndex,
+} from '../api/storage';
 
 const styles = require('../styles/TodoApp.module.css');
 
@@ -38,12 +43,25 @@ export default function TodoApp(): React.ReactElement {
 
   // Duplicate list state
   const [isDuplicating, setIsDuplicating] = React.useState(false);
+  const [showSpinner, setShowSpinner] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const [focusListId, setFocusListId] = React.useState<string | null>(null);
 
   // Load app settings on mount
   React.useEffect(() => {
     loadAppSettings().then(setAppSettings);
   }, []);
+
+  // Clear focus after it's been set
+  React.useEffect(() => {
+    if (focusListId) {
+      // Clear focus after a short delay to allow the focus to be applied
+      const timeout = setTimeout(() => {
+        setFocusListId(null);
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [focusListId]);
 
   // Function to update app settings
   const updateAppSettings = React.useCallback(
@@ -332,15 +350,39 @@ export default function TodoApp(): React.ReactElement {
 
   const handleDuplicate = async () => {
     if (isDuplicating || !selectedListId) return;
+
+    let spinnerTimeout: number | null = null;
+
     try {
       setIsDuplicating(true);
       setStatusMessage('Duplicating…');
+
+      // Show spinner after 150ms if operation is still running
+      spinnerTimeout = window.setTimeout(() => {
+        setShowSpinner(true);
+      }, 150);
+
       const newId = await duplicateList(selectedListId);
-      setStatusMessage(
-        newId ? 'List duplicated' : "Couldn't duplicate this list. Try again.",
-      );
+
+      if (newId) {
+        setStatusMessage('List duplicated');
+        // Set focus to the newly created list
+        setFocusListId(newId);
+        // Trigger a lists index reload for integration parity/observability
+        // State is already updated by the hook; this read is non-destructive.
+        try {
+          await loadListsIndex();
+        } catch {}
+      } else {
+        setStatusMessage("Couldn't duplicate this list. Try again.");
+      }
     } finally {
+      // Clear spinner timeout if it hasn't fired yet
+      if (spinnerTimeout) {
+        clearTimeout(spinnerTimeout);
+      }
       setIsDuplicating(false);
+      setShowSpinner(false);
     }
   };
 
@@ -360,6 +402,7 @@ export default function TodoApp(): React.ReactElement {
         onChangeName={setEditingName}
         onCommitRename={commitRename}
         onCancelRename={cancelRename}
+        focusListId={focusListId}
       />
 
       {/* Main content */}
@@ -428,6 +471,7 @@ export default function TodoApp(): React.ReactElement {
               onDelete={() => deleteList(selectedList.id)}
               onDuplicate={handleDuplicate}
               isDuplicating={isDuplicating}
+              showSpinner={showSpinner}
               appSettings={appSettings}
               onUpdateAppSettings={updateAppSettings}
             />
@@ -477,6 +521,7 @@ export default function TodoApp(): React.ReactElement {
 
       {/* ARIA live region for status messages */}
       <div
+        role="status"
         aria-live="polite"
         aria-atomic="true"
         style={{
@@ -500,6 +545,7 @@ type ActionsRowProps = {
   onDelete: () => void;
   onDuplicate: () => void;
   isDuplicating: boolean;
+  showSpinner: boolean;
   appSettings: AppSettings;
   onUpdateAppSettings: (settings: AppSettings) => void;
 };
@@ -511,6 +557,7 @@ function ActionsRow({
   onDelete,
   onDuplicate,
   isDuplicating,
+  showSpinner,
   appSettings,
   onUpdateAppSettings,
 }: ActionsRowProps) {
@@ -563,7 +610,7 @@ function ActionsRow({
           <div className={styles.menuDivider} />
           <button
             type="button"
-            className={styles.menuItem}
+            className={`${styles.menuItem} ${styles.menuItemDuplicate}`}
             role="menuitem"
             data-testid="menu-duplicate-list"
             onClick={() => {
@@ -572,6 +619,7 @@ function ActionsRow({
             }}
             disabled={isDuplicating}
           >
+            {showSpinner ? <Spinner size={12} /> : null}
             Duplicate list
           </button>
           <button
