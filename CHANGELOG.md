@@ -5,6 +5,28 @@ All notable changes to Todolo will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-01-27
+
+### Added
+- **Duplicate Lists Feature**: Complete implementation of list duplication functionality
+  - Core functionality with proper state management and database operations
+  - UI integration with accessibility improvements
+  - Observability and monitoring with comprehensive logging
+  - Three-phase implementation covering core functionality, UI integration, and monitoring
+- Enhanced development workflow with updated agent rules
+- Improved error handling and state management for list operations
+
+### Fixed
+- Lists now delete persistently: added explicit DB + IPC delete path to remove lists and their todos. Prevents deleted lists from reappearing on restart.
+- Fixed issue with duplicate lists not duplicating todo states correctly
+- Improved list deletion reliability and data consistency
+
+### Added
+- Targeted logs for delete flow across UI, storage, and DB for observability.
+- Tests for delete behavior: UI integration test driving the delete button, and storage IPC tests for the new delete endpoint.
+- Comprehensive monitoring for duplicate list operations
+- Enhanced accessibility for list management features
+
 ## [1.2.1] - 2025-10-06
 
 ### Fixed
