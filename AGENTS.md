@@ -13,7 +13,6 @@ Rules for Agents
 
 Operational Requirements
 - Pre-commit must pass: tests (see .husky/pre-commit).
-- Provide a brief change summary for each significant change using docs/templates/change-summary.md as a guide (include in commit message or task notes).
 
 Notes
 - If a rule is intentionally skipped, state the trade-off and the smallest safe alternative in the change summary.

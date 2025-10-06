@@ -64,6 +64,7 @@ export function openDatabase(): DB {
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
   db.pragma('temp_store = MEMORY');
+  db.pragma('foreign_keys = ON');
 
   applyMigrations(db);
   return db;
@@ -403,8 +404,12 @@ export function duplicateList(
       success: false;
       error: 'invalid_source_id' | 'not_found' | 'internal_error';
     } {
+  const startTime = performance.now();
   const database = openDatabase();
+
   try {
+    console.log(`[DB] duplicateList started for sourceListId=${sourceListId}`);
+
     if (!sourceListId || typeof sourceListId !== 'string') {
       return { success: false, error: 'invalid_source_id' };
     }
@@ -420,6 +425,7 @@ export function duplicateList(
     const newListId = crypto.randomUUID();
     const finalName = safeName || `${sourceList.name} (Copy)`;
     const now = new Date().toISOString();
+
     const tx = database.transaction(() => {
       database
         .prepare(
@@ -437,9 +443,24 @@ export function duplicateList(
       copyTodos.run({ newListId, sourceListId });
     });
     tx();
+
+    // Get todo count for logging
+    const todoCount = database
+      .prepare('SELECT COUNT(*) as count FROM todos WHERE list_id = ?')
+      .get(newListId) as { count: number };
+
+    const duration = performance.now() - startTime;
+    console.log(
+      `[DB] duplicateList completed: sourceListId=${sourceListId}, newListId=${newListId}, todoCount=${todoCount.count}, durationMs=${duration.toFixed(2)}`,
+    );
+
     return { success: true, newListId };
   } catch (e) {
-    console.error('[DB] Error duplicating list:', e);
+    const duration = performance.now() - startTime;
+    console.error(
+      `[DB] duplicateList failed after ${duration.toFixed(2)}ms:`,
+      e,
+    );
     return { success: false, error: 'internal_error' };
   }
 }

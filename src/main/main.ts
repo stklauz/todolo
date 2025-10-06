@@ -192,8 +192,9 @@ ipcMain.handle(
     } catch (error) {
       const duration = performance.now() - startTime;
       console.error(
-        `[PERF] duplicate-list failed after ${duration.toFixed(2)}ms:`,
-        error,
+        `[IPC] duplicate-list failed after ${duration.toFixed(2)}ms:`,
+        error instanceof Error ? error.message : String(error),
+        error instanceof Error ? error.stack : undefined,
       );
       return { success: false, error: 'internal_error' } as const;
     }
