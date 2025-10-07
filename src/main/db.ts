@@ -432,15 +432,38 @@ export function duplicateList(
           'INSERT INTO lists (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
         )
         .run(newListId, finalName, now, now);
-      // Set-based copy for performance: fewer JS/DB round-trips
-      const copyTodos = database.prepare(
-        `INSERT INTO todos (list_id, id, text, completed, indent, order_index)
-         SELECT @newListId, id, text, completed, indent, order_index
+
+      // Copy todos but assign NEW ids within the new list to ensure
+      // global uniqueness across lists and avoid any coupling via ids.
+      const selectTodos = database.prepare(
+        `SELECT text, completed, indent, order_index
          FROM todos
-         WHERE list_id = @sourceListId
+         WHERE list_id = ?
          ORDER BY order_index`,
       );
-      copyTodos.run({ newListId, sourceListId });
+      const insertTodo = database.prepare(
+        'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (?, ?, ?, ?, ?, ?)',
+      );
+
+      const rows = selectTodos.all(sourceListId) as Array<{
+        text: string;
+        completed: number;
+        indent: number;
+        order_index: number;
+      }>;
+
+      // Assign sequential ids in the duplicated list, preserving order.
+      let nextId = 1;
+      for (const r of rows) {
+        insertTodo.run(
+          newListId,
+          nextId++,
+          r.text,
+          r.completed ? 1 : 0,
+          Number(r.indent ?? 0),
+          r.order_index,
+        );
+      }
     });
     tx();
 
@@ -450,8 +473,9 @@ export function duplicateList(
       .get(newListId) as { count: number };
 
     const duration = performance.now() - startTime;
+    const idRange = todoCount.count > 0 ? `1..${todoCount.count}` : 'empty';
     console.log(
-      `[DB] duplicateList completed: sourceListId=${sourceListId}, newListId=${newListId}, todoCount=${todoCount.count}, durationMs=${duration.toFixed(2)}`,
+      `[DB] duplicateList completed: sourceListId=${sourceListId}, newListId=${newListId}, todoCount=${todoCount.count}, durationMs=${duration.toFixed(2)} (ids remapped, newIdRange=${idRange})`,
     );
 
     return { success: true, newListId };

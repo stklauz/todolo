@@ -197,6 +197,69 @@ describe('Storage API', () => {
       );
     });
 
+    it('should remap todo ids on duplicate and preserve order', async () => {
+      // Arrange a mock IPC that simulates source todos with non-sequential ids
+      const sourceListId = 'source-list-id';
+      const newListId = 'new-list-id';
+      const calls: Array<{ channel: string; args: any[] }> = [];
+      mockInvoke.mockImplementation(async (channel: string, ...args: any[]) => {
+        calls.push({ channel, args });
+        if (channel === 'duplicate-list') {
+          // Duplicate returns new list id
+          return { success: true, newListId };
+        }
+        if (channel === 'load-list-todos') {
+          const listId = args[0];
+          if (listId === sourceListId) {
+            // Source has ids that are not 1..N (simulate realistic gaps)
+            return {
+              version: 2,
+              todos: [
+                { id: 5, text: 'A', completed: false, indent: 0 },
+                { id: 10, text: 'B', completed: true, indent: 0 },
+              ],
+            };
+          }
+          if (listId === newListId) {
+            // After duplicate, the DB should remap ids to 1..N while preserving order
+            return {
+              version: 2,
+              todos: [
+                { id: 1, text: 'A', completed: false, indent: 0 },
+                { id: 2, text: 'B', completed: true, indent: 0 },
+              ],
+            };
+          }
+          return { version: 2, todos: [] };
+        }
+        // Default fallthrough for other channels
+        return undefined;
+      });
+
+      // Act: duplicate and then load todos for the new list
+      const dup = await duplicateList(sourceListId);
+      expect(dup).toEqual({ success: true, newListId });
+
+      const srcTodos = await loadListTodos(sourceListId);
+      const dstTodos = await loadListTodos(newListId);
+
+      // Assert: ids are remapped in new list and order/content preserved
+      expect(srcTodos.todos.map((t) => t.id)).toEqual([5, 10]);
+      expect(dstTodos.todos.map((t) => t.id)).toEqual([1, 2]);
+      expect(dstTodos.todos.map((t) => t.text)).toEqual(
+        srcTodos.todos.map((t) => t.text),
+      );
+      expect(dstTodos.todos.map((t) => t.completed)).toEqual(
+        srcTodos.todos.map((t) => t.completed),
+      );
+
+      // Sanity: verify IPC channels called as expected
+      expect(calls.some((c) => c.channel === 'duplicate-list')).toBe(true);
+      expect(
+        calls.filter((c) => c.channel === 'load-list-todos').length,
+      ).toBeGreaterThanOrEqual(2);
+    });
+
     it('should duplicate list with custom name', async () => {
       const mockResult = { success: true, newListId: 'new-list-id' };
       mockInvoke.mockResolvedValue(mockResult);
