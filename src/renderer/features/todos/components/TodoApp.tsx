@@ -237,13 +237,9 @@ export default function TodoApp(): React.ReactElement {
           // Do nothing if current todo is empty
           return;
         }
-        // Insert relative to the visible position only if filtering is active
-        if (appSettings.hideCompletedItems) {
-          const visibleIndex = todos.findIndex((t) => t.id === id);
-          if (visibleIndex !== -1) insertBelowAndFocus(visibleIndex);
-        } else {
-          insertBelowAndFocus(index);
-        }
+        // Always insert based on the full list position so behavior
+        // is consistent even when completed items are hidden
+        insertBelowAndFocus(index);
       } else if (event.key === 'Backspace') {
         const isEmpty = allTodos[index]?.text.length === 0;
         if (isEmpty) {
@@ -257,12 +253,9 @@ export default function TodoApp(): React.ReactElement {
           }
           // Prevent deleting the last remaining todo
           if (allTodos.length <= 1) return;
-          if (appSettings.hideCompletedItems) {
-            const visibleIndex = todos.findIndex((t) => t.id === id);
-            if (visibleIndex !== -1) removeAtAndManageFocus(visibleIndex);
-          } else {
-            removeAtAndManageFocus(index);
-          }
+          // Always remove based on the full list position so deletion
+          // still works when completed items are hidden
+          removeAtAndManageFocus(index);
         }
       }
     };

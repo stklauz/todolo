@@ -2,8 +2,8 @@ import React from 'react';
 
 const styles = require('../styles/TodoList.module.css');
 
-// Debug mode - set to true to enable detailed logging
-const DEBUG_DRAG_DROP = true;
+// Debug mode - set to false by default to avoid noisy logs
+const DEBUG_DRAG_DROP = false;
 
 const debugLog = (message: string, data?: any) => {
   if (DEBUG_DRAG_DROP) {

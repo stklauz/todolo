@@ -26,6 +26,12 @@ Use this as a simple, implementation‑doc checklist. Keep changes small, increm
 - Make failure modes explicit: validate, guard, and return useful errors.
 - Leave the campsite cleaner: remove duplication and tighten interfaces.
 
+### Renderer Key Handling Ownership
+- The parent view (e.g., `TodoApp`) owns keyboard handling for editing actions (Enter/Backspace/Tab).
+- Always compute positions against the full underlying list, not a filtered view (e.g., when hiding completed items).
+- Children (e.g., `TodoList`/`TodoRow`) should delegate key events to the parent instead of translating indices locally.
+- Rationale: avoids filtered-index vs full-index drift and preserves hierarchy semantics (indent/outdent) consistently.
+
 ## Minimal Steps for Implementation Docs
 1) Problem & scope: goal, non‑goals, inputs/outputs, edge cases.
 2) Data flow & interfaces: functions, types, contracts, flags.

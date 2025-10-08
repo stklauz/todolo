@@ -280,6 +280,50 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
     });
   });
 
+  describe('Editing Behavior', () => {
+    it('Backspace on empty indented item outdents first, then deletes', async () => {
+      // Override initial todos for this test: Parent + empty child
+      mockStorage.loadListTodos.mockResolvedValueOnce({
+        version: 2,
+        todos: [
+          { id: 1, text: 'Parent', completed: false, indent: 0 },
+          { id: 2, text: '', completed: false, indent: 1 },
+        ],
+      });
+
+      render(<TodoApp />);
+
+      await waitFor(() => {
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled();
+      });
+
+      // Two visible inputs (child is empty but still visible)
+      const inputs = await screen.findAllByRole('textbox', {
+        name: /todo text/i,
+      });
+      expect(inputs.length).toBe(2);
+
+      const user = userEvent.setup();
+      // Focus the child (second input) and press Backspace
+      await user.click(inputs[1]);
+      await user.keyboard('{Backspace}');
+
+      // After outdent: still two inputs
+      const afterOutdent = await screen.findAllByRole('textbox', {
+        name: /todo text/i,
+      });
+      expect(afterOutdent.length).toBe(2);
+
+      // Press Backspace again to delete the now-unindented empty row
+      await user.keyboard('{Backspace}');
+
+      const afterDelete = await screen.findAllByRole('textbox', {
+        name: /todo text/i,
+      });
+      expect(afterDelete.length).toBe(1);
+    });
+  });
+
   describe('Focus Management', () => {
     it('should create and select the newly duplicated list', async () => {
       // Mock successful duplication with new list

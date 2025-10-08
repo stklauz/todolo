@@ -11,8 +11,8 @@ try {
 }
 const styles = require('../styles/TodoList.module.css');
 
-// Debug mode - set to true to enable detailed logging
-const DEBUG_DRAG_DROP = true;
+// Debug mode - set to false by default to avoid noisy logs
+const DEBUG_DRAG_DROP = false;
 
 const debugLog = (message: string, data?: any) => {
   if (DEBUG_DRAG_DROP) {
@@ -142,9 +142,6 @@ const TodoList = React.memo(function TodoList({
   }, []);
 
   // Cache per-id handlers so TodoRow props remain stable across renders
-  const keydownByIdRef = React.useRef(
-    new Map<number, (e: React.KeyboardEvent<HTMLTextAreaElement>) => void>(),
-  );
   const dragStartByIdRef = React.useRef(
     new Map<number, (e: React.DragEvent) => void>(),
   );
@@ -162,59 +159,8 @@ const TodoList = React.memo(function TodoList({
     [changeIndent],
   );
 
-  const getKeydownHandler = React.useCallback(
-    (id: number) => {
-      const existing = keydownByIdRef.current.get(id);
-      if (existing) return existing;
-      const fn = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        const list = todosRef.current;
-        const idx = list.findIndex((t) => t.id === id);
-        if (idx === -1) return;
-        const cur = list[idx];
-        if (event.key === 'Tab') {
-          event.preventDefault();
-          if (event.shiftKey) {
-            // outdent
-            handleIndent(id, -1);
-          } else {
-            // only indent if there is a parent above
-            let hasParent = false;
-            for (let i = idx - 1; i >= 0; i--) {
-              if (Number(list[i].indent ?? 0) === 0) {
-                hasParent = true;
-                break;
-              }
-            }
-            if (hasParent) handleIndent(id, +1);
-          }
-          return;
-        }
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          if (cur && cur.text.trim().length > 0) {
-            insertBelowAndFocus(idx);
-          }
-          return;
-        }
-        if (event.key === 'Backspace') {
-          const isEmpty = !cur || cur.text.length === 0;
-          if (isEmpty) {
-            event.preventDefault();
-            const indent = Number(cur?.indent ?? 0);
-            if (indent > 0) {
-              handleIndent(id, -1);
-              return;
-            }
-            if (list.length <= 1) return;
-            removeAt(idx);
-          }
-        }
-      };
-      keydownByIdRef.current.set(id, fn);
-      return fn;
-    },
-    [handleIndent, insertBelowAndFocus, removeAt],
-  );
+  // Key handling is owned by the parent (TodoApp) to ensure operations
+  // are computed against the full list, not the filtered view.
 
   const getDragStart = React.useCallback(
     (id: number) => {
@@ -297,7 +243,7 @@ const TodoList = React.memo(function TodoList({
             }}
             toggleDisabled={toggleDisabled}
             onChange={(e) => updateTodo(todo.id, e.target.value)}
-            onKeyDown={getKeydownHandler(todo.id)}
+            onKeyDown={handleTodoKeyDown(todo.id)}
             onDragStart={getDragStart(todo.id)}
             onDragEnd={handleDragEnd}
             onDragOver={getDragOver(todo.id)}
@@ -360,7 +306,7 @@ const TodoList = React.memo(function TodoList({
           indeterminate={derived.indeterminate.get(todo.id) === true}
           onToggle={() => toggleTodo(todo.id)}
           onChange={(e) => updateTodo(todo.id, e.target.value)}
-          onKeyDown={getKeydownHandler(todo.id)}
+          onKeyDown={handleTodoKeyDown(todo.id)}
           onDragStart={getDragStart(todo.id)}
           onDragEnd={handleDragEnd}
           onDragOver={getDragOver(todo.id)}
