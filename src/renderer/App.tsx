@@ -1,7 +1,7 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import './styles/base.css';
-import TodoApp from './features/todos/components/TodoApp';
+import { TodoApp } from './features/todos/components/TodoApp';
 import DebugPanel from './components/DebugPanel';
 import { debugLogger } from './utils/debug';
 

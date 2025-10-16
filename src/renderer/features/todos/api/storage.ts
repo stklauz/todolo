@@ -1,4 +1,4 @@
-import type { AppData, TodoList, EditorTodo, AppSettings } from '../types';
+import type { EditorTodo, AppSettings } from '../types';
 import { debugLogger } from '../../../utils/debug';
 
 // v2 index file format

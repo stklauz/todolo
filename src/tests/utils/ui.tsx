@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import TodoApp from '../../renderer/features/todos/components/TodoApp';
+import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
 import * as storage from '../../renderer/features/todos/api/storage';
 
 export const mockStorage = storage as jest.Mocked<typeof storage>;

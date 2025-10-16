@@ -1,15 +1,15 @@
 import React from 'react';
-import { TodoRow } from './TodoRow';
-import type { EditorTodo } from '../types';
+import { TodoRow } from '../TodoRow/TodoRow';
+import type { EditorTodo } from '../../types';
 
 // Import audio file with fallback for tests
 let popSound: string;
 try {
-  popSound = require('../../../../../assets/sounds/bell.mp3');
+  popSound = require('../../../../../../assets/sounds/bell.mp3');
 } catch {
   popSound = 'mock-audio';
 }
-const styles = require('../styles/TodoList.module.css');
+const styles = require('./TodoList.module.css');
 
 // Debug mode - set to false by default to avoid noisy logs
 const DEBUG_DRAG_DROP = false;
@@ -30,6 +30,7 @@ type Props = {
   insertBelowAndFocus: (index: number, text?: string) => void;
   changeIndent: (id: number, delta: number) => void;
   removeAt: (index: number) => void;
+  addTodoAtEnd: (text: string) => number;
   // drag & drop
   dragInfo: { id: number; section: 'active' | 'completed' } | null;
   handleDragStart: (id: number) => void;
@@ -54,9 +55,10 @@ const TodoList = React.memo(function TodoList({
   toggleTodo,
   handleTodoKeyDown,
   insertBelowAndFocus,
-  changeIndent,
-  removeAt,
-  dragInfo,
+  changeIndent: _changeIndent,
+  removeAt: _removeAt,
+  addTodoAtEnd,
+  dragInfo: _dragInfo,
   handleDragStart,
   handleDragEnd,
   handleDragOver,
@@ -152,12 +154,12 @@ const TodoList = React.memo(function TodoList({
   const dropOnByIdRef = React.useRef(new Map<number, () => void>());
 
   // Small wrapper to call changeIndent via parent prop without recreating closures
-  const handleIndent = React.useCallback(
-    (id: number, delta: number) => {
-      changeIndent(id, delta);
-    },
-    [changeIndent],
-  );
+  // const _handleIndent = React.useCallback(
+  //   (id: number, delta: number) => {
+  //     changeIndent(id, delta);
+  //   },
+  //   [changeIndent],
+  // );
 
   // Key handling is owned by the parent (TodoApp) to ensure operations
   // are computed against the full list, not the filtered view.
@@ -352,6 +354,24 @@ const TodoList = React.memo(function TodoList({
           handleDropAtEnd('completed');
         }}
       />
+
+      {/* Add new todo textarea */}
+      <div className={styles.addTodoRow}>
+        <textarea
+          className={styles.addTodoInput}
+          placeholder="Add a new todo..."
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              const text = e.currentTarget.value.trim();
+              if (text) {
+                addTodoAtEnd(text);
+                e.currentTarget.value = '';
+              }
+            }
+          }}
+        />
+      </div>
     </>
   );
 });

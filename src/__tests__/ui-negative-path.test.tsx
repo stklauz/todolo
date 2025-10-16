@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import TodoApp from '../renderer/features/todos/components/TodoApp';
+import { TodoApp } from '../renderer/features/todos/components/TodoApp';
 import * as storage from '../renderer/features/todos/api/storage';
 import { debugLogger } from '../renderer/utils/debug';
 import {

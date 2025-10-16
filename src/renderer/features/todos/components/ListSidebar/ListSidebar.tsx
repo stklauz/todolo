@@ -1,9 +1,9 @@
 import React from 'react';
 import { IoAddOutline } from 'react-icons/io5';
-import type { TodoList } from '../types';
-import { ReactComponent as TodoloLogo } from '../../../../../assets/logo/todolo.svg';
+import type { TodoList } from '../../types';
+import { ReactComponent as TodoloLogo } from '../../../../../../assets/logo/todolo.svg';
 
-const styles = require('../styles/Sidebar.module.css');
+const styles = require('./Sidebar.module.css');
 
 type Props = {
   lists: TodoList[];
@@ -27,12 +27,12 @@ export default function ListSidebar({
   selectedListId,
   onSelect,
   onAdd,
-  editingListId,
-  editingName,
-  onStartRename,
-  onChangeName,
-  onCommitRename,
-  onCancelRename,
+  editingListId: _editingListId,
+  editingName: _editingName,
+  onStartRename: _onStartRename,
+  onChangeName: _onChangeName,
+  onCommitRename: _onCommitRename,
+  onCancelRename: _onCancelRename,
   focusListId,
 }: Props) {
   const listItemRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import TodoApp from '../../renderer/features/todos/components/TodoApp';
+import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
 import * as storage from '../../renderer/features/todos/api/storage';
 
 // Mock the storage module

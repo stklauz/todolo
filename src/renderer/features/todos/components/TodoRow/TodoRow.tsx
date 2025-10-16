@@ -1,6 +1,6 @@
 import React from 'react';
 
-const styles = require('../styles/TodoList.module.css');
+const styles = require('../TodoList/TodoList.module.css');
 
 // Debug mode - set to false by default to avoid noisy logs
 const DEBUG_DRAG_DROP = false;

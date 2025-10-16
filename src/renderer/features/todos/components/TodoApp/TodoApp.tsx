@@ -1,18 +1,18 @@
 import React from 'react';
-import { IoEllipsisHorizontal } from 'react-icons/io5';
-import ListSidebar from './ListSidebar';
-import TodoList from './TodoList';
-import Spinner from '../../../components/Spinner';
-import type { EditorTodo, Section, AppSettings } from '../types';
-import useTodosState from '../hooks/useTodosState';
-import useDragReorder from '../hooks/useDragReorder';
+import ListSidebar from '../ListSidebar/ListSidebar';
+import TodoList from '../TodoList/TodoList';
+import TodoAppHeader from './TodoAppHeader';
+import ActionsMenu from './ActionsMenu';
+import type { EditorTodo, Section, AppSettings } from '../../types';
+import useTodosState from '../../hooks/useTodosState';
+import useDragReorder from '../../hooks/useDragReorder';
 import {
   loadAppSettings,
   saveAppSettings,
   loadListsIndex,
-} from '../api/storage';
+} from '../../api/storage';
 
-const styles = require('../styles/TodoApp.module.css');
+const styles = require('./TodoApp.module.css');
 
 // TodoApp: An editor-like list of todos spanning multiple lists
 // - Each todo is an input you can type in
@@ -31,6 +31,7 @@ export default function TodoApp(): React.ReactElement {
     toggleTodo,
     changeIndent,
     insertTodoBelow,
+    addTodoAtEnd,
     addList,
     deleteList,
     duplicateList,
@@ -400,64 +401,20 @@ export default function TodoApp(): React.ReactElement {
 
       {/* Main content */}
       <div className={styles.container}>
-        <div className={styles.titleRow}>
-          {editingListId === selectedListId ? (
-            <input
-              ref={titleInputRef}
-              className={styles.titleInput}
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              onFocus={() => {
-                inputJustFocusedRef.current = true;
-                // Reset the flag after a short delay
-                setTimeout(() => {
-                  inputJustFocusedRef.current = false;
-                }, 150);
-              }}
-              onBlur={(e) => {
-                // Don't commit if this is an immediate blur after focus
-                if (inputJustFocusedRef.current) {
-                  return;
-                }
-                // Only commit if we're actually losing focus to something else
-                const relatedTarget = e.relatedTarget as HTMLElement;
-                if (relatedTarget && relatedTarget.closest('.titleRow')) {
-                  // If focus is moving to another element in the title row, don't commit
-                  return;
-                }
-                commitRename();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  commitRename();
-                }
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  cancelRename();
-                }
-              }}
-            />
-          ) : (
-            <h1
-              className={`${styles.title} ${styles.titleClickable}`}
-              onClick={() => {
-                const targetId = selectedList?.id ?? lists[0]?.id ?? null;
-                const currentName =
-                  selectedList?.name ?? lists[0]?.name ?? 'My List';
-                if (targetId) {
-                  startRename(targetId, currentName);
-                }
-              }}
-              title="Click to rename"
-            >
-              {selectedListName}
-            </h1>
-          )}
+        <TodoAppHeader
+          selectedList={selectedList}
+          selectedListName={selectedListName}
+          editingListId={editingListId}
+          editingName={editingName}
+          inputJustFocusedRef={inputJustFocusedRef}
+          titleInputRef={titleInputRef}
+          onStartRename={startRename}
+          onChangeName={setEditingName}
+          onCommitRename={commitRename}
+          onCancelRename={cancelRename}
+        >
           {selectedList && (
-            <ActionsRow
+            <ActionsMenu
               createdAt={selectedList.createdAt}
               updatedAt={selectedList.updatedAt}
               canDelete={lists.length > 1}
@@ -469,7 +426,7 @@ export default function TodoApp(): React.ReactElement {
               onUpdateAppSettings={updateAppSettings}
             />
           )}
-        </div>
+        </TodoAppHeader>
         {selectedList && (
           <div className={styles.subtitleRow}>
             <div className={styles.subtitle}>
@@ -497,6 +454,7 @@ export default function TodoApp(): React.ReactElement {
           handleTodoKeyDown={handleTodoKeyDown}
           changeIndent={changeIndent}
           removeAt={removeAtAndManageFocus}
+          addTodoAtEnd={addTodoAtEnd}
           dragInfo={dragInfo}
           handleDragStart={handleDragStart}
           handleDragEnd={handleDragEnd}
@@ -527,112 +485,6 @@ export default function TodoApp(): React.ReactElement {
       >
         {statusMessage}
       </div>
-    </div>
-  );
-}
-
-type ActionsRowProps = {
-  createdAt?: string;
-  updatedAt?: string;
-  canDelete: boolean;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  isDuplicating: boolean;
-  showSpinner: boolean;
-  appSettings: AppSettings;
-  onUpdateAppSettings: (settings: AppSettings) => void;
-};
-
-function ActionsRow({
-  createdAt,
-  updatedAt,
-  canDelete,
-  onDelete,
-  onDuplicate,
-  isDuplicating,
-  showSpinner,
-  appSettings,
-  onUpdateAppSettings,
-}: ActionsRowProps) {
-  const [open, setOpen] = React.useState(false);
-  const btnRef = React.useRef<HTMLButtonElement | null>(null);
-  const menuRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (!open) return;
-      const t = e.target as Node | null;
-      if (menuRef.current?.contains(t) || btnRef.current?.contains(t)) return;
-      setOpen(false);
-    }
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-
-  return (
-    <div className={styles.menuWrap}>
-      <button
-        type="button"
-        className={styles.menuBtn}
-        title="List actions"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        ref={btnRef}
-      >
-        <IoEllipsisHorizontal size={18} />
-      </button>
-      {open && (
-        <div className={styles.menu} ref={menuRef} role="menu">
-          <div className={styles.menuSection}>
-            <div className={styles.menuSectionTitle}>App Settings</div>
-            <label className={styles.menuToggleItem}>
-              <input
-                type="checkbox"
-                checked={!appSettings.hideCompletedItems}
-                onChange={(e) => {
-                  onUpdateAppSettings({
-                    ...appSettings,
-                    hideCompletedItems: !e.target.checked,
-                  });
-                }}
-              />
-              <span>Completed items</span>
-            </label>
-          </div>
-          <div className={styles.menuDivider} />
-          <button
-            type="button"
-            className={`${styles.menuItem} ${styles.menuItemDuplicate}`}
-            role="menuitem"
-            data-testid="menu-duplicate-list"
-            onClick={() => {
-              setOpen(false);
-              onDuplicate();
-            }}
-            disabled={isDuplicating}
-          >
-            {showSpinner ? <Spinner size={12} /> : null}
-            Duplicate list
-          </button>
-          <button
-            type="button"
-            className={styles.menuItemDanger}
-            role="menuitem"
-            data-testid="menu-delete-list"
-            onClick={() => {
-              setOpen(false);
-              if (canDelete) onDelete();
-            }}
-            disabled={!canDelete}
-            title={
-              canDelete ? 'Delete this list' : "Can't delete your only list"
-            }
-          >
-            Delete list
-          </button>
-        </div>
-      )}
     </div>
   );
 }
