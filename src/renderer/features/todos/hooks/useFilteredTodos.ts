@@ -9,10 +9,10 @@ export interface UseFilteredTodosReturn {
   filteredTodos: EditorTodo[];
   /** Original unfiltered array of todos */
   allTodos: EditorTodo[];
-  /** Function to insert a todo below a filtered index and focus it */
-  insertBelowAndFocus: (index: number, text?: string) => void;
-  /** Function to remove a todo at a filtered index and manage focus */
-  removeAtAndManageFocus: (index: number) => void;
+  /** Function to insert a todo below a specified todo and focus it */
+  insertBelowAndFocus: (todoId: number, text?: string) => void;
+  /** Function to remove a todo by ID and manage focus */
+  removeAtAndManageFocus: (todoId: number) => void;
 }
 
 /**
@@ -70,67 +70,51 @@ export default function useFilteredTodos(
       : allTodos;
   }, [allTodos, hideCompletedItems]);
 
+  /**
+   * Insert a new todo below the specified todo and focus it.
+   *
+   * @param todoId - ID of the todo to insert below (uses ID instead of index to avoid
+   *                 ambiguity between filtered and full list positions)
+   * @param text - Optional text for the new todo
+   */
   const insertBelowAndFocus = React.useCallback(
-    (index: number, text = '') => {
-      // If we're filtering completed items, we need to find the correct position in the full list
-      if (hideCompletedItems) {
-        // Find the target todo in the visible list
-        const target = filteredTodos[index];
-        if (!target) return;
+    (todoId: number, text = '') => {
+      // Find the todo in the full list by ID
+      const fullIndex = allTodos.findIndex((t) => t.id === todoId);
+      if (fullIndex < 0) return;
 
-        // Find its position in the full list
-        const fullIndex = allTodos.findIndex((t) => t.id === target.id);
-        if (fullIndex < 0) return;
-
-        // Insert after the found position in the full list
-        const id = insertTodoBelow(fullIndex, text);
-        focusTodo(id);
-      } else {
-        // No filtering, use index directly
-        const id = insertTodoBelow(index, text);
-        focusTodo(id);
-      }
+      // Always insert based on full list position
+      const id = insertTodoBelow(fullIndex, text);
+      focusTodo(id);
     },
-    [hideCompletedItems, filteredTodos, allTodos, insertTodoBelow, focusTodo],
+    [allTodos, insertTodoBelow, focusTodo],
   );
 
+  /**
+   * Remove a todo and manage focus appropriately.
+   *
+   * @param todoId - ID of the todo to remove (uses ID instead of index to avoid
+   *                 ambiguity between filtered and full list positions)
+   */
   const removeAtAndManageFocus = React.useCallback(
-    (index: number) => {
-      if (hideCompletedItems) {
-        // Translate filtered index -> id -> full list index
-        const target = filteredTodos[index];
-        if (!target) return;
-        const targetId = target.id;
-        setSelectedTodos((prev) => {
-          const fullIdx = prev.findIndex((t) => t.id === targetId);
-          if (fullIdx === -1) return prev;
-          const next = [...prev];
-          next.splice(fullIdx, 1);
-          if (next.length === 0) {
-            // No focus needed if no todos left
-          } else {
-            const focusIdx = Math.max(0, fullIdx - 1);
-            const focusTarget = next[focusIdx] ?? next[0];
-            if (focusTarget) focusTodo(focusTarget.id);
-          }
-          return next;
-        });
-      } else {
-        // No filtering, use index directly
-        setSelectedTodos((prev) => {
-          const next = [...prev];
-          next.splice(index, 1);
-          if (next.length === 0) {
-            // No focus needed if no todos left
-          } else {
-            const target = next[Math.max(0, index - 1)] ?? next[0];
-            if (target) focusTodo(target.id);
-          }
-          return next;
-        });
-      }
+    (todoId: number) => {
+      setSelectedTodos((prev) => {
+        const fullIdx = prev.findIndex((t) => t.id === todoId);
+        if (fullIdx === -1) return prev;
+
+        const next = [...prev];
+        next.splice(fullIdx, 1);
+
+        if (next.length > 0) {
+          const focusIdx = Math.max(0, fullIdx - 1);
+          const focusTarget = next[focusIdx] ?? next[0];
+          if (focusTarget) focusTodo(focusTarget.id);
+        }
+
+        return next;
+      });
     },
-    [hideCompletedItems, filteredTodos, setSelectedTodos, focusTodo],
+    [setSelectedTodos, focusTodo],
   );
 
   return {

@@ -150,7 +150,7 @@ export default function TodoApp(): React.ReactElement {
         }
         // Always insert based on the full list position so behavior
         // is consistent even when completed items are hidden
-        insertBelowAndFocus(index);
+        insertBelowAndFocus(id);
       } else if (event.key === 'Backspace') {
         const isEmpty = allTodos[index]?.text.length === 0;
         if (isEmpty) {
@@ -166,7 +166,7 @@ export default function TodoApp(): React.ReactElement {
           if (allTodos.length <= 1) return;
           // Always remove based on the full list position so deletion
           // still works when completed items are hidden
-          removeAtAndManageFocus(index);
+          removeAtAndManageFocus(id);
         }
       }
     };

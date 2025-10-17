@@ -20,7 +20,7 @@ type Props = {
   handleTodoKeyDown: (
     id: number,
   ) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  insertBelowAndFocus: (index: number, text?: string) => void;
+  insertBelowAndFocus: (todoId: number, text?: string) => void;
   changeIndent: (id: number, delta: number) => void;
   removeAt: (index: number) => void;
   // drag & drop
@@ -231,7 +231,7 @@ const TodoList = React.memo(function TodoList({
               toggleTodo(todo.id);
               // If this was the only active non-empty todo, create a new empty one and focus it
               if (isSingleActive && !isEmpty && index !== -1) {
-                insertBelowAndFocus(index, '');
+                insertBelowAndFocus(todo.id, '');
               }
             }}
             toggleDisabled={toggleDisabled}
