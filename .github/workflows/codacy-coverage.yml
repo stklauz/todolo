@@ -15,9 +15,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      - run: npm run build:main
       - run: npm run test:coverage
       - name: Run codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
-          project-token: ${{ secrets.CODACY_REPOSITORY_TOKEN }}
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: ./coverage/lcov.info
