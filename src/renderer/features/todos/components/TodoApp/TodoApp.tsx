@@ -29,7 +29,6 @@ export default function TodoApp(): React.ReactElement {
     changeIndent,
     insertTodoBelow,
     removeTodoAt,
-    addTodoAtEnd,
     addList,
     deleteList,
     duplicateList,
@@ -293,7 +292,6 @@ export default function TodoApp(): React.ReactElement {
           handleTodoKeyDown={handleTodoKeyDown}
           changeIndent={changeIndent}
           removeAt={removeAtAndManageFocus}
-          addTodoAtEnd={addTodoAtEnd}
           dragInfo={dragInfo}
           handleDragStart={handleDragStart}
           handleDragEnd={handleDragEnd}

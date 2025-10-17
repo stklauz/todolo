@@ -391,8 +391,8 @@ describe('useTodosState', () => {
 
     // Build current list state entirely through the public API
     act(() => {
-      result.current.addTodoAtEnd('Task 1');
-      result.current.addTodoAtEnd('Task 2');
+      result.current.insertTodoBelow(0, 'Task 1');
+      result.current.insertTodoBelow(1, 'Task 2');
     });
 
     // Toggle completion of the 'Task 1' todo (not the seed)

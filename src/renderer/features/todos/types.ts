@@ -107,7 +107,6 @@ export type UseTodosStateReturn = {
   changeIndent: (id: number, delta: number) => void;
   insertTodoBelow: (index: number, text?: string) => number;
   removeTodoAt: (index: number) => void;
-  addTodoAtEnd: (text: string) => number;
   addList: () => string;
   deleteSelectedList: () => void;
   deleteList: (id: string) => void;

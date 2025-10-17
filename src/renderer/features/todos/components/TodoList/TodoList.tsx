@@ -23,7 +23,6 @@ type Props = {
   insertBelowAndFocus: (index: number, text?: string) => void;
   changeIndent: (id: number, delta: number) => void;
   removeAt: (index: number) => void;
-  addTodoAtEnd: (text: string) => number;
   // drag & drop
   dragInfo: { id: number; section: 'active' | 'completed' } | null;
   handleDragStart: (id: number) => void;
@@ -50,7 +49,6 @@ const TodoList = React.memo(function TodoList({
   insertBelowAndFocus,
   changeIndent: _changeIndent,
   removeAt: _removeAt,
-  addTodoAtEnd,
   dragInfo: _dragInfo,
   handleDragStart,
   handleDragEnd,
@@ -323,24 +321,6 @@ const TodoList = React.memo(function TodoList({
           handleDropAtEnd('completed');
         }}
       />
-
-      {/* Add new todo textarea */}
-      <div className={styles.addTodoRow}>
-        <textarea
-          className={styles.addTodoInput}
-          placeholder="Add a new todo..."
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              const text = e.currentTarget.value.trim();
-              if (text) {
-                addTodoAtEnd(text);
-                e.currentTarget.value = '';
-              }
-            }
-          }}
-        />
-      </div>
     </>
   );
 });

@@ -29,8 +29,6 @@ export interface TodosActionsContextValue {
   insertTodoBelow: (index: number, text?: string) => number;
   /** Remove a todo at the specified index */
   removeTodoAt: (index: number) => void;
-  /** Add a new todo at the end of the list */
-  addTodoAtEnd: (text: string) => number;
 
   // List management
   /** Update a list's properties */

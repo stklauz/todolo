@@ -132,19 +132,6 @@ export default function useTodosOperations({
     saveWithStrategy('immediate');
   }
 
-  function addTodoAtEnd(text: string): number {
-    const id = nextId();
-    setSelectedTodos((prev) => {
-      const newTodo = { id, text, completed: false, indent: 0 };
-      return [...prev, newTodo];
-    });
-    // Only save if the text is not empty - empty todos should not be saved
-    if (text.trim() !== '') {
-      saveWithStrategy('immediate');
-    }
-    return id;
-  }
-
   return {
     updateTodo,
     toggleTodo,
@@ -152,6 +139,5 @@ export default function useTodosOperations({
     changeIndent,
     insertTodoBelow,
     removeTodoAt,
-    addTodoAtEnd,
   } as const;
 }

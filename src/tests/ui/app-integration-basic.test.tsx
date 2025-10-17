@@ -5,32 +5,22 @@ import '@testing-library/jest-dom';
 import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
 import TodosProvider from '../../renderer/features/todos/contexts/TodosProvider';
 import * as storage from '../../renderer/features/todos/api/storage';
+import { setupDefaultMocks, mockStorage } from '../utils/ui';
 
 // Mock the storage module
 jest.mock('../../renderer/features/todos/api/storage');
-const mockStorage = storage as jest.Mocked<typeof storage>;
 
 describe('E2E Basic Flow Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Mock successful storage operations by default
-    mockStorage.loadAppSettings.mockResolvedValue({ hideCompletedItems: true });
-    mockStorage.loadListsIndex.mockResolvedValue({
-      version: 2,
-      lists: [],
-      selectedListId: undefined,
+    setupDefaultMocks({
+      duplicateList: jest.fn().mockResolvedValue({
+        success: true,
+        newListId: 'duplicated-list-id',
+      }),
+      // TODO: Remove setSelectedListMeta mock - let real function run
+      // This test doesn't need to mock list selection persistence
+      setSelectedListMeta: jest.fn().mockResolvedValue(undefined),
     });
-    mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
-      todos: [],
-    });
-    mockStorage.saveListsIndex.mockResolvedValue(true);
-    mockStorage.saveListTodos.mockResolvedValue(true);
-    mockStorage.duplicateList.mockResolvedValue({
-      success: true,
-      newListId: 'duplicated-list-id',
-    });
-    mockStorage.setSelectedListMeta.mockResolvedValue();
   });
 
   describe('Basic App Flow', () => {
@@ -101,12 +91,15 @@ describe('E2E Basic Flow Tests', () => {
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
       });
+      await waitFor(() => {
+        expect(mockStorage.loadListTodos).toHaveBeenCalled();
+      });
 
-      // Find the textarea and add a todo (user-typed)
-      const textarea = screen.getByRole('textbox');
+      // Find the todo input and add a todo (user-typed)
+      const input = screen.getByLabelText('Todo text');
       const user = userEvent.setup();
-      await user.click(textarea);
-      await user.type(textarea, 'Test todo');
+      await user.click(input);
+      await user.type(input, 'Test todo');
 
       // Wait for debounced save
       await waitFor(
@@ -129,11 +122,14 @@ describe('E2E Basic Flow Tests', () => {
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
       });
+      await waitFor(() => {
+        expect(mockStorage.loadListTodos).toHaveBeenCalled();
+      });
 
-      const textarea = screen.getByRole('textbox');
+      const input = screen.getByLabelText('Todo text');
       const user = userEvent.setup();
-      await user.click(textarea);
-      await user.type(textarea, 'Test todo');
+      await user.click(input);
+      await user.type(input, 'Test todo');
 
       // Should not crash on save failure
       await waitFor(

@@ -99,7 +99,6 @@ export default function useTodosState() {
     changeIndent,
     insertTodoBelow,
     removeTodoAt,
-    addTodoAtEnd,
   } = useTodosOperations({
     setSelectedTodos,
     saveWithStrategy,
@@ -132,7 +131,6 @@ export default function useTodosState() {
     changeIndent,
     insertTodoBelow,
     removeTodoAt,
-    addTodoAtEnd,
     addList,
     deleteSelectedList,
     deleteList,
