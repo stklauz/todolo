@@ -50,6 +50,12 @@ Use this as a simple, implementation‑doc checklist. Keep changes small, increm
 - Keep tests deterministic and readable; avoid over-mocking.
 - Target: >80% code coverage for new code, 100% for critical paths.
 
+### Testing Checklist
+- [ ] Critical user flows tested
+- [ ] Edge cases covered  
+- [ ] No tests for trivial code (getters, simple setters, etc.)
+- [ ] Integration tests for complex interactions
+
 ## Implementation Notes
 - If duplication is unavoidable, extract a shared utility immediately after.
 - Validate inputs and handle null/undefined; avoid silent failures.

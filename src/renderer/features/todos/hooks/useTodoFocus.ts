@@ -106,6 +106,7 @@ export function useTodoFocusEffect(
       const el = inputByIdRef.current.get(id);
       if (el) {
         el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
         focusNextIdRef.current = null;
       }
     } else if (todos.length === 1) {
