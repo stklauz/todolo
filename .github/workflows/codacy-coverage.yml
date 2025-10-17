@@ -16,6 +16,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build:main
+      - run: npm run build:renderer
       - run: npm run test:coverage
       - name: Run codacy-coverage-reporter
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
