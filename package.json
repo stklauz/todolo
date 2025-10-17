@@ -44,6 +44,7 @@
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepare": "husky"
   },
@@ -106,6 +107,27 @@
     ],
     "transform": {
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
+    },
+    "collectCoverage": true,
+    "coverageThreshold": {
+      "global": {
+        "branches": 45,
+        "functions": 60,
+        "lines": 70,
+        "statements": 68
+      },
+      "./src/renderer/features/todos/utils/": {
+        "branches": 75,
+        "functions": 75,
+        "lines": 90,
+        "statements": 90
+      },
+      "./src/renderer/features/todos/reducers/": {
+        "branches": 80,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
     }
   },
   "dependencies": {

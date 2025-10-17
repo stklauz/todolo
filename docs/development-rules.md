@@ -82,15 +82,22 @@ Use this as a simple, implementation‑doc checklist. Keep changes small, increm
 ```bash
 npm run lint        # Check for ESLint issues
 npm run typecheck   # TypeScript compilation check
-npm test           # Run test suite
+npm test           # Run test suite with coverage enforcement
 ```
+
+**Coverage Requirements**: All changes must maintain or improve code coverage:
+- Global coverage thresholds are enforced via pre-commit hooks
+- New code should target >80% coverage for statements, functions, and lines
+- Critical paths (utils, reducers) require >90% coverage
+- Use `npm run test:coverage` to check coverage before committing
 
 ### Quality Gates
 - All changes MUST pass lint, typecheck, and tests before being considered complete
 - No linting errors should be introduced
-- Test coverage should be maintained or improved
+- Test coverage must meet or exceed current thresholds (enforced by pre-commit)
 - TypeScript compilation must succeed without errors
 - Pre-commit hook will automatically run these checks on commit
+- Coverage thresholds are enforced: commits will be blocked if coverage drops
 
 ### For AI Agents
 - Always run the quality checks after making any code changes
@@ -101,6 +108,7 @@ npm test           # Run test suite
 ## Definition of Done
 - Feature is behind a flag or fully user‑ready.
 - Tests exist and pass; key paths are observable.
+- **Coverage requirements met**: All coverage thresholds maintained or improved.
 - Docs updated; rollout/rollback verified.
 - No unnecessary duplication; code aligns with project patterns.
 - **Quality checks passed**: `npm run lint`, `npm run typecheck`, `npm test` all succeed.
