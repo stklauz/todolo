@@ -2,12 +2,12 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
-import TodosProvider from '../../renderer/features/todos/contexts/TodosProvider';
-import * as storage from '../../renderer/features/todos/api/storage';
+import { TodoApp } from '../../features/todos/components/TodoApp';
+import TodosProvider from '../../features/todos/contexts/TodosProvider';
+import * as storage from '../../features/todos/api/storage';
 
 // Mock the storage module to observe calls from UI to storage and assert IPC wiring
-jest.mock('../../renderer/features/todos/api/storage');
+jest.mock('../../features/todos/api/storage');
 const mockStorage = storage as jest.Mocked<typeof storage>;
 
 describe('Delete List - UI to DB wiring', () => {

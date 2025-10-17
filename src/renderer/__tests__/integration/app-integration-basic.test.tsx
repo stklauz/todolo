@@ -2,13 +2,13 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
-import TodosProvider from '../../renderer/features/todos/contexts/TodosProvider';
-import * as storage from '../../renderer/features/todos/api/storage';
-import { setupDefaultMocks, mockStorage } from '../../renderer/testUtils/ui';
+import { TodoApp } from '../../features/todos/components/TodoApp';
+import TodosProvider from '../../features/todos/contexts/TodosProvider';
+import * as storage from '../../features/todos/api/storage';
+import { setupDefaultMocks, mockStorage } from '../../testUtils/ui';
 
 // Mock the storage module
-jest.mock('../../renderer/features/todos/api/storage');
+jest.mock('../../features/todos/api/storage');
 
 describe('E2E Basic Flow Tests', () => {
   beforeEach(() => {

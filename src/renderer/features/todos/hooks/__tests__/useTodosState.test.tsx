@@ -1,10 +1,10 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
-import useTodosState from '../renderer/features/todos/hooks/useTodosState';
-import * as storage from '../renderer/features/todos/api/storage';
+import useTodosState from '../useTodosState';
+import * as storage from '../../api/storage';
 
 // Mock the storage module
-jest.mock('../renderer/features/todos/api/storage');
+jest.mock('../../api/storage');
 const mockStorage = storage as jest.Mocked<typeof storage>;
 
 describe('useTodosState', () => {

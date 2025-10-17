@@ -3,16 +3,16 @@ import { screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 // user-event is provided via setupUser() from test utils
 
-import * as storage from '../../renderer/features/todos/api/storage';
+import * as storage from '../../features/todos/api/storage';
 import {
   renderAppWithDefaults,
   setupDefaultMocks,
   mockStorage,
   setupUser,
-} from '../../renderer/testUtils/ui';
+} from '../../testUtils/ui';
 
 // Mock the storage module (util relies on the same module reference)
-jest.mock('../../renderer/features/todos/api/storage');
+jest.mock('../../features/todos/api/storage');
 
 describe('UI Happy Path – user interactions', () => {
   beforeEach(() => {
