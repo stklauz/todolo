@@ -9,6 +9,20 @@ import crypto from 'crypto';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Database = require('better-sqlite3');
 
+// Type for better-sqlite3 database instance
+type DatabaseInstance = {
+  prepare: (sql: string) => any;
+  exec: (sql: string) => void;
+  pragma: (sql: string) => any;
+  close: () => void;
+  transaction: (fn: () => void) => any;
+};
+
+// Type for database rows
+type DatabaseRow = {
+  [key: string]: unknown;
+};
+
 export type EditorTodo = {
   id: number;
   text: string;
@@ -31,7 +45,7 @@ export type AppSettings = {
   hideCompletedItems: boolean;
 };
 
-type DB = any;
+type DB = DatabaseInstance;
 let db: DB | null = null;
 
 const getUserDataDir = () => app.getPath('userData');
@@ -41,7 +55,10 @@ function safeJoinUserData(filename: string): string {
     throw new Error('Invalid filename for database');
   }
   const base = path.resolve(getUserDataDir());
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const full = path.resolve(base, filename);
+  // Security check: ensure the resolved path is within the userData directory
+  // This prevents path traversal attacks (e.g., "../../../etc/passwd")
   if (!full.startsWith(base + path.sep)) {
     throw new Error('Unsafe database path');
   }
@@ -61,13 +78,14 @@ export function openDatabase(): DB {
   const dbPath = getDbPath();
   // open database
   db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-  db.pragma('temp_store = MEMORY');
-  db.pragma('foreign_keys = ON');
+  // At this point db is guaranteed to be non-null since we just assigned it
+  db!.pragma('journal_mode = WAL');
+  db!.pragma('synchronous = NORMAL');
+  db!.pragma('temp_store = MEMORY');
+  db!.pragma('foreign_keys = ON');
 
-  applyMigrations(db);
-  return db;
+  applyMigrations(db!);
+  return db!;
 }
 
 export function closeDatabase(): void {
@@ -268,7 +286,7 @@ export function loadListTodos(listId: string): {
     )
     .all(listId);
   // rows loaded from todos
-  const todos: EditorTodo[] = rows.map((r: any) => ({
+  const todos: EditorTodo[] = rows.map((r: DatabaseRow) => ({
     id: Number(r.id),
     text: String(r.text),
     completed: !!r.completed,

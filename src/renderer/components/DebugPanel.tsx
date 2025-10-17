@@ -14,6 +14,13 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
     'logs',
   );
 
+  const renderDetails = (details: unknown): string => {
+    if (typeof details === 'string') {
+      return details;
+    }
+    return JSON.stringify(details) || 'null';
+  };
+
   useEffect(() => {
     if (!isVisible) return;
 
@@ -109,11 +116,9 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isVisible, onClose }) => {
                     {new Date(log.timestamp).toLocaleTimeString()}
                   </span>
                   <span className="debug-log-operation">{log.operation}</span>
-                  {log.details && (
+                  {log.details != null && (
                     <span className="debug-log-details">
-                      {typeof log.details === 'string'
-                        ? log.details
-                        : JSON.stringify(log.details)}
+                      {renderDetails(log.details)}
                     </span>
                   )}
                 </div>

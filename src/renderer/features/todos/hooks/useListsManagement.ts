@@ -32,7 +32,7 @@ export default function useListsManagement({
   flushCurrentTodos,
 }: UseListsManagementProps) {
   function addList(): string {
-    const id = crypto?.randomUUID?.() || String(Date.now() + Math.random());
+    const id = crypto?.randomUUID?.() || `list-${Date.now()}`;
     const idx = lists.length + 1;
     const name = `List ${idx}`;
     const now = new Date().toISOString();
@@ -47,7 +47,7 @@ export default function useListsManagement({
         lists: snapshot.map((l) => ({
           id: l.id,
           name: l.name,
-          createdAt: l.createdAt!,
+          createdAt: l.createdAt || new Date().toISOString(),
           updatedAt: l.updatedAt,
         })),
         selectedListId: id,
@@ -81,7 +81,7 @@ export default function useListsManagement({
           lists: remaining.map((l) => ({
             id: l.id,
             name: l.name,
-            createdAt: l.createdAt!,
+            createdAt: l.createdAt || new Date().toISOString(),
             updatedAt: l.updatedAt,
           })),
           selectedListId: nextSelected ?? undefined,
@@ -134,7 +134,7 @@ export default function useListsManagement({
           lists: remaining.map((l) => ({
             id: l.id,
             name: l.name,
-            createdAt: l.createdAt!,
+            createdAt: l.createdAt || new Date().toISOString(),
             updatedAt: l.updatedAt,
           })),
           selectedListId: nextSelected ?? undefined,
@@ -181,7 +181,7 @@ export default function useListsManagement({
             lists: snapshot.map((l) => ({
               id: l.id,
               name: l.name,
-              createdAt: l.createdAt!,
+              createdAt: l.createdAt || new Date().toISOString(),
               updatedAt: l.updatedAt,
             })),
             selectedListId: id ?? undefined,
@@ -213,7 +213,7 @@ export default function useListsManagement({
               try {
                 const fetched = await loadListTodos(result.newListId);
                 const todosNorm = (fetched.todos || []).map(
-                  (t: any, i: number) => normalizeTodo(t, i + 1),
+                  (t: unknown, i: number) => normalizeTodo(t, i + 1),
                 );
 
                 const newList = {

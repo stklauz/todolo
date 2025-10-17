@@ -6,7 +6,7 @@ export interface DebugLogEntry {
   timestamp: number;
   operation: string;
   duration?: number;
-  details?: any;
+  details?: unknown;
   level: 'info' | 'warn' | 'error' | 'perf';
 }
 
@@ -33,7 +33,7 @@ class DebugLogger {
     return this.isEnabled;
   }
 
-  log(level: DebugLogEntry['level'], operation: string, details?: any) {
+  log(level: DebugLogEntry['level'], operation: string, details?: unknown) {
     if (!this.isEnabled) return;
 
     const entry: DebugLogEntry = {
@@ -60,7 +60,7 @@ class DebugLogger {
   startTiming(operation: string): string {
     if (!this.isEnabled) return '';
 
-    const markId = `${operation}_${Date.now()}_${Math.random()}`;
+    const markId = `${operation}_${Date.now()}_${crypto?.getRandomValues?.(new Uint32Array(1))[0] || 0}`;
     this.performanceMarks.set(markId, performance.now());
     this.log('perf', `Started: ${operation}`);
     return markId;
@@ -125,13 +125,20 @@ class DebugLogger {
     > = {};
 
     this.logs.forEach((log) => {
-      if (log.level === 'perf' && log.details?.duration) {
+      if (
+        log.level === 'perf' &&
+        log.details &&
+        typeof log.details === 'object' &&
+        'duration' in log.details
+      ) {
         const operation = log.operation.replace(/^(Started|Completed):\s*/, '');
         if (!summary[operation]) {
           summary[operation] = { count: 0, totalTime: 0, avgTime: 0 };
         }
         summary[operation].count++;
-        summary[operation].totalTime += parseFloat(log.details.duration);
+        summary[operation].totalTime += parseFloat(
+          String(log.details.duration),
+        );
       }
     });
 
@@ -171,13 +178,13 @@ export const debugLogger = new DebugLogger();
 // Performance monitoring decorators
 export function measurePerformance(operation: string) {
   return function performanceDecorator(
-    target: any,
+    target: unknown,
     propertyName: string,
     descriptor: PropertyDescriptor,
   ) {
     const method = descriptor.value;
 
-    descriptor.value = function decoratedMethod(...args: any[]) {
+    descriptor.value = function decoratedMethod(...args: unknown[]) {
       if (debugLogger.isDebugEnabled()) {
         return debugLogger.measureSync(`${operation}.${propertyName}`, () =>
           method.apply(this, args),
@@ -190,13 +197,13 @@ export function measurePerformance(operation: string) {
 
 export function measureAsyncPerformance(operation: string) {
   return function asyncPerformanceDecorator(
-    target: any,
+    target: unknown,
     propertyName: string,
     descriptor: PropertyDescriptor,
   ) {
     const method = descriptor.value;
 
-    descriptor.value = function decoratedAsyncMethod(...args: any[]) {
+    descriptor.value = function decoratedAsyncMethod(...args: unknown[]) {
       if (debugLogger.isDebugEnabled()) {
         return debugLogger.measureAsync(`${operation}.${propertyName}`, () =>
           method.apply(this, args),

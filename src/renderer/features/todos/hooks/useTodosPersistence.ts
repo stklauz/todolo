@@ -180,7 +180,7 @@ export default function useTodosPersistence({
         });
       }
     };
-    run();
+    void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedListId]);
 

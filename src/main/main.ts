@@ -26,6 +26,9 @@ import {
   deleteList as dbDeleteList,
   setSelectedListMeta as dbSetSelectedListMeta,
   closeDatabase,
+  type ListsIndexV2,
+  type AppSettings,
+  type EditorTodo,
 } from './db';
 
 // Separate Dev and Prod databases by using different userData paths.
@@ -69,7 +72,7 @@ ipcMain.handle('load-lists', async () => {
   }
 });
 
-ipcMain.handle('save-lists', async (_event, indexDoc: any) => {
+ipcMain.handle('save-lists', async (_event, indexDoc: ListsIndexV2) => {
   const startTime = performance.now();
   try {
     console.log(`[PERF] Starting save-lists operation (sqlite)`);
@@ -109,7 +112,11 @@ ipcMain.handle('load-list-todos', async (_event, listId: string) => {
 
 ipcMain.handle(
   'save-list-todos',
-  async (_event, listId: string, todosDoc: any) => {
+  async (
+    _event,
+    listId: string,
+    todosDoc: { version: 2; todos: EditorTodo[] },
+  ) => {
     const startTime = performance.now();
     try {
       console.log(
@@ -152,7 +159,7 @@ ipcMain.handle('load-app-settings', async () => {
   }
 });
 
-ipcMain.handle('save-app-settings', async (_event, settings: any) => {
+ipcMain.handle('save-app-settings', async (_event, settings: AppSettings) => {
   const startTime = performance.now();
   try {
     console.log(`[PERF] Starting save-app-settings operation (sqlite)`);
@@ -351,11 +358,11 @@ app.on('will-quit', () => {
 app
   .whenReady()
   .then(() => {
-    createWindow();
+    void createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
+      if (mainWindow === null) void createWindow();
     });
   })
   .catch(console.log);

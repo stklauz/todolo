@@ -25,20 +25,29 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
       if (
         result &&
         typeof result === 'object' &&
-        (result as any).version === 2 &&
-        Array.isArray((result as any).lists)
+        (result as unknown as { version?: unknown }).version === 2 &&
+        Array.isArray((result as unknown as { lists?: unknown }).lists)
       ) {
         // Minimal item-shape validation: require id/name/createdAt
-        const rawLists = (result as any).lists as any[];
-        const validLists = rawLists.filter((l) => {
-          return (
-            l &&
-            typeof l === 'object' &&
-            typeof l.id === 'string' &&
-            typeof l.name === 'string' &&
-            typeof l.createdAt === 'string'
-          );
-        });
+        const rawLists = (result as unknown as { lists: unknown[] }).lists;
+        const validLists = rawLists.filter(
+          (
+            l,
+          ): l is {
+            id: string;
+            name: string;
+            createdAt: string;
+            updatedAt?: string;
+          } => {
+            return Boolean(
+              l &&
+                typeof l === 'object' &&
+                typeof (l as { id?: unknown }).id === 'string' &&
+                typeof (l as { name?: unknown }).name === 'string' &&
+                typeof (l as { createdAt?: unknown }).createdAt === 'string',
+            );
+          },
+        );
         if (validLists.length !== rawLists.length) {
           debugLogger.log(
             'warn',
@@ -50,13 +59,17 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
           );
         }
         // Ensure selectedListId points to a valid list
-        const validIds = new Set(validLists.map((l: any) => l.id));
-        const selected = (result as any).selectedListId;
-        const selectedListId = validIds.has(selected) ? selected : undefined;
+        const validIds = new Set(validLists.map((l) => l.id));
+        const selected = (result as unknown as { selectedListId?: unknown })
+          .selectedListId;
+        const selectedListId =
+          typeof selected === 'string' && validIds.has(selected)
+            ? selected
+            : undefined;
 
-        const sanitized = {
+        const sanitized: ListsIndexV2 = {
           version: 2 as const,
-          lists: validLists as any,
+          lists: validLists,
           selectedListId,
         };
         debugLogger.log('info', 'Lists index loaded successfully', {
@@ -71,10 +84,12 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
         'Malformed lists index payload received; using safe default',
         {
           receivedType: typeof result,
-          version: (result as any)?.version,
-          listsType: Array.isArray((result as any)?.lists)
+          version: (result as unknown as { version?: unknown })?.version,
+          listsType: Array.isArray(
+            (result as unknown as { lists?: unknown })?.lists,
+          )
             ? 'array'
-            : typeof (result as any)?.lists,
+            : typeof (result as unknown as { lists?: unknown })?.lists,
         },
       );
     } catch (error) {
@@ -94,7 +109,7 @@ export async function saveListsIndex(doc: ListsIndexV2): Promise<boolean> {
       const res = (await window.electron.ipcRenderer.invoke(
         'save-lists',
         doc,
-      )) as any;
+      )) as { success?: boolean; error?: string };
       const success = !!res?.success;
       debugLogger.log(success ? 'info' : 'error', 'Lists index save result', {
         success,
@@ -118,8 +133,8 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
       if (
         res &&
         typeof res === 'object' &&
-        (res as any).version === 2 &&
-        Array.isArray((res as any).todos)
+        (res as unknown as { version?: unknown }).version === 2 &&
+        Array.isArray((res as unknown as { todos?: unknown }).todos)
       ) {
         debugLogger.log('info', 'List todos loaded successfully', {
           listId,
@@ -133,10 +148,12 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
         'Malformed todos payload received; using safe default',
         {
           listId,
-          version: (res as any)?.version,
-          todosType: Array.isArray((res as any)?.todos)
+          version: (res as unknown as { version?: unknown })?.version,
+          todosType: Array.isArray(
+            (res as unknown as { todos?: unknown })?.todos,
+          )
             ? 'array'
-            : typeof (res as any)?.todos,
+            : typeof (res as unknown as { todos?: unknown })?.todos,
         },
       );
     } catch (error) {
@@ -160,7 +177,7 @@ export async function saveListTodos(
         'save-list-todos',
         listId,
         doc,
-      )) as any;
+      )) as { success?: boolean; error?: string };
       const success = !!res?.success;
       debugLogger.log(success ? 'info' : 'error', 'List todos save result', {
         listId,
@@ -203,7 +220,7 @@ export async function saveAppSettings(settings: AppSettings): Promise<boolean> {
       const res = (await window.electron.ipcRenderer.invoke(
         'save-app-settings',
         settings,
-      )) as any;
+      )) as { success?: boolean; error?: string };
       const success = !!res?.success;
       debugLogger.log(success ? 'info' : 'error', 'App settings save result', {
         success,
