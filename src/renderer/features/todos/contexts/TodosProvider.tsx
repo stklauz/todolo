@@ -1,9 +1,7 @@
 import React from 'react';
-import { loadAppSettings, saveAppSettings } from '../api/storage';
 import useTodosState from '../hooks/useTodosState';
 import TodosContext, { useTodosContext } from './TodosContext';
 import TodosActionsContext, { useTodosActions } from './TodosActionsContext';
-import type { AppSettings } from '../types';
 
 /**
  * Props for the TodosProvider component
@@ -18,10 +16,8 @@ interface TodosProviderProps {
  *
  * This provider:
  * - Manages global todos state using useTodosState
- * - Provides app settings management (hide completed items)
  * - Exposes todos data via TodosContext
  * - Exposes todos actions via TodosActionsContext
- * - Handles app settings persistence
  *
  * @param props - Component props
  * @returns JSX element providing todos context to children
@@ -57,35 +53,16 @@ function TodosProvider({ children }: TodosProviderProps) {
     addList,
     deleteList,
     duplicateList,
+    updateList,
     flushCurrentTodos,
   } = useTodosState();
-
-  // App settings state
-  const [appSettings, setAppSettings] = React.useState<AppSettings>({
-    hideCompletedItems: true,
-  });
-
-  // Load app settings on mount
-  React.useEffect(() => {
-    loadAppSettings().then(setAppSettings);
-  }, []);
-
-  // Function to update app settings
-  const updateAppSettings = React.useCallback(
-    async (newSettings: AppSettings) => {
-      setAppSettings(newSettings);
-      await saveAppSettings(newSettings);
-    },
-    [],
-  );
 
   const todosContextValue = React.useMemo(
     () => ({
       lists,
       selectedListId,
-      appSettings,
     }),
-    [lists, selectedListId, appSettings],
+    [lists, selectedListId],
   );
 
   const todosActionsValue = React.useMemo(
@@ -93,6 +70,7 @@ function TodosProvider({ children }: TodosProviderProps) {
       addList,
       deleteList,
       duplicateList,
+      updateList,
       setSelectedListId,
       updateTodo,
       toggleTodo,
@@ -100,7 +78,6 @@ function TodosProvider({ children }: TodosProviderProps) {
       insertTodoBelow,
       removeTodoAt,
       addTodoAtEnd,
-      updateAppSettings,
       getSelectedTodos,
       setSelectedTodos,
       flushCurrentTodos,
@@ -109,6 +86,7 @@ function TodosProvider({ children }: TodosProviderProps) {
       addList,
       deleteList,
       duplicateList,
+      updateList,
       setSelectedListId,
       updateTodo,
       toggleTodo,
@@ -116,7 +94,6 @@ function TodosProvider({ children }: TodosProviderProps) {
       insertTodoBelow,
       removeTodoAt,
       addTodoAtEnd,
-      updateAppSettings,
       getSelectedTodos,
       setSelectedTodos,
       flushCurrentTodos,

@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
 import { TodoApp } from '../renderer/features/todos/components/TodoApp';
+import TodosProvider from '../renderer/features/todos/contexts/TodosProvider';
 import * as storage from '../renderer/features/todos/api/storage';
 import { debugLogger } from '../renderer/utils/debug';
 import {
@@ -42,7 +43,11 @@ describe('UI Negative Path – minimal assertions', () => {
         .mockRejectedValueOnce(new Error('disk unavailable')),
     } as any);
 
-    render(<TodoApp />);
+    render(
+      <TodosProvider>
+        <TodoApp />
+      </TodosProvider>,
+    );
 
     // App should recover by creating an initial list (see useTodosState)
     const addListBtn = await screen.findByRole('button', { name: /add list/i });

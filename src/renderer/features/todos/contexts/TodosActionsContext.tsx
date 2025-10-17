@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { EditorTodo, AppSettings } from '../types';
+import type { EditorTodo, TodoList } from '../types';
 
 /**
  * Context value containing todos actions (functions to modify state)
@@ -32,9 +32,9 @@ export interface TodosActionsContextValue {
   /** Add a new todo at the end of the list */
   addTodoAtEnd: (text: string) => number;
 
-  // App settings
-  /** Update application settings */
-  updateAppSettings: (settings: AppSettings) => Promise<void>;
+  // List management
+  /** Update a list's properties */
+  updateList: (id: string, updates: Partial<TodoList>) => void;
 
   // Utility functions
   /** Get todos for the currently selected list */
@@ -60,7 +60,6 @@ const TodosActionsContext = createContext<TodosActionsContextValue | null>(
  * This hook provides functions to modify todos state:
  * - List management (add, delete, duplicate, select)
  * - Todo operations (update, toggle, indent, insert, remove)
- * - App settings management
  * - Utility functions for data access
  *
  * @returns Todos actions context value

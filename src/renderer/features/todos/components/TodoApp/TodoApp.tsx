@@ -4,7 +4,7 @@ import TodoList from '../TodoList/TodoList';
 import TodoAppHeader from './TodoAppHeader';
 import ActionsMenu from './ActionsMenu';
 import type { EditorTodo, Section, AppSettings } from '../../types';
-import useTodosState from '../../hooks/useTodosState';
+import { useTodosContext, useTodosActions } from '../../contexts/TodosProvider';
 import useDragReorder from '../../hooks/useDragReorder';
 import useTodoFocus, { useTodoFocusEffect } from '../../hooks/useTodoFocus';
 import useListEditing from '../../hooks/useListEditing';
@@ -19,10 +19,8 @@ import {
 const styles = require('./TodoApp.module.css');
 
 export default function TodoApp(): React.ReactElement {
+  const { lists, selectedListId } = useTodosContext();
   const {
-    lists,
-    setLists,
-    selectedListId,
     setSelectedListId,
     getSelectedTodos,
     setSelectedTodos,
@@ -35,7 +33,8 @@ export default function TodoApp(): React.ReactElement {
     addList,
     deleteList,
     duplicateList,
-  } = useTodosState();
+    updateList,
+  } = useTodosActions();
 
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
@@ -202,13 +201,7 @@ export default function TodoApp(): React.ReactElement {
       cancelRename();
       return;
     }
-    setLists((prev) =>
-      prev.map((l) =>
-        l.id === editingListId
-          ? { ...l, name, updatedAt: new Date().toISOString() }
-          : l,
-      ),
-    );
+    updateList(editingListId, { name });
     commitRenameBase();
   }
 

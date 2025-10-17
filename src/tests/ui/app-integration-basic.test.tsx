@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
+import TodosProvider from '../../renderer/features/todos/contexts/TodosProvider';
 import * as storage from '../../renderer/features/todos/api/storage';
 
 // Mock the storage module
@@ -34,7 +35,11 @@ describe('E2E Basic Flow Tests', () => {
 
   describe('Basic App Flow', () => {
     it('should render the app without crashing', async () => {
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       // Wait for initialization
       await waitFor(() => {
@@ -67,7 +72,11 @@ describe('E2E Basic Flow Tests', () => {
         todos: [{ id: 1, text: 'Existing todo', completed: false, indent: 0 }],
       });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -83,7 +92,11 @@ describe('E2E Basic Flow Tests', () => {
 
   describe('Data Persistence', () => {
     it('should save data when changes are made', async () => {
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -107,7 +120,11 @@ describe('E2E Basic Flow Tests', () => {
     it('should handle save failures gracefully', async () => {
       mockStorage.saveListTodos.mockResolvedValue(false);
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -130,7 +147,11 @@ describe('E2E Basic Flow Tests', () => {
 
   describe('Storage API Integration', () => {
     it('should call storage APIs correctly', async () => {
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(1);
@@ -145,7 +166,11 @@ describe('E2E Basic Flow Tests', () => {
     it('should handle storage errors gracefully', async () => {
       mockStorage.loadListsIndex.mockRejectedValue(new Error('Storage error'));
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       // Should handle the error and continue
       await waitFor(() => {
@@ -167,7 +192,11 @@ describe('E2E Basic Flow Tests', () => {
         selectedListId: undefined,
       });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -182,7 +211,11 @@ describe('E2E Basic Flow Tests', () => {
     it('should handle corrupted data gracefully', async () => {
       mockStorage.loadListsIndex.mockResolvedValue(null as any);
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -224,7 +257,11 @@ describe('E2E Basic Flow Tests', () => {
           selectedListId: 'duplicated-list-id',
         });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -279,7 +316,11 @@ describe('E2E Basic Flow Tests', () => {
         selectedListId: 'list-1',
       });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       // Wait for the app to fully load and render the menu button
       await waitFor(() => {
@@ -334,7 +375,11 @@ describe('E2E Basic Flow Tests', () => {
         error: 'not_found',
       });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();

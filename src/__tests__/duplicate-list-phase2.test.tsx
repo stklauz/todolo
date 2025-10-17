@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { TodoApp } from '../renderer/features/todos/components/TodoApp';
+import TodosProvider from '../renderer/features/todos/contexts/TodosProvider';
 import * as storage from '../renderer/features/todos/api/storage';
 
 // Mock the storage module
@@ -40,7 +41,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
 
   describe('Title Actions Menu Order', () => {
     it('should show "Duplicate list" above "Delete list" consistently', async () => {
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -91,7 +96,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
           }),
       );
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -144,7 +153,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
         });
       });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -194,7 +207,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
           }),
       );
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -247,7 +264,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
           }),
       );
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -291,7 +312,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
         ],
       });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -356,7 +381,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
           selectedListId: 'duplicated-list-id',
         });
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();
@@ -414,7 +443,11 @@ describe('Duplicate List Phase 2 - UI Integration & Accessibility', () => {
           }),
       );
 
-      render(<TodoApp />);
+      render(
+        <TodosProvider>
+          <TodoApp />
+        </TodosProvider>,
+      );
 
       await waitFor(() => {
         expect(mockStorage.loadListsIndex).toHaveBeenCalled();

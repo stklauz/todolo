@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { TodoList, AppSettings } from '../types';
+import type { TodoList } from '../types';
 
 /**
  * Context value containing todos data (read-only state)
@@ -9,8 +9,6 @@ export interface TodosContextValue {
   lists: TodoList[];
   /** ID of the currently selected list */
   selectedListId: string | null;
-  /** Application settings */
-  appSettings: AppSettings;
 }
 
 /**
@@ -24,7 +22,6 @@ const TodosContext = createContext<TodosContextValue | null>(null);
  * This hook provides read-only access to:
  * - All todo lists
  * - Currently selected list ID
- * - Application settings
  *
  * @returns Todos context value
  * @throws Error if used outside of TodosProvider
@@ -32,10 +29,9 @@ const TodosContext = createContext<TodosContextValue | null>(null);
  * @example
  * ```tsx
  * function TodoList() {
- *   const { lists, selectedListId, appSettings } = useTodosContext();
+ *   const { lists, selectedListId } = useTodosContext();
  *
  *   const selectedList = lists.find(l => l.id === selectedListId);
- *   const hideCompleted = appSettings.hideCompletedItems;
  *
  *   return selectedList ? selectedList.name : 'No list selected';
  * }

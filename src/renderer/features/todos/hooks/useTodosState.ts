@@ -106,6 +106,19 @@ export default function useTodosState() {
     nextId,
   });
 
+  const updateList = React.useCallback(
+    (id: string, updates: Partial<TodoList>) => {
+      setLists((prev) =>
+        prev.map((l) =>
+          l.id === id
+            ? { ...l, ...updates, updatedAt: new Date().toISOString() }
+            : l,
+        ),
+      );
+    },
+    [],
+  );
+
   return {
     lists,
     setLists,
@@ -124,6 +137,7 @@ export default function useTodosState() {
     deleteSelectedList,
     deleteList,
     duplicateList,
+    updateList,
     flushCurrentTodos,
   } as const;
 }
