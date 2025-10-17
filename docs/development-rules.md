@@ -74,11 +74,36 @@ Use this as a simple, implementation‑doc checklist. Keep changes small, increm
 - Remove dead code and debug logs; ticket any remaining TODOs.
 - Document breaking changes.
 
+## Quality Assurance Requirements
+
+### After Any Code Generation/Changes
+**MANDATORY**: Run these commands after any code changes to ensure quality:
+
+```bash
+npm run lint        # Check for ESLint issues
+npm run typecheck   # TypeScript compilation check
+npm test           # Run test suite
+```
+
+### Quality Gates
+- All changes MUST pass lint, typecheck, and tests before being considered complete
+- No linting errors should be introduced
+- Test coverage should be maintained or improved
+- TypeScript compilation must succeed without errors
+- Pre-commit hook will automatically run these checks on commit
+
+### For AI Agents
+- Always run the quality checks after making any code changes
+- Fix any issues before considering the task complete
+- Use the existing npm scripts rather than running tools directly
+- If issues are found, address them immediately before proceeding
+
 ## Definition of Done
 - Feature is behind a flag or fully user‑ready.
 - Tests exist and pass; key paths are observable.
 - Docs updated; rollout/rollback verified.
 - No unnecessary duplication; code aligns with project patterns.
+- **Quality checks passed**: `npm run lint`, `npm run typecheck`, `npm test` all succeed.
 
 ## Examples
 

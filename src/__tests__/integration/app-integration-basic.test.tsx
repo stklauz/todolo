@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
 import TodosProvider from '../../renderer/features/todos/contexts/TodosProvider';
 import * as storage from '../../renderer/features/todos/api/storage';
-import { setupDefaultMocks, mockStorage } from '../utils/ui';
+import { setupDefaultMocks, mockStorage } from '../../renderer/testUtils/ui';
 
 // Mock the storage module
 jest.mock('../../renderer/features/todos/api/storage');

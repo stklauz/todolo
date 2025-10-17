@@ -9,7 +9,7 @@ import {
   setupDefaultMocks,
   mockStorage,
   setupUser,
-} from '../utils/ui';
+} from '../../renderer/testUtils/ui';
 
 // Mock the storage module (util relies on the same module reference)
 jest.mock('../../renderer/features/todos/api/storage');

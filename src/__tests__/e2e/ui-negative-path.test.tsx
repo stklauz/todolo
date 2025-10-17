@@ -3,18 +3,18 @@ import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 
-import { TodoApp } from '../renderer/features/todos/components/TodoApp';
-import TodosProvider from '../renderer/features/todos/contexts/TodosProvider';
-import * as storage from '../renderer/features/todos/api/storage';
-import { debugLogger } from '../renderer/utils/debug';
+import { TodoApp } from '../../renderer/features/todos/components/TodoApp';
+import TodosProvider from '../../renderer/features/todos/contexts/TodosProvider';
+import * as storage from '../../renderer/features/todos/api/storage';
+import { debugLogger } from '../../renderer/utils/debug';
 import {
   renderAppWithDefaults,
   setupDefaultMocks,
   setupUser,
-} from '../tests/utils/ui';
+} from '../../renderer/testUtils/ui';
 
 // Mock the storage module
-jest.mock('../renderer/features/todos/api/storage');
+jest.mock('../../renderer/features/todos/api/storage');
 const mockStorage = storage as jest.Mocked<typeof storage>;
 
 // Local alias remains for compatibility within this file
