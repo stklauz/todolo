@@ -15,7 +15,7 @@ import {
 // Mock the storage module
 jest.mock('../../features/todos/api/storage');
 
-describe.skip('Error Handling', () => {
+describe('Error Handling', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
@@ -70,10 +70,6 @@ describe.skip('Error Handling', () => {
     });
 
     it('handles app settings load failure gracefully', async () => {
-      // Reset mocks to ensure clean state
-      jest.clearAllMocks();
-      setupDefaultMocks();
-
       renderAppWithDefaults({
         loadAppSettings: jest
           .fn()
@@ -92,15 +88,11 @@ describe.skip('Error Handling', () => {
   });
 
   describe('Storage Save Failures', () => {
-    it.skip('handles todos save failure gracefully', async () => {
+    it('handles todos save failure gracefully', async () => {
       // Enable debug to ensure error-logging branches execute
       debugLogger.enable();
       try {
         const user = setupUser();
-
-        // Reset all mocks to ensure clean state
-        jest.clearAllMocks();
-        setupDefaultMocks();
 
         renderAppWithDefaults({
           saveListTodos: jest.fn().mockRejectedValue(new Error('write failed')),

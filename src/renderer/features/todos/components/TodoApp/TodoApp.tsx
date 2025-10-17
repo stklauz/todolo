@@ -47,7 +47,12 @@ export default function TodoApp(): React.ReactElement {
   } = useListDuplication();
 
   React.useEffect(() => {
-    loadAppSettings().then(setAppSettings);
+    loadAppSettings()
+      .then(setAppSettings)
+      .catch((error) => {
+        // Handle load failure gracefully - keep default settings
+        console.warn('Failed to load app settings, using defaults:', error);
+      });
   }, []);
   const updateAppSettings = React.useCallback(
     async (newSettings: AppSettings) => {

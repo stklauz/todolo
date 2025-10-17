@@ -113,6 +113,15 @@ export default function useListsManagement({
   }
 
   function deleteList(id: string) {
+    // Prevent deleting the only list
+    if (listsRef.current.length <= 1) {
+      debugLogger.log('info', 'Prevented deletion of only list', {
+        id,
+        listCount: listsRef.current.length,
+      });
+      return;
+    }
+
     // Fire-and-forget persistent delete in DB
     deleteListApi(id).catch((error) => {
       debugLogger.log('error', 'DB deleteList failed', { id, error });
