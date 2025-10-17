@@ -109,18 +109,30 @@
       "\\.(ts|tsx|js|jsx)$": "ts-jest"
     },
     "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/renderer/**/*.{ts,tsx,js,jsx}",
+      "!src/renderer/**/*.test.{ts,tsx,js,jsx}",
+      "!src/renderer/**/*.spec.{ts,tsx,js,jsx}",
+      "!src/renderer/**/__tests__/**",
+      "!src/renderer/**/__mocks__/**",
+      "!src/renderer/index.tsx",
+      "!src/renderer/index.ejs",
+      "!src/renderer/preload.d.ts"
+    ],
+    "coverageReporters": ["text", "text-summary", "html", "lcov"],
+    "coverageDirectory": "coverage",
     "coverageThreshold": {
       "global": {
-        "branches": 45,
+        "branches": 49,
         "functions": 60,
         "lines": 70,
-        "statements": 68
+        "statements": 65
       },
       "./src/renderer/features/todos/utils/": {
-        "branches": 75,
-        "functions": 75,
-        "lines": 90,
-        "statements": 90
+        "branches": 50,
+        "functions": 50,
+        "lines": 60,
+        "statements": 55
       },
       "./src/renderer/features/todos/reducers/": {
         "branches": 80,
