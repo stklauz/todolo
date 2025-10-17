@@ -2,6 +2,7 @@ import React from 'react';
 import { loadListsIndex, saveListsIndex } from '../api/storage';
 import type { TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
+import { normalizeList } from '../utils/validation';
 
 type UseListsIndexProps = {
   lists: TodoList[];
@@ -32,13 +33,7 @@ export default function useListsIndex({
         const index = await loadListsIndex();
 
         const normalizedLists: TodoList[] = (index.lists || []).map(
-          (list, li) => ({
-            id: String(list.id),
-            name: typeof list.name === 'string' ? list.name : `List ${li + 1}`,
-            todos: [],
-            createdAt: list.createdAt,
-            updatedAt: list.updatedAt,
-          }),
+          (list, li) => normalizeList(list, li),
         );
         setLists(normalizedLists);
         setSelectedListId(
@@ -47,7 +42,7 @@ export default function useListsIndex({
             ? index.selectedListId!
             : (normalizedLists[0]?.id ?? null),
         );
-      } catch (_e) {
+      } catch {
       } finally {
         setIndexLoaded(true);
       }
@@ -148,7 +143,7 @@ export default function useListsIndex({
 
       saveListsIndex(indexDoc).catch(() => {});
     } catch {}
-  }, [selectedListId, lists.length]);
+  }, [selectedListId, lists]);
 
   // Flush lists index immediately on window close/blur/hidden, to avoid losing debounced changes
   React.useEffect(() => {

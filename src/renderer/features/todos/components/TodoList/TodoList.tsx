@@ -2,6 +2,8 @@ import React from 'react';
 import { TodoRow } from '../TodoRow/TodoRow';
 import type { EditorTodo } from '../../types';
 
+// import { debugLogger } from '../../../../utils/debug';
+
 // Import audio file with fallback for tests
 let popSound: string;
 try {
@@ -10,15 +12,6 @@ try {
   popSound = 'mock-audio';
 }
 const styles = require('./TodoList.module.css');
-
-// Debug mode - set to false by default to avoid noisy logs
-const DEBUG_DRAG_DROP = false;
-
-const debugLog = (message: string, data?: any) => {
-  if (DEBUG_DRAG_DROP) {
-    console.log(`[TodoList Debug] ${message}`, data || '');
-  }
-};
 
 type Props = {
   todos: EditorTodo[];
@@ -138,8 +131,8 @@ const TodoList = React.memo(function TodoList({
       audio.preload = 'auto';
       audio.volume = 0.3; // Set a reasonable volume
       audioRef.current = audio;
-    } catch (error) {
-      console.warn('Failed to initialize audio:', error);
+    } catch {
+      // console.warn('Failed to initialize audio:', error);
     }
   }, []);
 
@@ -228,11 +221,11 @@ const TodoList = React.memo(function TodoList({
               if (audio) {
                 try {
                   audio.currentTime = 0;
-                  audio.play().catch((error) => {
-                    console.warn('Audio playback failed:', error);
+                  audio.play().catch(() => {
+                    // console.warn('Audio playback failed:', error);
                   });
-                } catch (error) {
-                  console.warn('Audio error:', error);
+                } catch {
+                  // console.warn('Audio error:', error);
                 }
               }
 
@@ -265,28 +258,16 @@ const TodoList = React.memo(function TodoList({
             : styles.dropZone
         }
         onDragOver={(e) => {
-          debugLog('Active end zone drag over', {
-            eventType: e.type,
-            dropAtSectionEnd,
-          });
           e.preventDefault();
           e.stopPropagation();
           handleDragOverEndZone(e, 'active');
         }}
         onDragLeave={(e) => {
-          debugLog('Active end zone drag leave', {
-            eventType: e.type,
-            dropAtSectionEnd,
-          });
           e.preventDefault();
           e.stopPropagation();
           handleDragLeaveEndZone('active');
         }}
         onDrop={(e) => {
-          debugLog('Active end zone drop', {
-            eventType: e.type,
-            dropAtSectionEnd,
-          });
           e.preventDefault();
           e.stopPropagation();
           handleDropAtEnd('active');
@@ -327,28 +308,16 @@ const TodoList = React.memo(function TodoList({
             : styles.dropZone
         }
         onDragOver={(e) => {
-          debugLog('Completed end zone drag over', {
-            eventType: e.type,
-            dropAtSectionEnd,
-          });
           e.preventDefault();
           e.stopPropagation();
           handleDragOverEndZone(e, 'completed');
         }}
         onDragLeave={(e) => {
-          debugLog('Completed end zone drag leave', {
-            eventType: e.type,
-            dropAtSectionEnd,
-          });
           e.preventDefault();
           e.stopPropagation();
           handleDragLeaveEndZone('completed');
         }}
         onDrop={(e) => {
-          debugLog('Completed end zone drop', {
-            eventType: e.type,
-            dropAtSectionEnd,
-          });
           e.preventDefault();
           e.stopPropagation();
           handleDropAtEnd('completed');

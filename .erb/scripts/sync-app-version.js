@@ -50,7 +50,7 @@ function main() {
     require('child_process').execSync(`git add ${appPkgPath}`, {
       stdio: 'ignore',
     });
-  } catch (_) {
+  } catch {
     // ignore if git not available
   }
 }

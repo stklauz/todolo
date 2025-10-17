@@ -343,7 +343,7 @@ app.on('before-quit', () => {
 });
 
 // Handle app termination on macOS
-app.on('will-quit', (event) => {
+app.on('will-quit', () => {
   console.log('[APP] App will quit, ensuring database is closed...');
   closeDatabase();
 });

@@ -167,3 +167,83 @@ export const updateTodoIndent = (
   ...todo,
   indent: clampIndent(indent),
 });
+
+/**
+ * Computes the section for a todo by ID in the todos array (used in drag/drop)
+ * This is a simplified version that matches the logic in useDragReorder
+ */
+export const computeSectionById = (
+  id: number,
+  todos: EditorTodo[],
+): Section => {
+  const idx = todos.findIndex((t) => t.id === id);
+  if (idx === -1) return 'active';
+
+  const cur = todos[idx];
+  const indent = Number(cur.indent ?? 0);
+
+  if (indent <= 0) {
+    // Parent: effective completion requires parent AND all children to be completed
+    let allChildrenCompleted = true;
+    for (let i = idx + 1; i < todos.length; i++) {
+      if (Number(todos[i].indent ?? 0) === 0) break;
+      if (!todos[i].completed) {
+        allChildrenCompleted = false;
+        break;
+      }
+    }
+    return cur.completed && allChildrenCompleted ? 'completed' : 'active';
+  }
+
+  // Child: completed only if child and parent are completed
+  let parentCompleted = false;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (Number(todos[i].indent ?? 0) === 0) {
+      parentCompleted = !!todos[i].completed;
+      break;
+    }
+  }
+  return cur.completed && parentCompleted ? 'completed' : 'active';
+};
+
+/**
+ * Checks if targetId is a child of sourceId in the todos array
+ * Used for drag/drop validation
+ */
+export const isChildOf = (
+  sourceId: number,
+  targetId: number,
+  todos: EditorTodo[],
+): boolean => {
+  const sourceIndex = todos.findIndex((t) => t.id === sourceId);
+  const targetIndex = todos.findIndex((t) => t.id === targetId);
+
+  if (sourceIndex === -1 || targetIndex === -1) return false;
+
+  const sourceTodo = todos[sourceIndex];
+  const targetTodo = todos[targetIndex];
+
+  if (!sourceTodo || !targetTodo) return false;
+
+  // Must be in same section (same completion status)
+  if (sourceTodo.completed !== targetTodo.completed) return false;
+
+  // Target must come after source
+  if (targetIndex <= sourceIndex) return false;
+
+  const sourceIndent = sourceTodo.indent ?? 0;
+  const targetIndent = targetTodo.indent ?? 0;
+
+  // Target must be indented more than source
+  if (targetIndent <= sourceIndent) return false;
+
+  // Check if there's any todo between source and target that breaks the relationship
+  for (let i = sourceIndex + 1; i < targetIndex; i++) {
+    const todo = todos[i];
+    if (todo && (todo.indent ?? 0) <= sourceIndent) {
+      return false;
+    }
+  }
+
+  return true;
+};

@@ -1,15 +1,8 @@
 import React from 'react';
 
+// import { debugLogger } from '../../../../utils/debug';
+
 const styles = require('../TodoList/TodoList.module.css');
-
-// Debug mode - set to false by default to avoid noisy logs
-const DEBUG_DRAG_DROP = false;
-
-const debugLog = (message: string, data?: any) => {
-  if (DEBUG_DRAG_DROP) {
-    console.log(`[TodoRow Debug] ${message}`, data || '');
-  }
-};
 
 type TodoRowProps = {
   value: string;
@@ -62,27 +55,16 @@ export const TodoRow = React.memo(
         <div
           className={`${styles.row} ${isDropTarget ? styles.dropTarget : ''}`}
           onDragOver={(e) => {
-            debugLog('Row drag over', {
-              value,
-              isDropTarget,
-              eventType: e.type,
-            });
             e.preventDefault();
             e.stopPropagation();
             onDragOver(e);
           }}
           onDragLeave={(e) => {
-            debugLog('Row drag leave', {
-              value,
-              isDropTarget,
-              eventType: e.type,
-            });
             e.preventDefault();
             e.stopPropagation();
             onDragLeave();
           }}
           onDrop={(e) => {
-            debugLog('Row drop', { value, isDropTarget, eventType: e.type });
             e.preventDefault();
             e.stopPropagation();
             onDrop();
@@ -95,12 +77,10 @@ export const TodoRow = React.memo(
             className={`${styles.draggable} ${indentClass}`}
             draggable
             onDragStart={(e) => {
-              debugLog('Span drag start', { value, eventType: e.type });
               e.stopPropagation();
               onDragStart(e);
             }}
             onDragEnd={(e) => {
-              debugLog('Span drag end', { value, eventType: e.type });
               e.stopPropagation();
               onDragEnd();
             }}

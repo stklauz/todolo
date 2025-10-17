@@ -6,6 +6,10 @@ import ActionsMenu from './ActionsMenu';
 import type { EditorTodo, Section, AppSettings } from '../../types';
 import useTodosState from '../../hooks/useTodosState';
 import useDragReorder from '../../hooks/useDragReorder';
+import useTodoFocus, { useTodoFocusEffect } from '../../hooks/useTodoFocus';
+import useListEditing from '../../hooks/useListEditing';
+import useFilteredTodos from '../../hooks/useFilteredTodos';
+import useListDuplication from '../../hooks/useListDuplication';
 import {
   loadAppSettings,
   saveAppSettings,
@@ -13,11 +17,6 @@ import {
 } from '../../api/storage';
 
 const styles = require('./TodoApp.module.css');
-
-// TodoApp: An editor-like list of todos spanning multiple lists
-// - Each todo is an input you can type in
-// - Press Enter in a todo to insert a new one below and focus it
-// - There is always at least one todo present
 
 export default function TodoApp(): React.ReactElement {
   const {
@@ -31,40 +30,27 @@ export default function TodoApp(): React.ReactElement {
     toggleTodo,
     changeIndent,
     insertTodoBelow,
+    removeTodoAt,
     addTodoAtEnd,
     addList,
     deleteList,
     duplicateList,
   } = useTodosState();
 
-  // App settings state
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
   });
+  const {
+    isDuplicating,
+    showSpinner,
+    statusMessage,
+    focusListId,
+    handleDuplicate: handleDuplicateBase,
+  } = useListDuplication();
 
-  // Duplicate list state
-  const [isDuplicating, setIsDuplicating] = React.useState(false);
-  const [showSpinner, setShowSpinner] = React.useState(false);
-  const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
-  const [focusListId, setFocusListId] = React.useState<string | null>(null);
-
-  // Load app settings on mount
   React.useEffect(() => {
     loadAppSettings().then(setAppSettings);
   }, []);
-
-  // Clear focus after it's been set
-  React.useEffect(() => {
-    if (focusListId) {
-      // Clear focus after a short delay to allow the focus to be applied
-      const timeout = setTimeout(() => {
-        setFocusListId(null);
-      }, 100);
-      return () => clearTimeout(timeout);
-    }
-  }, [focusListId]);
-
-  // Function to update app settings
   const updateAppSettings = React.useCallback(
     async (newSettings: AppSettings) => {
       setAppSettings(newSettings);
@@ -74,15 +60,22 @@ export default function TodoApp(): React.ReactElement {
   );
 
   const allTodos: EditorTodo[] = getSelectedTodos();
-  const todos: EditorTodo[] = appSettings.hideCompletedItems
-    ? allTodos.filter((todo) => !todo.completed)
-    : allTodos;
-  // REFS: keep values between renders without causing re-renders
-  // Track inputs by todo id so we can focus newly inserted rows
-  const inputByIdRef = React.useRef(new Map<number, HTMLTextAreaElement>());
-  const focusNextIdRef = React.useRef<number | null>(null);
 
-  // Drag state/handlers via hook
+  const { inputByIdRef, focusNextIdRef, setInputRef, focusTodo } =
+    useTodoFocus();
+  const {
+    filteredTodos: todos,
+    insertBelowAndFocus,
+    removeAtAndManageFocus,
+  } = useFilteredTodos(
+    allTodos,
+    appSettings.hideCompletedItems,
+    insertTodoBelow,
+    removeTodoAt,
+    setSelectedTodos,
+    focusTodo,
+  );
+
   const sectionOf = (id: number): Section => {
     const idx = todos.findIndex((x) => x.id === id);
     if (idx === -1) return 'active';
@@ -128,87 +121,6 @@ export default function TodoApp(): React.ReactElement {
     sectionOf,
   );
 
-  // Keep the map in sync as inputs mount/unmount
-  function setInputRef(id: number, el: HTMLTextAreaElement | null) {
-    if (el) inputByIdRef.current.set(id, el);
-    else inputByIdRef.current.delete(id);
-  }
-
-  // no local load/save effects; handled in useTodosState
-
-  // mutations are provided by useTodosState (updateTodo/toggleTodo)
-
-  // Insert a new todo after the given index and focus it
-  function insertBelowAndFocus(index: number, text = '') {
-    // If we're filtering completed items, we need to find the correct position in the full list
-    if (appSettings.hideCompletedItems) {
-      // Find the target todo in the visible list
-      const target = todos[index];
-      if (!target) return;
-
-      // Find its position in the full list
-      const fullIndex = allTodos.findIndex((t) => t.id === target.id);
-      if (fullIndex < 0) return;
-
-      // Insert after the found position in the full list
-      const id = insertTodoBelow(fullIndex, text);
-      focusNextIdRef.current = id;
-    } else {
-      // No filtering, use index directly
-      const id = insertTodoBelow(index, text);
-      focusNextIdRef.current = id;
-    }
-  }
-
-  // Remove the todo at index; focus a neighbor or the bottom box if none left
-  function removeAtAndManageFocus(index: number) {
-    if (appSettings.hideCompletedItems) {
-      // Translate filtered index -> id -> full list index
-      const target = todos[index];
-      if (!target) return;
-      const targetId = target.id;
-      setLists((prev) =>
-        prev.map((l) => {
-          if (l.id !== selectedListId) return l;
-          const fullIdx = l.todos.findIndex((t) => t.id === targetId);
-          if (fullIdx === -1) return l;
-          const next = [...l.todos];
-          next.splice(fullIdx, 1);
-          if (next.length === 0) {
-            focusNextIdRef.current = null;
-          } else {
-            const focusIdx = Math.max(0, fullIdx - 1);
-            const focusTarget = next[focusIdx] ?? next[0];
-            if (focusTarget) focusNextIdRef.current = focusTarget.id;
-          }
-          return { ...l, todos: next, updatedAt: new Date().toISOString() };
-        }),
-      );
-    } else {
-      // No filtering, use index directly
-      setLists((prev) =>
-        prev.map((l) => {
-          if (l.id !== selectedListId) return l;
-          const next = [...l.todos];
-          next.splice(index, 1);
-          if (next.length === 0) {
-            focusNextIdRef.current = null;
-          } else {
-            const target = next[Math.max(0, index - 1)] ?? next[0];
-            if (target) focusNextIdRef.current = target.id;
-          }
-          return { ...l, todos: next, updatedAt: new Date().toISOString() };
-        }),
-      );
-    }
-  }
-
-  // drag-drop handlers provided by useDragReorder
-
-  // end drag-drop customizations
-
-  // Enter inside a todo: insert a new one below and focus it
-  // Compute index by id so this works across split lists
   function handleTodoKeyDown(id: number) {
     return (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Use the full list for operations; UI is filtered
@@ -262,68 +174,32 @@ export default function TodoApp(): React.ReactElement {
     };
   }
 
-  // After the todos array changes, focus the input we marked (if any),
-  // otherwise if none left, focus the bottom create input
-  React.useEffect(() => {
-    // Don't interfere with title editing
-    if (isEditingRef.current) return;
+  const {
+    editingListId,
+    editingName,
+    inputJustFocusedRef,
+    titleInputRef,
+    isEditingRef,
+    startRename,
+    setEditingName,
+    cancelRename,
+    commitRename: commitRenameBase,
+  } = useListEditing();
 
-    const id = focusNextIdRef.current;
-    if (id != null) {
-      const el = inputByIdRef.current.get(id);
-      if (el) el.focus();
-      focusNextIdRef.current = null;
-    } else if (todos.length === 1) {
-      const only = todos[0];
-      const el = inputByIdRef.current.get(only.id);
-      if (el) el.focus();
-    }
-  }, [todos]);
-
-  const [editingListId, setEditingListId] = React.useState<string | null>(null);
-  const [editingName, setEditingName] = React.useState<string>('');
-  const inputJustFocusedRef = React.useRef(false);
-  const titleInputRef = React.useRef<HTMLInputElement>(null);
-  const isEditingRef = React.useRef(false);
-
-  // Focus the input when editing starts (only when editingListId changes)
-  React.useEffect(() => {
-    if (editingListId === selectedListId && titleInputRef.current) {
-      // Small delay to ensure the input is rendered
-      setTimeout(() => {
-        if (titleInputRef.current) {
-          titleInputRef.current.focus();
-          // Don't select all text - let user position cursor where they want
-        }
-      }, 10);
-    }
-  }, [editingListId]); // Only depend on editingListId, not selectedListId
-
-  // selected list info
+  useTodoFocusEffect(todos, focusNextIdRef, inputByIdRef, isEditingRef);
   const selectedList = lists.find((l) => l.id === selectedListId) || null;
   const selectedListName = selectedList?.name || 'My List';
 
   function onAddList() {
     const id = addList();
-    isEditingRef.current = true;
-    setEditingListId(id);
-    setEditingName(`List ${lists.length + 1}`);
-  }
-
-  // deleteSelectedList comes from hook
-
-  function startRename(listId: string, current: string) {
-    isEditingRef.current = true;
-    setEditingListId(listId);
-    setEditingName(current);
+    startRename(id, `List ${lists.length + 1}`);
   }
 
   function commitRename() {
     if (!editingListId || !isEditingRef.current) return;
     const name = editingName.trim();
     if (!name) {
-      setEditingListId(null);
-      isEditingRef.current = false;
+      cancelRename();
       return;
     }
     setLists((prev) =>
@@ -333,54 +209,24 @@ export default function TodoApp(): React.ReactElement {
           : l,
       ),
     );
-    setEditingListId(null);
-    isEditingRef.current = false;
-  }
-
-  function cancelRename() {
-    setEditingListId(null);
-    isEditingRef.current = false;
+    commitRenameBase();
   }
 
   const handleDuplicate = async () => {
-    if (isDuplicating || !selectedListId) return;
+    if (!selectedListId) return;
 
-    let spinnerTimeout: number | null = null;
-
-    try {
-      setIsDuplicating(true);
-      setStatusMessage('Duplicating…');
-
-      // Show spinner after 150ms if operation is still running
-      spinnerTimeout = window.setTimeout(() => {
-        setShowSpinner(true);
-      }, 150);
-
-      const newId = await duplicateList(selectedListId);
-
+    const duplicateListWithReload = async (id: string) => {
+      const newId = await duplicateList(id);
       if (newId) {
-        setStatusMessage('List duplicated');
-        // Set focus to the newly created list
-        setFocusListId(newId);
-        // Trigger a lists index reload for integration parity/observability
-        // State is already updated by the hook; this read is non-destructive.
         try {
           await loadListsIndex();
         } catch {}
-      } else {
-        setStatusMessage("Couldn't duplicate this list. Try again.");
       }
-    } finally {
-      // Clear spinner timeout if it hasn't fired yet
-      if (spinnerTimeout) {
-        clearTimeout(spinnerTimeout);
-      }
-      setIsDuplicating(false);
-      setShowSpinner(false);
-    }
-  };
+      return newId;
+    };
 
-  // no debug globals/logs
+    await handleDuplicateBase(selectedListId, duplicateListWithReload);
+  };
 
   return (
     <div className={styles.layout}>

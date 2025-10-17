@@ -134,18 +134,13 @@ export default function useTodosOperations({
 
   function addTodoAtEnd(text: string): number {
     const id = nextId();
-    console.log(`[UI] addTodoAtEnd called - id: ${id}, text: "${text}"`);
     setSelectedTodos((prev) => {
       const newTodo = { id, text, completed: false, indent: 0 };
-      console.log(`[UI] Adding new todo:`, newTodo);
       return [...prev, newTodo];
     });
     // Only save if the text is not empty - empty todos should not be saved
     if (text.trim() !== '') {
-      console.log(`[UI] Saving new todo with non-empty text: "${text}"`);
       saveWithStrategy('immediate');
-    } else {
-      console.log(`[UI] Skipping save for empty todo text`);
     }
     return id;
   }

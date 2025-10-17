@@ -170,14 +170,14 @@ export const debugLogger = new DebugLogger();
 
 // Performance monitoring decorators
 export function measurePerformance(operation: string) {
-  return function (
+  return function performanceDecorator(
     target: any,
     propertyName: string,
     descriptor: PropertyDescriptor,
   ) {
     const method = descriptor.value;
 
-    descriptor.value = function (...args: any[]) {
+    descriptor.value = function decoratedMethod(...args: any[]) {
       if (debugLogger.isDebugEnabled()) {
         return debugLogger.measureSync(`${operation}.${propertyName}`, () =>
           method.apply(this, args),
@@ -189,14 +189,14 @@ export function measurePerformance(operation: string) {
 }
 
 export function measureAsyncPerformance(operation: string) {
-  return function (
+  return function asyncPerformanceDecorator(
     target: any,
     propertyName: string,
     descriptor: PropertyDescriptor,
   ) {
     const method = descriptor.value;
 
-    descriptor.value = function (...args: any[]) {
+    descriptor.value = function decoratedAsyncMethod(...args: any[]) {
       if (debugLogger.isDebugEnabled()) {
         return debugLogger.measureAsync(`${operation}.${propertyName}`, () =>
           method.apply(this, args),
