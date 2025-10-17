@@ -73,7 +73,7 @@ describe.skip('Error Handling', () => {
       // Reset mocks to ensure clean state
       jest.clearAllMocks();
       setupDefaultMocks();
-      
+
       renderAppWithDefaults({
         loadAppSettings: jest
           .fn()
@@ -97,11 +97,11 @@ describe.skip('Error Handling', () => {
       debugLogger.enable();
       try {
         const user = setupUser();
-        
+
         // Reset all mocks to ensure clean state
         jest.clearAllMocks();
         setupDefaultMocks();
-        
+
         renderAppWithDefaults({
           saveListTodos: jest.fn().mockRejectedValue(new Error('write failed')),
           loadAppSettings: jest

@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
 
-# Lint (non-blocking if not present)
-npm run lint || exit 1
+# Lint and format staged files, then re-stage them
+npx lint-staged || exit 1
+
+# Type check (runs on entire codebase)
 npm run typecheck || exit 1
 
 # Tests with coverage threshold enforcement
