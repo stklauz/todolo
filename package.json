@@ -38,7 +38,7 @@
     "lint:fix": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && npm run install-native-deps && npm run rebuild:native && electron-builder build --publish never && npm run build:dll",
+    "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "rebuild:native": "cd release/app && electron-rebuild -f -w better-sqlite3",
     "install-native-deps": "cd release/app && npm install better-sqlite3@11.10.0",
