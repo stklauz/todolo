@@ -80,6 +80,7 @@ export function openDatabase(): DB {
   db = new Database(dbPath);
   // At this point db is guaranteed to be non-null since we just assigned it
   db!.pragma('journal_mode = WAL');
+  db!.pragma('wal_autocheckpoint=1000');
   db!.pragma('synchronous = NORMAL');
   db!.pragma('temp_store = MEMORY');
   db!.pragma('foreign_keys = ON');
@@ -174,7 +175,7 @@ export function loadListsIndex(): ListsIndexV2 {
       setMeta.run('selectedListId', id);
     });
     tx();
-    database.pragma('wal_checkpoint(FULL)');
+    // no per-save checkpoint
     // default list seeded for empty DB
     const seeded = database
       .prepare(
@@ -261,8 +262,7 @@ export function saveListsIndex(index: ListsIndexV2): {
     });
     tx();
 
-    // Force WAL checkpoint after each save to ensure data persistence
-    database.pragma('wal_checkpoint(FULL)');
+    // no per-save checkpoint
     try {
       console.log(
         `[DB] saveListsIndex succeeded; upserted=${index.lists.length}; selected=${index.selectedListId ?? 'none'}`,
@@ -352,8 +352,7 @@ export function saveListTodos(
       }
     });
     tx();
-    // Force WAL checkpoint after each save to ensure data persistence
-    database.pragma('wal_checkpoint(FULL)');
+    // no per-save checkpoint
     return { success: true };
   } catch (e: any) {
     console.error(`[DB] Error saving todos for list ${listId}:`, e);
@@ -405,8 +404,7 @@ export function setSelectedListMeta(listId: string | null): void {
         'INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)',
       );
       setMeta.run('selectedListId', listId);
-      // Ensure durability similar to other writes
-      database.pragma('wal_checkpoint(FULL)');
+      // no per-save checkpoint
     }
   } catch (e: any) {
     console.error('[DB] Error setting selectedListId in meta:', e);
@@ -531,7 +529,7 @@ export function deleteList(listId: string): {
       }
     });
     tx();
-    database.pragma('wal_checkpoint(FULL)');
+    // no per-save checkpoint
     console.log('[DB] deleteList succeeded', { listId });
     return { success: true };
   } catch (e: any) {

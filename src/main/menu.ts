@@ -185,6 +185,12 @@ export default class MenuBuilder {
       label: 'View',
       submenu: [
         {
+          label: 'Toggle Developer Tools',
+          click: () => {
+            this.mainWindow.webContents.toggleDevTools();
+          },
+        },
+        {
           label: 'Toggle Full Screen',
           accelerator: 'Ctrl+Command+F',
           click: () => {
@@ -318,6 +324,12 @@ export default class MenuBuilder {
                 },
               ]
             : [
+                {
+                  label: 'Toggle &Developer Tools',
+                  click: () => {
+                    this.mainWindow.webContents.toggleDevTools();
+                  },
+                },
                 {
                   label: 'Toggle &Full Screen',
                   accelerator: 'F11',

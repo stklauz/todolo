@@ -55,8 +55,8 @@ export default function useTodosOperations({
           next[i] = { ...next[i], completed: newCompleted };
         }
       }
-      // Todo completion should be immediate
-      saveWithStrategy('immediate');
+      // Batch completion saves to avoid main-thread stalls
+      saveWithStrategy('debounced', 75);
       return next;
     });
   }
@@ -141,8 +141,8 @@ export default function useTodosOperations({
       });
       return next;
     });
-    // Add operations should be immediate
-    saveWithStrategy('immediate');
+    // Batch add saves to avoid main-thread stalls
+    saveWithStrategy('debounced', 75);
     return id;
   }
 
@@ -152,8 +152,8 @@ export default function useTodosOperations({
       next.splice(index, 1);
       return next;
     });
-    // Delete operations should be immediate
-    saveWithStrategy('immediate');
+    // Batch delete saves to avoid main-thread stalls
+    saveWithStrategy('debounced', 75);
   }
 
   return {

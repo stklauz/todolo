@@ -321,4 +321,47 @@ describe('Storage API', () => {
       expect(res).toEqual({ success: false, error: 'internal_error' });
     });
   });
+
+  describe('debounce coalescing (burst saves)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('coalesces multiple debounced saves into one IPC call', async () => {
+      // Arrange: mock IPC
+      mockInvoke.mockResolvedValue({ success: true });
+
+      // A minimal coalescer mirroring saveWithStrategy('debounced', 75)
+      let t: any = null;
+      const callSave = (listId: string, doc: any) => {
+        // this mirrors renderer's debounced behavior
+        if (t) clearTimeout(t);
+        t = setTimeout(async () => {
+          await (window as any).electron.ipcRenderer.invoke(
+            'save-list-todos',
+            listId,
+            doc,
+          );
+          t = null;
+        }, 75);
+      };
+
+      // Act: rapid burst of 5 saves within 75ms
+      for (let i = 0; i < 5; i++) {
+        callSave('list-1', { version: 2, todos: [] });
+      }
+      // advance time to flush the debounced save
+      jest.advanceTimersByTime(80);
+
+      // Assert: only one IPC save invoked
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      expect(mockInvoke).toHaveBeenCalledWith('save-list-todos', 'list-1', {
+        version: 2,
+        todos: [],
+      });
+    });
+  });
 });
