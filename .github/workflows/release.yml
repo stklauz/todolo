@@ -14,17 +14,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '22.12.0' }
+        with: { node-version: 20 }
       - run: npm ci
       - name: Sync app version from tag
         run: node ./.erb/scripts/sync-app-version.js
         env:
           VERSION: ${{ github.ref_name }}
       - run: npm run build
-      - name: Install native deps (better-sqlite3)
-        run: npm run install-native-deps
-      - name: Rebuild native deps against Electron
-        run: npm run rebuild:native
       - run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
