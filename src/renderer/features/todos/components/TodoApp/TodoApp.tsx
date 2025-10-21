@@ -15,6 +15,7 @@ import {
   saveAppSettings,
   loadListsIndex,
 } from '../../api/storage';
+import { debugLogger } from '../../../../utils/debug';
 
 const styles = require('./TodoApp.module.css');
 
@@ -51,7 +52,11 @@ export default function TodoApp(): React.ReactElement {
       .then(setAppSettings)
       .catch((error) => {
         // Handle load failure gracefully - keep default settings
-        console.warn('Failed to load app settings, using defaults:', error);
+        debugLogger.log(
+          'warn',
+          'Failed to load app settings, using defaults',
+          error,
+        );
       });
   }, []);
   const updateAppSettings = React.useCallback(

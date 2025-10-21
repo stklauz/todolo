@@ -122,7 +122,9 @@ export default function useTodosOperations({
         }
 
         // In production, log but don't crash - skip the operation
-        console.error(`[BUG] ${errorMsg}`);
+        debugLogger.log('error', '[BUG] Duplicate todo ID detected', {
+          message: errorMsg,
+        });
         return prev;
       }
 
