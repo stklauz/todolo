@@ -40,8 +40,6 @@
     "format:check": "prettier --check .",
     "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
-    "rebuild:native": "cd release/app && electron-rebuild -f -w better-sqlite3",
-    "install-native-deps": "cd release/app && npm install better-sqlite3@11.10.0",
     "prestart": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run start:renderer",
     "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon . -- {@}\" --",
@@ -235,13 +233,7 @@
     "appId": "com.stklauz.todolo",
     "asar": true,
     "afterSign": ".erb/scripts/notarize.js",
-    "asarUnpack": [
-      "**/*.node",
-      "**\\*.{node,dll}",
-      "node_modules/better-sqlite3/**/*"
-    ],
-    "npmRebuild": true,
-    "buildDependenciesFromSource": true,
+    "asarUnpack": "**\\*.{node,dll}",
     "files": [
       "dist",
       "node_modules",
