@@ -10,6 +10,7 @@ type UseTodosPersistenceProps = {
   listsRef: React.MutableRefObject<TodoList[]>;
   loadedListsRef: React.MutableRefObject<Set<string>>;
   nextId: () => number;
+  syncIdCounter: (maxId: number) => void;
   setLists: React.Dispatch<React.SetStateAction<TodoList[]>>;
 };
 
@@ -20,6 +21,7 @@ export default function useTodosPersistence({
   listsRef,
   loadedListsRef,
   nextId,
+  syncIdCounter,
   setLists,
 }: UseTodosPersistenceProps) {
   const todosSaveTimerRef = React.useRef<number | null>(null);
@@ -172,11 +174,12 @@ export default function useTodosPersistence({
         );
         loadedListsRef.current.add(selectedListId);
         const maxId = todosNorm.reduce((m, t) => (t.id > m ? t.id : m), 0);
-        nextId(); // Update the counter
+        syncIdCounter(maxId);
         debugLogger.log('info', 'Loaded existing todos for list', {
           selectedListId,
           todoCount: todosNorm.length,
           maxId,
+          nextIdWillBe: maxId + 1,
         });
       }
     };

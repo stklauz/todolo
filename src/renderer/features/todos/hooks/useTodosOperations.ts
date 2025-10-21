@@ -1,5 +1,6 @@
 // import React from 'react'; // Not needed in this file
 import type { EditorTodo } from '../types';
+import { debugLogger } from '../../../utils/debug';
 
 type UseTodosOperationsProps = {
   setSelectedTodos: (
@@ -104,6 +105,27 @@ export default function useTodosOperations({
   function insertTodoBelow(index: number, text = ''): number {
     const id = nextId();
     setSelectedTodos((prev) => {
+      // Defensive check for duplicate IDs
+      if (prev.some((t) => t.id === id)) {
+        const maxId = prev.reduce((m, t) => (t.id > m ? t.id : m), 0);
+        const errorMsg = `Duplicate ID ${id} detected. Max ID in list: ${maxId}. Counter was out of sync.`;
+
+        debugLogger.log('error', 'Duplicate todo ID detected', {
+          duplicateId: id,
+          existingIds: prev.map((t) => t.id),
+          maxId,
+        });
+
+        // In development, throw to catch in tests
+        if (process.env.NODE_ENV !== 'production') {
+          throw new Error(`[BUG] ${errorMsg}`);
+        }
+
+        // In production, log but don't crash - skip the operation
+        console.error(`[BUG] ${errorMsg}`);
+        return prev;
+      }
+
       const next = [...prev];
       const baseIndent = Math.max(
         0,

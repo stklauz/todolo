@@ -20,11 +20,22 @@ export default function useTodosState() {
     listsRef.current = lists;
   }, [lists]);
 
-  // Helpers
+  // ID counter management
   const nextId = () => {
     const id = idCounterRef.current;
     idCounterRef.current += 1;
     return id;
+  };
+
+  /**
+   * Synchronizes the ID counter with the maximum ID found in loaded todos.
+   * Call this after loading todos from storage to ensure new todos get unique IDs.
+   * @param maxId - The highest ID currently in use
+   */
+  const syncIdCounter = (maxId: number) => {
+    if (maxId >= idCounterRef.current) {
+      idCounterRef.current = maxId + 1;
+    }
   };
 
   const getSelectedTodos = React.useCallback((): EditorTodo[] => {
@@ -70,6 +81,7 @@ export default function useTodosState() {
     listsRef,
     loadedListsRef,
     nextId,
+    syncIdCounter,
     setLists,
   });
 
@@ -118,6 +130,14 @@ export default function useTodosState() {
     [],
   );
 
+  /**
+   * Central state management for todos and lists.
+   *
+   * ID Counter Management:
+   * - nextId(): Gets next available ID and increments counter
+   * - Counter auto-syncs when loading existing lists
+   * - Always generates unique IDs within the application lifetime
+   */
   return {
     lists,
     setLists,

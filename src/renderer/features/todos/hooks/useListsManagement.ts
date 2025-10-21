@@ -3,12 +3,10 @@ import {
   saveListsIndex,
   duplicateList as duplicateListApi,
   deleteList as deleteListApi,
-  loadListTodos,
   setSelectedListMeta,
 } from '../api/storage';
 import type { TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
-import { normalizeTodo } from '../utils/validation';
 
 type UseListsManagementProps = {
   lists: TodoList[];
@@ -218,47 +216,21 @@ export default function useListsManagement({
             // Instead of reloading all lists from storage, just add the new list to current state
             // This prevents deleted lists from reappearing
             if (sourceList) {
-              // Load the todos for the newly duplicated list to ensure completed items are mirrored
-              try {
-                const fetched = await loadListTodos(result.newListId);
-                const todosNorm = (fetched.todos || []).map(
-                  (t: unknown, i: number) => normalizeTodo(t, i + 1),
-                );
-
-                const newList = {
-                  id: result.newListId,
-                  name: newListName || `${sourceList.name} (Copy)`,
-                  todos: todosNorm,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                };
-                setLists((prev) => [...prev, newList]);
-                // Mark the list as loaded in cache to prevent unnecessary reloads
-                loadedListsRef.current.add(result.newListId);
-                // Persist selection via index and meta for redundancy
-                setSelectedListIdWithSave(result.newListId);
-                setSelectedListMeta(result.newListId).catch(() => {});
-                // Selection and meta are persisted; no full index reload here to avoid
-                // reintroducing deleted lists due to save timing.
-                resolve(result.newListId);
-              } catch {
-                // console.error(
-                //   'Failed to load todos for duplicated list:',
-                //   error,
-                // );
-                // Fallback to empty todos if loading fails
-                const newList = {
-                  id: result.newListId,
-                  name: newListName || `${sourceList.name} (Copy)`,
-                  todos: [],
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                };
-                setLists((prev) => [...prev, newList]);
-                setSelectedListIdWithSave(result.newListId);
-                setSelectedListMeta(result.newListId).catch(() => {});
-                resolve(result.newListId);
-              }
+              // Create the new list entry WITHOUT loading todos
+              // Let useTodosPersistence handle loading via its effect
+              const newList = {
+                id: result.newListId,
+                name: newListName || `${sourceList.name} (Copy)`,
+                todos: [], // Empty - will be loaded by persistence hook
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              setLists((prev) => [...prev, newList]);
+              // DON'T mark as loaded - let persistence hook do it
+              // Persist selection via index and meta for redundancy
+              setSelectedListIdWithSave(result.newListId);
+              setSelectedListMeta(result.newListId).catch(() => {});
+              resolve(result.newListId);
             } else {
               resolve(null);
             }

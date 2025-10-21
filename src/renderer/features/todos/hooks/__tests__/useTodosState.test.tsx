@@ -369,6 +369,70 @@ describe('useTodosState', () => {
     expect(duplicatedList?.todos[2].completed).toBe(true);
   });
 
+  it('should synchronize ID counter when switching to duplicated list', async () => {
+    const mockLists = [
+      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+    ];
+
+    const sourceTodos = [
+      { id: 1, text: 'Task 1', completed: false, indent: 0 },
+      { id: 2, text: 'Task 2', completed: false, indent: 0 },
+      { id: 3, text: 'Task 3', completed: false, indent: 0 },
+      { id: 4, text: 'Task 4', completed: false, indent: 0 },
+    ];
+
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: mockLists,
+      selectedListId: '1',
+    });
+
+    let loadCallCount = 0;
+    mockStorage.loadListTodos.mockImplementation(async (listId: string) => {
+      loadCallCount++;
+      if (listId === 'new-list-id') {
+        return { version: 2, todos: sourceTodos };
+      }
+      return { version: 2, todos: [] };
+    });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    // Duplicate the list
+    let newListId: string | null = null;
+    await act(async () => {
+      newListId = await result.current.duplicateList('1');
+    });
+
+    expect(newListId).toBe('new-list-id');
+
+    // Wait for persistence hook to load todos
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // Create a new todo
+    let newTodoId: number;
+    await act(() => {
+      const todos = result.current.getSelectedTodos();
+      const lastIndex = todos.length - 1;
+      newTodoId = result.current.insertTodoBelow(lastIndex);
+    });
+
+    // The new todo should have ID 5, not 2
+    expect(newTodoId!).toBe(5);
+
+    // Verify no duplicate IDs exist
+    const finalTodos = result.current.getSelectedTodos();
+    const ids = finalTodos.map((t) => t.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length); // No duplicates
+  });
+
   it('should mirror completion when toggled then immediately duplicated', async () => {
     // Start with one list selected
     const mockLists = [
