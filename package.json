@@ -41,7 +41,7 @@
     "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && npm run install-native-deps && npm run rebuild:native && electron-builder build --publish never && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "rebuild:native": "cd release/app && electron-rebuild -f -w better-sqlite3",
-    "install-native-deps": "cd release/app && npm install better-sqlite3@^11.8.1",
+    "install-native-deps": "cd release/app && npm install better-sqlite3@11.10.0",
     "prestart": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run start:renderer",
     "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon . -- {@}\" --",
@@ -153,7 +153,6 @@
   },
   "dependencies": {
     "@electron/notarize": "^3.0.0",
-    "better-sqlite3": "^11.8.1",
     "electron-debug": "^4.1.0",
     "electron-log": "^5.3.2",
     "electron-updater": "^6.3.9",
