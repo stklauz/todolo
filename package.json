@@ -269,19 +269,6 @@
         }
       ]
     },
-    "win": {
-      "icon": "assets/icons/icon.ico",
-      "target": [
-        "nsis"
-      ]
-    },
-    "linux": {
-      "icon": "assets/icons/icon.png",
-      "target": [
-        "AppImage"
-      ],
-      "category": "Development"
-    },
     "directories": {
       "app": "release/app",
       "buildResources": "assets",
@@ -297,7 +284,7 @@
       "releaseType": "release"
     },
     "releaseInfo": {
-      "releaseNotes": "Download here\n\n- macOS (Apple Silicon M1/M2/M3): download the .dmg with 'arm64' in the name.\n- macOS (Intel): download the .dmg with 'x64' in the name.\n- Windows 10/11: download the .exe (NSIS installer).\n\nNotes\n- Auto-update: the app checks for updates on startup.\n- macOS Gatekeeper: if macOS blocks the app, right-click the app and choose Open.\n- macOS auto-update requires code signing/notarization; without it, users can still install manually from the .dmg.\n- Windows may show SmartScreen for unsigned installers; you can continue anyway."
+      "releaseNotes": "Download here\n\n- macOS (Apple Silicon M1/M2/M3): download the .dmg with 'arm64' in the name.\n- macOS (Intel): download the .dmg with 'x64' in the name."
     }
   },
   "collective": {
