@@ -3,7 +3,7 @@ import { IoEllipsisHorizontal } from 'react-icons/io5';
 import Spinner from '../../../../components/Spinner';
 import type { AppSettings } from '../../types';
 
-const styles = require('./TodoApp.module.css');
+const styles = require('../TodoApp/TodoApp.module.css');
 
 type ActionsMenuProps = {
   createdAt?: string;

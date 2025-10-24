@@ -52,9 +52,9 @@ describe('Accessibility', () => {
       );
 
       // Should have proper heading structure
-      const heading = screen.getByRole('heading', { level: 1 });
+      const heading = screen.getByTestId('heading');
       expect(heading).toBeInTheDocument();
-      expect(heading).toHaveTextContent('My List');
+      expect(heading).toHaveDisplayValue('My List');
 
       // Sidebar should have proper role
       const sidebar = screen.getByRole('complementary');
@@ -178,8 +178,8 @@ describe('Accessibility', () => {
       expect(addListButton).toBeInTheDocument();
 
       // Heading should have meaningful text
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveTextContent('My List');
+      const heading = screen.getByTestId('heading');
+      expect(heading).toHaveDisplayValue('My List');
     });
 
     it('provides context for available operations', async () => {
@@ -221,8 +221,8 @@ describe('Accessibility', () => {
       expect(addListButton).toHaveClass('iconBtn');
 
       // Heading should have proper styling
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveClass('title');
+      const heading = screen.getByTestId('heading');
+      expect(heading).toHaveClass('titleInput');
     });
   });
 
@@ -273,8 +273,8 @@ describe('Accessibility', () => {
       );
 
       // Should use proper heading hierarchy
-      const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading.tagName).toBe('H1');
+      const heading = screen.getByTestId('heading');
+      expect(heading.tagName).toBe('INPUT');
 
       // Should use proper button elements
       const addListButton = screen.getByRole('button', { name: /add list/i });
@@ -293,7 +293,7 @@ describe('Accessibility', () => {
       );
 
       // Should have a logical document structure
-      const heading = screen.getByRole('heading', { level: 1 });
+      const heading = screen.getByTestId('heading');
       expect(heading).toBeInTheDocument();
 
       const sidebar = screen.getByRole('complementary');

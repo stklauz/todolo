@@ -1,8 +1,8 @@
 import React from 'react';
 import ListSidebar from '../ListSidebar/ListSidebar';
 import TodoList from '../TodoList/TodoList';
-import TodoAppHeader from './TodoAppHeader';
-import ActionsMenu from './ActionsMenu';
+import TodoListHeader from '../TodoListHeader/TodoListHeader';
+import ActionsMenu from '../TodoListHeader/ActionsMenu';
 import type { EditorTodo, Section, AppSettings } from '../../types';
 import { useTodosContext, useTodosActions } from '../../contexts/TodosProvider';
 import useDragReorder from '../../hooks/useDragReorder';
@@ -249,7 +249,7 @@ export default function TodoApp(): React.ReactElement {
 
       {/* Main content */}
       <div className={styles.container}>
-        <TodoAppHeader
+        <TodoListHeader
           selectedList={selectedList}
           selectedListName={selectedListName}
           editingListId={editingListId}
@@ -274,7 +274,7 @@ export default function TodoApp(): React.ReactElement {
               onUpdateAppSettings={updateAppSettings}
             />
           )}
-        </TodoAppHeader>
+        </TodoListHeader>
         {selectedList && (
           <div className={styles.subtitleRow}>
             <div className={styles.subtitle}>

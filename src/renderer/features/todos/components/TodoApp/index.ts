@@ -1,3 +1,3 @@
 export { default as TodoApp } from './TodoApp';
-export { default as TodoAppHeader } from './TodoAppHeader';
-export { default as ActionsMenu } from './ActionsMenu';
+export { default as TodoAppHeader } from '../TodoListHeader/TodoListHeader';
+export { default as ActionsMenu } from '../TodoListHeader/ActionsMenu';

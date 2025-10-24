@@ -74,7 +74,7 @@ describe('Delete List - UI to DB wiring', () => {
 
     // Title should now reflect the remaining selected list ('Beta')
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Beta' })).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Beta')).toBeInTheDocument();
     });
   });
 });

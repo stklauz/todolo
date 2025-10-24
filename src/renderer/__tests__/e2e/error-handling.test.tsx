@@ -66,7 +66,7 @@ describe('Error Handling', () => {
       expect(
         screen.getByRole('button', { name: /add list/i }),
       ).toBeInTheDocument();
-      expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+      expect(screen.getByTestId('heading')).toBeInTheDocument();
     });
 
     it('handles app settings load failure gracefully', async () => {
