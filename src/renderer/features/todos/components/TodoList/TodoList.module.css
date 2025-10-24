@@ -1,6 +1,6 @@
 /* Drag target indicator */
-.dropTarget { 
-  position: relative; 
+.dropTarget {
+  position: relative;
 }
 
 .dropTarget::before {
@@ -14,14 +14,14 @@
   z-index: 10;
 }
 
-.dropZone { 
-  height: 12px; 
-  position: relative; 
+.dropZone {
+  height: 12px;
+  position: relative;
   background-color: transparent;
   transition: background-color 150ms ease;
 }
 
-.dropZoneActive { 
+.dropZoneActive {
   background-color: #f0f9ff; /* blue-50 */
 }
 
@@ -34,142 +34,6 @@
   height: 0;
   border-top: 3px solid #3b82f6; /* blue-500 - more visible */
   z-index: 10;
-}
-
-/* Row + Inputs styling */
-.row {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-}
-
-/* Indentation levels (applied to the whole row) */
-.indent1 { padding-left: 1.75rem !important; }
-.indent2 { padding-left: 3.5rem !important; }
-.indent3 { padding-left: 5.25rem !important; }
-
-.row:hover { 
-  background: #f8fafc; /* slate-50 */ 
-}
-
-.draggable { 
-  display: inline-flex; 
-  align-items: center; 
-  cursor: grab; 
-  width: 100%; 
-  padding: 4px;
-  border-radius: 6px;
-  transition: background-color 150ms ease;
-}
-
-.draggable:hover {
-  background-color: #f8fafc; /* slate-50 */
-}
-
-.draggable:active {
-  cursor: grabbing;
-  background-color: #e2e8f0; /* slate-200 */
-}
-
-/* Custom checkbox – consistent, friendly visuals */
-.checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid #cbd5e1; /* slate-300 */
-  background: #ffffff;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-}
-
-.checkbox:hover { 
-  border-color: #94a3b8; /* slate-400 */ 
-}
-.checkbox:focus { 
-  outline: none; 
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.14); 
-}
-
-.checkbox:disabled { 
-  opacity: 0.5; 
-}
-
-.checkbox:checked {
-  background-color: var(--color-main);
-  border-color: var(--color-main);
-}
-
-.checkbox::after {
-  content: '';
-  width: 10px;
-  height: 10px;
-  background: white;
-  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%);
-  transform: scale(0);
-  transform-origin: center;
-  transition: transform 120ms ease;
-}
-
-.checkbox:checked::after { transform: scale(1); }
-
-/* Indeterminate state (for partially-complete parents) */
-.checkbox:indeterminate {
-  background-color: var(--color-main);
-  border-color: var(--color-main);
-}
-.checkbox:indeterminate::after {
-  clip-path: none;
-  width: 10px;
-  height: 2px;
-  background: #ffffff;
-  border-radius: 1px;
-  transform: none;
-}
-
-.input {
-  flex: 1;
-  font-size: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  padding: 4px 8px;
-  border-radius: 8px;
-  outline: none;
-  color: var(--color-black);
-  /* For textarea-based inputs */
-  width: 100%;
-  display: block;
-  resize: none;
-  overflow: hidden; /* hide scrollbar; height grows instead */
-  line-height: 1.4;
-  /* Wrap very long words/URLs instead of overflowing */
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  min-height: 22px;
-  /* Slight nudge to align with checkbox */
-  margin-top: 2px;
-  /* Pure-CSS autoresize in modern Chromium/WebKit */
-  field-sizing: content;
-}
-
-.input::placeholder { 
-  color: #9aa3ac; 
-}
-
-.input:focus { 
-  background: transparent; 
-}
-
-.inputCompleted { 
-  color: var(--color-grey); 
-  text-decoration: line-through; 
 }
 
 /* Section header for Completed */
@@ -185,10 +49,8 @@
 .sectionDivider {
   height: 1px;
   background: #e5e7eb; /* gray-200 */
-  border-radius: 1px;
 }
 
 .sectionGroup {
   margin-top: 16px;
 }
-

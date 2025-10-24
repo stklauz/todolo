@@ -1,8 +1,6 @@
 import React from 'react';
 
-// import { debugLogger } from '../../../../utils/debug';
-
-const styles = require('../TodoList/TodoList.module.css');
+const styles = require('./TodoRow.module.css');
 
 type TodoRowProps = {
   value: string;
