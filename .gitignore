@@ -39,3 +39,6 @@ src/renderer/features/todos/api/storage.ts
 release/app/package-lock.json
 docs/todolo-debug-prod.json
 docs/todolo-debug-dev.json
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.cursor/rules/snyk_rules.mdc
