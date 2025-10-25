@@ -1,19 +1,4 @@
 /* Drag target indicator */
-.dropTarget {
-  position: relative;
-}
-
-.dropTarget::before {
-  content: '';
-  position: absolute;
-  top: -3px;
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 3px solid #3b82f6; /* blue-500 - more visible */
-  z-index: 10;
-}
-
 .dropZone {
   height: 12px;
   position: relative;
