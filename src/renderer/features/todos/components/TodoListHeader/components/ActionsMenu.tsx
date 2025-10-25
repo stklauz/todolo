@@ -6,8 +6,6 @@ import type { AppSettings } from '../../../types';
 const styles = require('./ActionsMenu.module.css');
 
 type ActionsMenuProps = {
-  createdAt?: string;
-  updatedAt?: string;
   canDelete: boolean;
   onDelete: () => void;
   onDuplicate: () => void;
@@ -18,8 +16,6 @@ type ActionsMenuProps = {
 };
 
 export default function ActionsMenu({
-  createdAt: _createdAt,
-  updatedAt: _updatedAt,
   canDelete,
   onDelete,
   onDuplicate,

@@ -73,7 +73,7 @@ export default function TodoListHeader({
     }, 150);
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleBlur = () => {
     // Don't commit if this is an immediate blur after focus
     if (inputJustFocusedRef.current) {
       return;
@@ -117,8 +117,6 @@ export default function TodoListHeader({
         />
         {selectedList && (
           <ActionsMenu
-            createdAt={selectedList.createdAt}
-            updatedAt={selectedList.updatedAt}
             canDelete={canDelete}
             onDelete={() => selectedList && deleteList(selectedList.id)}
             onDuplicate={onDuplicate}

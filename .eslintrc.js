@@ -24,9 +24,8 @@ module.exports = {
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': 'error',
     'no-unused-vars': 'off',
-    // Keep signal on, avoid blocking commits for WIP props/vars
     '@typescript-eslint/no-unused-vars': [
-      'warn',
+      'error',
       {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',

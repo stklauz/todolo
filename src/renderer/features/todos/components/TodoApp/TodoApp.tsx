@@ -2,7 +2,6 @@ import React from 'react';
 import ListSidebar from '../ListSidebar/ListSidebar';
 import TodoList from '../TodoList/TodoList';
 import TodoListHeader from '../TodoListHeader/TodoListHeader';
-import ActionsMenu from '../TodoListHeader/components/ActionsMenu';
 import type { EditorTodo, Section, AppSettings } from '../../types';
 import { useTodosContext, useTodosActions } from '../../contexts/TodosProvider';
 import useDragReorder from '../../hooks/useDragReorder';
@@ -31,7 +30,6 @@ export default function TodoApp(): React.ReactElement {
     insertTodoBelow,
     removeTodoAt,
     addList,
-    deleteList,
     duplicateList,
     updateList,
   } = useTodosActions();
