@@ -200,7 +200,7 @@ const TodoList = React.memo(function TodoList({
   );
 
   return (
-    <>
+    <div className={styles.list}>
       {derived.active.map((todo) => {
         const isEmpty = todo.text.trim().length === 0;
         const toggleDisabled = isEmpty;
@@ -321,7 +321,7 @@ const TodoList = React.memo(function TodoList({
           handleDropAtEnd('completed');
         }}
       />
-    </>
+    </div>
   );
 });
 

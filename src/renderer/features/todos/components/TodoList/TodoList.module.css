@@ -1,3 +1,6 @@
+.list {
+  padding-bottom: 2.5rem;
+}
 /* Drag target indicator */
 .dropZone {
   height: 12px;

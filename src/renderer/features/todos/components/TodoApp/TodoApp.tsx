@@ -249,88 +249,90 @@ export default function TodoApp(): React.ReactElement {
 
       {/* Main content */}
       <div className={styles.container}>
-        <TodoListHeader
-          selectedList={selectedList}
-          selectedListName={selectedListName}
-          editingListId={editingListId}
-          editingName={editingName}
-          inputJustFocusedRef={inputJustFocusedRef}
-          titleInputRef={titleInputRef}
-          onStartRename={startRename}
-          onChangeName={setEditingName}
-          onCommitRename={commitRename}
-          onCancelRename={cancelRename}
-        >
+        <div className={styles.content}>
+          <TodoListHeader
+            selectedList={selectedList}
+            selectedListName={selectedListName}
+            editingListId={editingListId}
+            editingName={editingName}
+            inputJustFocusedRef={inputJustFocusedRef}
+            titleInputRef={titleInputRef}
+            onStartRename={startRename}
+            onChangeName={setEditingName}
+            onCommitRename={commitRename}
+            onCancelRename={cancelRename}
+          >
+            {selectedList && (
+              <ActionsMenu
+                createdAt={selectedList.createdAt}
+                updatedAt={selectedList.updatedAt}
+                canDelete={lists.length > 1}
+                onDelete={() => deleteList(selectedList.id)}
+                onDuplicate={handleDuplicate}
+                isDuplicating={isDuplicating}
+                showSpinner={showSpinner}
+                appSettings={appSettings}
+                onUpdateAppSettings={updateAppSettings}
+              />
+            )}
+          </TodoListHeader>
           {selectedList && (
-            <ActionsMenu
-              createdAt={selectedList.createdAt}
-              updatedAt={selectedList.updatedAt}
-              canDelete={lists.length > 1}
-              onDelete={() => deleteList(selectedList.id)}
-              onDuplicate={handleDuplicate}
-              isDuplicating={isDuplicating}
-              showSpinner={showSpinner}
-              appSettings={appSettings}
-              onUpdateAppSettings={updateAppSettings}
-            />
-          )}
-        </TodoListHeader>
-        {selectedList && (
-          <div className={styles.subtitleRow}>
-            <div className={styles.subtitle}>
-              {selectedList.createdAt ? (
-                <span>
-                  Created{' '}
-                  {new Date(selectedList.createdAt).toLocaleDateString()}{' '}
-                </span>
-              ) : null}
-              {selectedList.updatedAt ? (
-                <span>
-                  • Updated{' '}
-                  {new Date(selectedList.updatedAt).toLocaleDateString()}
-                </span>
-              ) : null}
+            <div className={styles.subtitleRow}>
+              <div className={styles.subtitle}>
+                {selectedList.createdAt ? (
+                  <span>
+                    Created{' '}
+                    {new Date(selectedList.createdAt).toLocaleDateString()}{' '}
+                  </span>
+                ) : null}
+                {selectedList.updatedAt ? (
+                  <span>
+                    • Updated{' '}
+                    {new Date(selectedList.updatedAt).toLocaleDateString()}
+                  </span>
+                ) : null}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <TodoList
-          todos={todos}
-          updateTodo={updateTodo}
-          toggleTodo={toggleTodo}
-          insertBelowAndFocus={insertBelowAndFocus}
-          handleTodoKeyDown={handleTodoKeyDown}
-          changeIndent={changeIndent}
-          removeAt={removeAtAndManageFocus}
-          dragInfo={dragInfo}
-          handleDragStart={handleDragStart}
-          handleDragEnd={handleDragEnd}
-          handleDragOver={handleDragOver}
-          handleDragLeave={handleDragLeave}
-          handleDropOn={handleDropOn}
-          dropTargetId={dropTargetId}
-          dropAtSectionEnd={dropAtSectionEnd}
-          handleDragOverEndZone={handleDragOverEndZone}
-          handleDragLeaveEndZone={handleDragLeaveEndZone}
-          handleDropAtEnd={handleDropAtEnd}
-          setInputRef={setInputRef}
-        />
-      </div>
+          <TodoList
+            todos={todos}
+            updateTodo={updateTodo}
+            toggleTodo={toggleTodo}
+            insertBelowAndFocus={insertBelowAndFocus}
+            handleTodoKeyDown={handleTodoKeyDown}
+            changeIndent={changeIndent}
+            removeAt={removeAtAndManageFocus}
+            dragInfo={dragInfo}
+            handleDragStart={handleDragStart}
+            handleDragEnd={handleDragEnd}
+            handleDragOver={handleDragOver}
+            handleDragLeave={handleDragLeave}
+            handleDropOn={handleDropOn}
+            dropTargetId={dropTargetId}
+            dropAtSectionEnd={dropAtSectionEnd}
+            handleDragOverEndZone={handleDragOverEndZone}
+            handleDragLeaveEndZone={handleDragLeaveEndZone}
+            handleDropAtEnd={handleDropAtEnd}
+            setInputRef={setInputRef}
+          />
+        </div>
 
-      {/* ARIA live region for status messages */}
-      <div
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        style={{
-          position: 'absolute',
-          width: 1,
-          height: 1,
-          overflow: 'hidden',
-          clip: 'rect(1px, 1px, 1px, 1px)',
-        }}
-      >
-        {statusMessage}
+        {/* ARIA live region for status messages */}
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            overflow: 'hidden',
+            clip: 'rect(1px, 1px, 1px, 1px)',
+          }}
+        >
+          {statusMessage}
+        </div>
       </div>
     </div>
   );
