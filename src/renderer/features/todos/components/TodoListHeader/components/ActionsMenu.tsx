@@ -1,9 +1,9 @@
 import React from 'react';
 import { IoEllipsisHorizontal } from 'react-icons/io5';
-import Spinner from '../../../../components/Spinner';
-import type { AppSettings } from '../../types';
+import Spinner from '../../../../../components/Spinner';
+import type { AppSettings } from '../../../types';
 
-const styles = require('../TodoApp/TodoApp.module.css');
+const styles = require('./ActionsMenu.module.css');
 
 type ActionsMenuProps = {
   createdAt?: string;

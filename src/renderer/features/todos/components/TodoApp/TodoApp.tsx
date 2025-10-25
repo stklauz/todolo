@@ -2,7 +2,7 @@ import React from 'react';
 import ListSidebar from '../ListSidebar/ListSidebar';
 import TodoList from '../TodoList/TodoList';
 import TodoListHeader from '../TodoListHeader/TodoListHeader';
-import ActionsMenu from '../TodoListHeader/ActionsMenu';
+import ActionsMenu from '../TodoListHeader/components/ActionsMenu';
 import type { EditorTodo, Section, AppSettings } from '../../types';
 import { useTodosContext, useTodosActions } from '../../contexts/TodosProvider';
 import useDragReorder from '../../hooks/useDragReorder';
@@ -261,39 +261,13 @@ export default function TodoApp(): React.ReactElement {
             onChangeName={setEditingName}
             onCommitRename={commitRename}
             onCancelRename={cancelRename}
-          >
-            {selectedList && (
-              <ActionsMenu
-                createdAt={selectedList.createdAt}
-                updatedAt={selectedList.updatedAt}
-                canDelete={lists.length > 1}
-                onDelete={() => deleteList(selectedList.id)}
-                onDuplicate={handleDuplicate}
-                isDuplicating={isDuplicating}
-                showSpinner={showSpinner}
-                appSettings={appSettings}
-                onUpdateAppSettings={updateAppSettings}
-              />
-            )}
-          </TodoListHeader>
-          {selectedList && (
-            <div className={styles.subtitleRow}>
-              <div className={styles.subtitle}>
-                {selectedList.createdAt ? (
-                  <span>
-                    Created{' '}
-                    {new Date(selectedList.createdAt).toLocaleDateString()}{' '}
-                  </span>
-                ) : null}
-                {selectedList.updatedAt ? (
-                  <span>
-                    • Updated{' '}
-                    {new Date(selectedList.updatedAt).toLocaleDateString()}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          )}
+            canDelete={lists.length > 1}
+            onDuplicate={handleDuplicate}
+            isDuplicating={isDuplicating}
+            showSpinner={showSpinner}
+            appSettings={appSettings}
+            onUpdateAppSettings={updateAppSettings}
+          />
 
           <TodoList
             todos={todos}

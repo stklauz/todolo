@@ -1,10 +1,18 @@
 import React from 'react';
-import type { TodoList } from '../../types';
+import type { AppSettings, TodoList } from '../../types';
 import { useTimeout } from '../../hooks/useTimeout';
+import ActionsMenu from './components/ActionsMenu';
+import { useTodosActions } from '../../contexts/TodosProvider';
 
 const styles = require('./TodoListHeader.module.css');
 
 type TodoListHeaderProps = {
+  canDelete: boolean;
+  onDuplicate: () => void;
+  isDuplicating: boolean;
+  showSpinner: boolean;
+  appSettings: AppSettings;
+  onUpdateAppSettings: (settings: AppSettings) => void;
   selectedList: TodoList | null;
   selectedListName: string;
   editingListId: string | null;
@@ -15,7 +23,6 @@ type TodoListHeaderProps = {
   onChangeName: (name: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
-  children: React.ReactNode; // ActionsRow component
 };
 
 export default function TodoListHeader({
@@ -29,11 +36,18 @@ export default function TodoListHeader({
   onChangeName,
   onCommitRename,
   onCancelRename,
-  children,
+  canDelete,
+  onDuplicate,
+  isDuplicating,
+  showSpinner,
+  appSettings,
+  onUpdateAppSettings,
 }: TodoListHeaderProps): React.ReactElement {
   const isEditing = editingListId === selectedList?.id;
   const displayValue = isEditing ? editingName : selectedListName;
   const setCleanupTimeout = useTimeout();
+
+  const { deleteList } = useTodosActions();
 
   const handleStartRename = () => {
     if (!isEditing) {
@@ -87,20 +101,52 @@ export default function TodoListHeader({
   };
 
   return (
-    <div className={styles.titleRow}>
-      <input
-        ref={titleInputRef}
-        className={`${styles.titleInput} ${isEditing ? styles.titleInputEditing : ''}`}
-        value={displayValue}
-        onChange={(e) => onChangeName(e.target.value)}
-        onClick={handleClick}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        readOnly={!isEditing}
-        data-testid="heading"
-      />
-      {children}
-    </div>
+    <>
+      <div className={styles.titleRow}>
+        <input
+          ref={titleInputRef}
+          className={`${styles.titleInput} ${isEditing ? styles.titleInputEditing : ''}`}
+          value={displayValue}
+          onChange={(e) => onChangeName(e.target.value)}
+          onClick={handleClick}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          readOnly={!isEditing}
+          data-testid="heading"
+        />
+        {selectedList && (
+          <ActionsMenu
+            createdAt={selectedList.createdAt}
+            updatedAt={selectedList.updatedAt}
+            canDelete={canDelete}
+            onDelete={() => selectedList && deleteList(selectedList.id)}
+            onDuplicate={onDuplicate}
+            isDuplicating={isDuplicating}
+            showSpinner={showSpinner}
+            appSettings={appSettings}
+            onUpdateAppSettings={onUpdateAppSettings}
+          />
+        )}
+      </div>
+      {selectedList && (
+        <div className={styles.subtitleRow}>
+          <div className={styles.subtitle}>
+            {selectedList.createdAt && (
+              <span>
+                Created{' '}
+                {new Date(selectedList.createdAt).toLocaleDateString()}{' '}
+              </span>
+            )}
+            {selectedList.updatedAt && (
+              <span>
+                • Updated{' '}
+                {new Date(selectedList.updatedAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

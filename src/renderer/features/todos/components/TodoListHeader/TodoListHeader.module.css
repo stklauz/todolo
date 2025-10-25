@@ -22,3 +22,16 @@
 .titleInputEditing {
   border: 1px solid var(--color-grey-light);
 }
+
+.subtitle {
+  margin: 4px 0;
+  color: #6b7280; /* muted */
+  font-size: 12px;
+}
+
+.subtitleRow {
+  margin: 4px 0 16px;
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
