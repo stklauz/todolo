@@ -9,11 +9,7 @@ import useTodoFocus, { useTodoFocusEffect } from '../../hooks/useTodoFocus';
 import useListEditing from '../../hooks/useListEditing';
 import useFilteredTodos from '../../hooks/useFilteredTodos';
 import useListDuplication from '../../hooks/useListDuplication';
-import {
-  loadAppSettings,
-  saveAppSettings,
-  loadListsIndex,
-} from '../../api/storage';
+import { loadAppSettings, saveAppSettings } from '../../api/storage';
 import { debugLogger } from '../../../../utils/debug';
 
 const styles = require('./TodoApp.module.css');
@@ -30,20 +26,13 @@ export default function TodoApp(): React.ReactElement {
     insertTodoBelow,
     removeTodoAt,
     addList,
-    duplicateList,
     updateList,
   } = useTodosActions();
 
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
   });
-  const {
-    isDuplicating,
-    showSpinner,
-    statusMessage,
-    focusListId,
-    handleDuplicate: handleDuplicateBase,
-  } = useListDuplication();
+  const { statusMessage, focusListId } = useListDuplication();
 
   React.useEffect(() => {
     loadAppSettings()
@@ -212,22 +201,6 @@ export default function TodoApp(): React.ReactElement {
     commitRenameBase();
   }
 
-  const handleDuplicate = async () => {
-    if (!selectedListId) return;
-
-    const duplicateListWithReload = async (id: string) => {
-      const newId = await duplicateList(id);
-      if (newId) {
-        try {
-          await loadListsIndex();
-        } catch {}
-      }
-      return newId;
-    };
-
-    await handleDuplicateBase(selectedListId, duplicateListWithReload);
-  };
-
   return (
     <div className={styles.layout}>
       {/* Sidebar */}
@@ -259,10 +232,6 @@ export default function TodoApp(): React.ReactElement {
             onChangeName={setEditingName}
             onCommitRename={commitRename}
             onCancelRename={cancelRename}
-            canDelete={lists.length > 1}
-            onDuplicate={handleDuplicate}
-            isDuplicating={isDuplicating}
-            showSpinner={showSpinner}
             appSettings={appSettings}
             onUpdateAppSettings={updateAppSettings}
           />

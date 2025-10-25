@@ -6,8 +6,6 @@ import React from 'react';
 export interface UseListDuplicationReturn {
   /** Whether a duplication operation is currently in progress */
   isDuplicating: boolean;
-  /** Whether to show a loading spinner (after delay) */
-  showSpinner: boolean;
   /** Status message to display to the user */
   statusMessage: string | null;
   /** ID of the list to focus after duplication (temporary) */
@@ -37,7 +35,6 @@ export interface UseListDuplicationReturn {
  * ```tsx
  * const {
  *   isDuplicating,
- *   showSpinner,
  *   statusMessage,
  *   focusListId,
  *   handleDuplicate
@@ -49,13 +46,11 @@ export interface UseListDuplicationReturn {
  * };
  *
  * // Use in component
- * const buttonText = showSpinner ? 'Duplicating...' : 'Duplicate';
  * const statusDisplay = statusMessage || '';
  * ```
  */
 export default function useListDuplication(): UseListDuplicationReturn {
   const [isDuplicating, setIsDuplicating] = React.useState(false);
-  const [showSpinner, setShowSpinner] = React.useState(false);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [focusListId, setFocusListId] = React.useState<string | null>(null);
 
@@ -77,16 +72,11 @@ export default function useListDuplication(): UseListDuplicationReturn {
     ) => {
       if (isDuplicating || !selectedListId) return;
 
-      let spinnerTimeout: number | null = null;
+      const spinnerTimeout: number | null = null;
 
       try {
         setIsDuplicating(true);
         setStatusMessage('Duplicating…');
-
-        // Show spinner after 150ms if operation is still running
-        spinnerTimeout = window.setTimeout(() => {
-          setShowSpinner(true);
-        }, 150);
 
         const newId = await duplicateListFn(selectedListId);
 
@@ -103,7 +93,6 @@ export default function useListDuplication(): UseListDuplicationReturn {
           clearTimeout(spinnerTimeout);
         }
         setIsDuplicating(false);
-        setShowSpinner(false);
       }
     },
     [isDuplicating],
@@ -111,7 +100,6 @@ export default function useListDuplication(): UseListDuplicationReturn {
 
   return {
     isDuplicating,
-    showSpinner,
     statusMessage,
     focusListId,
     handleDuplicate,

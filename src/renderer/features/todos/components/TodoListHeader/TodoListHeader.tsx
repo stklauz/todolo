@@ -2,15 +2,10 @@ import React from 'react';
 import type { AppSettings, TodoList } from '../../types';
 import { useTimeout } from '../../hooks/useTimeout';
 import ActionsMenu from './components/ActionsMenu';
-import { useTodosActions } from '../../contexts/TodosProvider';
 
 const styles = require('./TodoListHeader.module.css');
 
 type TodoListHeaderProps = {
-  canDelete: boolean;
-  onDuplicate: () => void;
-  isDuplicating: boolean;
-  showSpinner: boolean;
   appSettings: AppSettings;
   onUpdateAppSettings: (settings: AppSettings) => void;
   selectedList: TodoList | null;
@@ -36,18 +31,12 @@ export default function TodoListHeader({
   onChangeName,
   onCommitRename,
   onCancelRename,
-  canDelete,
-  onDuplicate,
-  isDuplicating,
-  showSpinner,
   appSettings,
   onUpdateAppSettings,
 }: TodoListHeaderProps): React.ReactElement {
   const isEditing = editingListId === selectedList?.id;
   const displayValue = isEditing ? editingName : selectedListName;
   const setCleanupTimeout = useTimeout();
-
-  const { deleteList } = useTodosActions();
 
   const handleStartRename = () => {
     if (!isEditing) {
@@ -117,11 +106,6 @@ export default function TodoListHeader({
         />
         {selectedList && (
           <ActionsMenu
-            canDelete={canDelete}
-            onDelete={() => selectedList && deleteList(selectedList.id)}
-            onDuplicate={onDuplicate}
-            isDuplicating={isDuplicating}
-            showSpinner={showSpinner}
             appSettings={appSettings}
             onUpdateAppSettings={onUpdateAppSettings}
           />

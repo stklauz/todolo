@@ -2,28 +2,30 @@ import React from 'react';
 import { IoEllipsisHorizontal } from 'react-icons/io5';
 import Spinner from '../../../../../components/Spinner';
 import type { AppSettings } from '../../../types';
+import { useTodosContext } from '../../../contexts';
+import { useTodosActions } from '../../../contexts/TodosProvider';
+import useListDuplication from '../../../hooks/useListDuplication';
+import { loadListsIndex } from '../../../api/storage';
 
 const styles = require('./ActionsMenu.module.css');
 
 type ActionsMenuProps = {
-  canDelete: boolean;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  isDuplicating: boolean;
-  showSpinner: boolean;
   appSettings: AppSettings;
   onUpdateAppSettings: (settings: AppSettings) => void;
 };
 
 export default function ActionsMenu({
-  canDelete,
-  onDelete,
-  onDuplicate,
-  isDuplicating,
-  showSpinner,
   appSettings,
   onUpdateAppSettings,
 }: ActionsMenuProps): React.ReactElement {
+  const { lists, selectedListId } = useTodosContext();
+  const { deleteList, duplicateList } = useTodosActions();
+  const { isDuplicating, handleDuplicate: handleDuplicateBase } =
+    useListDuplication();
+
+  const canDelete = lists.length > 1;
+  const selectedList = lists.find((l) => l.id === selectedListId) || null;
+
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef<HTMLButtonElement | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
@@ -38,6 +40,25 @@ export default function ActionsMenu({
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
+
+  const handleDuplicate = async () => {
+    if (!selectedListId) return;
+    const duplicateListWithReload = async (id: string) => {
+      const newId = await duplicateList(id);
+      if (newId) {
+        try {
+          await loadListsIndex();
+        } catch (error) {
+          console.error(
+            'Failed to reload list index after duplication:',
+            error,
+          );
+        }
+      }
+      return newId;
+    };
+    await handleDuplicateBase(selectedListId, duplicateListWithReload);
+  };
 
   return (
     <div className={styles.menuWrap}>
@@ -78,11 +99,11 @@ export default function ActionsMenu({
             data-testid="menu-duplicate-list"
             onClick={() => {
               setOpen(false);
-              onDuplicate();
+              handleDuplicate();
             }}
             disabled={isDuplicating}
           >
-            {showSpinner ? <Spinner size={12} /> : null}
+            {isDuplicating ? <Spinner size={12} /> : null}
             Duplicate list
           </button>
           <button
@@ -92,7 +113,9 @@ export default function ActionsMenu({
             data-testid="menu-delete-list"
             onClick={() => {
               setOpen(false);
-              if (canDelete) onDelete();
+              if (canDelete && selectedList) {
+                deleteList(selectedList.id);
+              }
             }}
             disabled={!canDelete}
             title={

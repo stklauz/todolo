@@ -6,7 +6,6 @@ describe('useListDuplication', () => {
     const { result } = renderHook(() => useListDuplication());
 
     expect(result.current.isDuplicating).toBe(false);
-    expect(result.current.showSpinner).toBe(false);
     expect(result.current.statusMessage).toBe(null);
     expect(result.current.focusListId).toBe(null);
   });
@@ -21,7 +20,6 @@ describe('useListDuplication', () => {
 
     expect(mockDuplicateList).toHaveBeenCalledWith('list-1');
     expect(result.current.isDuplicating).toBe(false);
-    expect(result.current.showSpinner).toBe(false);
     expect(result.current.statusMessage).toBe('List duplicated');
     expect(result.current.focusListId).toBe('new-list-id');
   });
@@ -36,7 +34,6 @@ describe('useListDuplication', () => {
 
     expect(mockDuplicateList).toHaveBeenCalledWith('list-1');
     expect(result.current.isDuplicating).toBe(false);
-    expect(result.current.showSpinner).toBe(false);
     expect(result.current.statusMessage).toBe(
       "Couldn't duplicate this list. Try again.",
     );
