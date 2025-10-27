@@ -25,7 +25,7 @@ jobs:
       - run: npm run rebuild
         env:
           npm_config_target_arch: ${{ matrix.arch }}
-      - run: npx electron-builder --publish always --arch ${{ matrix.arch }} -c.mac.identity=null -c.mac.type=development -c.mac.target=zip
+      - run: npx electron-builder --publish always --${{ matrix.arch }} -c.mac.identity=null -c.mac.type=development -c.mac.target=zip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
