@@ -242,7 +242,7 @@
       "icon": "assets/icons/icon.icns",
       "notarize": false,
       "target": {
-        "target": "default",
+        "target": "zip",
         "arch": [
           "arm64",
           "x64"
@@ -251,6 +251,7 @@
       "type": "development",
       "hardenedRuntime": false,
       "identity": null,
+      "sign": false,
       "gatekeeperAssess": false
     },
     "dmg": {
