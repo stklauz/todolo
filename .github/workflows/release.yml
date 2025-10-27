@@ -2,7 +2,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - v*
 permissions:
   contents: write
 jobs:
@@ -25,7 +25,6 @@ jobs:
       - run: npm run rebuild
         env:
           npm_config_target_arch: ${{ matrix.arch }}
-      - run: npx electron-builder --publish always --${{ matrix.arch }} -c.mac.identity=null -c.mac.type=development -c.mac.target=zip
+      - run: npx electron-builder --publish always --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false

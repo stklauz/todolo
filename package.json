@@ -228,11 +228,10 @@
     "webpack-dev-server": "^5.2.0",
     "webpack-merge": "^6.0.1"
   },
-  "build": {
+    "build": {
     "productName": "Todolo",
     "appId": "com.stklauz.todolo",
     "asar": true,
-    "afterSign": ".erb/scripts/notarize.js",
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
       "dist",
@@ -249,10 +248,9 @@
           "x64"
         ]
       },
-      "type": "distribution",
-      "hardenedRuntime": true,
-      "entitlements": "assets/entitlements.mac.plist",
-      "entitlementsInherit": "assets/entitlements.mac.plist",
+      "type": "development",
+      "hardenedRuntime": false,
+      "identity": null,
       "gatekeeperAssess": false
     },
     "dmg": {
