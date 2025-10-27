@@ -4,7 +4,7 @@ import type { EditorTodo, Section, AppSettings } from '../../types';
 import { useTodosActions } from '../../contexts';
 import useDragReorder from '../../hooks/useDragReorder';
 import useFilteredTodos from '../../hooks/useFilteredTodos';
-import useTodoFocus from '../../hooks/useTodoFocus';
+import useTodoKeyboardHandlers from '../../hooks/useTodoKeyboardHandlers';
 
 // import { debugLogger } from '../../../../utils/debug';
 
@@ -19,16 +19,14 @@ const styles = require('./TodoList.module.css');
 
 type Props = {
   appSettings: AppSettings;
-  handleTodoKeyDown: (
-    id: number,
-  ) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   setInputRef: (id: number, el: HTMLTextAreaElement | null) => void;
+  focusTodo: (id: number) => void;
 };
 
 const TodoList = React.memo(function TodoList({
   appSettings,
-  handleTodoKeyDown,
   setInputRef,
+  focusTodo,
 }: Props) {
   const {
     updateTodo,
@@ -37,10 +35,18 @@ const TodoList = React.memo(function TodoList({
     setSelectedTodos,
     insertTodoBelow,
     removeTodoAt,
+    changeIndent,
   } = useTodosActions();
-  const { focusTodo } = useTodoFocus();
 
   const allTodos = getSelectedTodos();
+
+  const handleTodoKeyDown = useTodoKeyboardHandlers({
+    allTodos,
+    changeIndent,
+    insertTodoBelow,
+    removeTodoAt,
+    focusTodo,
+  });
 
   const { filteredTodos: todos, insertBelowAndFocus } = useFilteredTodos(
     allTodos,

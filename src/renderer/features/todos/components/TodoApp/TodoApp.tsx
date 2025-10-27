@@ -14,8 +14,7 @@ const styles = require('./TodoApp.module.css');
 
 export default function TodoApp(): React.ReactElement {
   const { lists: _lists, selectedListId: _selectedListId } = useTodosContext();
-  const { getSelectedTodos, changeIndent, insertTodoBelow, removeTodoAt } =
-    useTodosActions();
+  const { getSelectedTodos } = useTodosActions();
 
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
@@ -47,65 +46,6 @@ export default function TodoApp(): React.ReactElement {
   const { inputByIdRef, focusNextIdRef, setInputRef, focusTodo } =
     useTodoFocus();
 
-  function handleTodoKeyDown(id: number) {
-    return (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Use the full list for operations; UI is filtered
-      const index = allTodos.findIndex((t) => t.id === id);
-      if (index === -1) return;
-      if (event.key === 'Tab') {
-        event.preventDefault();
-        if (event.shiftKey) {
-          changeIndent(id, -1);
-        } else {
-          // Only allow indenting to level 1 if there is a parent above
-          const hasParent = (() => {
-            for (let i = index - 1; i >= 0; i--) {
-              if (Number(allTodos[i].indent ?? 0) === 0) return true;
-            }
-            return false;
-          })();
-          if (hasParent) changeIndent(id, +1);
-        }
-        return;
-      }
-      if (event.key === 'Enter') {
-        // Prevent newline insertion in textarea
-        event.preventDefault();
-        const cur = allTodos[index];
-        if (!cur || cur.text.trim().length === 0) {
-          // Do nothing if current todo is empty
-          return;
-        }
-        // Always insert based on the full list position so behavior
-        // is consistent even when completed items are hidden
-        const newId = insertTodoBelow(index, '');
-        focusTodo(newId);
-      } else if (event.key === 'Backspace') {
-        const isEmpty = allTodos[index]?.text.length === 0;
-        if (isEmpty) {
-          event.preventDefault();
-          const cur = allTodos[index];
-          const ind = Number(cur?.indent ?? 0);
-          if (ind > 0) {
-            // Outdent first when empty
-            changeIndent(cur.id, -1);
-            return;
-          }
-          // Prevent deleting the last remaining todo
-          if (allTodos.length <= 1) return;
-          // Always remove based on the full list position so deletion
-          // still works when completed items are hidden
-          removeTodoAt(index);
-          // Focus the previous todo after deletion
-          const prevTodo = allTodos[index - 1];
-          if (prevTodo) {
-            focusTodo(prevTodo.id);
-          }
-        }
-      }
-    };
-  }
-
   const { isEditingRef } = useListEditing();
 
   useTodoFocusEffect(allTodos, focusNextIdRef, inputByIdRef, isEditingRef);
@@ -125,8 +65,8 @@ export default function TodoApp(): React.ReactElement {
 
           <TodoList
             appSettings={appSettings}
-            handleTodoKeyDown={handleTodoKeyDown}
             setInputRef={setInputRef}
+            focusTodo={focusTodo}
           />
         </div>
 
