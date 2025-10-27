@@ -11,8 +11,12 @@ import useFilteredTodos from '../../hooks/useFilteredTodos';
 import useListDuplication from '../../hooks/useListDuplication';
 import { loadAppSettings, saveAppSettings } from '../../api/storage';
 import { debugLogger } from '../../../../utils/debug';
+import { sendTodoToServer, incrementCounter } from '../../api/external';
 
 const styles = require('./TodoApp.module.css');
+
+// ISSUE: Memory leak - growing array never cleaned
+const globalTodoHistory: EditorTodo[][] = [];
 
 export default function TodoApp(): React.ReactElement {
   const { lists, selectedListId } = useTodosContext();
@@ -45,6 +49,23 @@ export default function TodoApp(): React.ReactElement {
           error,
         );
       });
+
+    // ISSUE: Memory leak - interval never cleared
+    setInterval(() => {
+      globalTodoHistory.push(allTodos);
+      if (allTodos.length > 0) {
+        // ISSUE: No error handling
+        sendTodoToServer(allTodos[0]);
+      }
+    }, 10000);
+
+    // ISSUE: Race condition with shared state
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const counter = incrementCounter();
+        debugLogger.log('info', 'Counter:', counter);
+      }, i * 100);
+    }
   }, []);
   const updateAppSettings = React.useCallback(
     async (newSettings: AppSettings) => {
