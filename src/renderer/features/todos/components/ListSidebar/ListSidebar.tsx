@@ -1,40 +1,22 @@
 import React from 'react';
 import { IoAddOutline } from 'react-icons/io5';
-import type { TodoList } from '../../types';
 import { ReactComponent as TodoloLogo } from '../../../../../../assets/logo/todolo.svg';
+import { useTodosContext, useTodosActions } from '../../contexts';
+import useListDuplication from '../../hooks/useListDuplication';
+import useListEditing from '../../hooks/useListEditing';
 
 const styles = require('./Sidebar.module.css');
 
-type Props = {
-  lists: TodoList[];
-  selectedListId: string | null;
-  onSelect: (id: string) => void;
-  onAdd: () => void;
-  // delete handled in title area; no per-item delete here
-  // rename controls
-  editingListId: string | null;
-  editingName: string;
-  onStartRename: (id: string, currentName: string) => void;
-  onChangeName: (name: string) => void;
-  onCommitRename: () => void;
-  onCancelRename: () => void;
-  // focus management
-  focusListId?: string | null;
-};
+export default function ListSidebar() {
+  const { lists, selectedListId } = useTodosContext();
+  const { setSelectedListId, addList } = useTodosActions();
+  const { focusListId } = useListDuplication();
+  const { startRename } = useListEditing();
 
-export default function ListSidebar({
-  lists,
-  selectedListId,
-  onSelect,
-  onAdd,
-  editingListId: _editingListId,
-  editingName: _editingName,
-  onStartRename: _onStartRename,
-  onChangeName: _onChangeName,
-  onCommitRename: _onCommitRename,
-  onCancelRename: _onCancelRename,
-  focusListId,
-}: Props) {
+  const handleAddList = React.useCallback(() => {
+    const id = addList();
+    startRename(id, `List ${lists.length + 1}`);
+  }, [addList, startRename, lists.length]);
   const listItemRefs = React.useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Focus management effect
@@ -65,7 +47,7 @@ export default function ListSidebar({
         <TodoloLogo className={styles.logo} />
         <button
           type="button"
-          onClick={onAdd}
+          onClick={handleAddList}
           title="Add list"
           className={styles.iconBtn}
           aria-label="Add list"
@@ -80,11 +62,11 @@ export default function ListSidebar({
             ref={(el) => setListItemRef(l.id, el)}
             tabIndex={0}
             role="button"
-            onClick={() => onSelect(l.id)}
+            onClick={() => setSelectedListId(l.id)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onSelect(l.id);
+                setSelectedListId(l.id);
               }
             }}
             className={`${styles.listItem} ${l.id === selectedListId ? styles.listItemActive : ''}`}

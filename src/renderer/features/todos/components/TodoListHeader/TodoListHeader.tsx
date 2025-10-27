@@ -1,39 +1,34 @@
 import React from 'react';
-import type { AppSettings, TodoList } from '../../types';
+import type { AppSettings } from '../../types';
 import { useTimeout } from '../../hooks/useTimeout';
 import ActionsMenu from './components/ActionsMenu';
+import { useTodosContext } from '../../contexts';
+import useListEditing from '../../hooks/useListEditing';
 
 const styles = require('./TodoListHeader.module.css');
 
 type TodoListHeaderProps = {
   appSettings: AppSettings;
   onUpdateAppSettings: (settings: AppSettings) => void;
-  selectedList: TodoList | null;
-  selectedListName: string;
-  editingListId: string | null;
-  editingName: string;
-  inputJustFocusedRef: React.MutableRefObject<boolean>;
-  titleInputRef: React.RefObject<HTMLInputElement | null>;
-  onStartRename: (id: string, currentName: string) => void;
-  onChangeName: (name: string) => void;
-  onCommitRename: () => void;
-  onCancelRename: () => void;
 };
 
 export default function TodoListHeader({
-  selectedList,
-  selectedListName,
-  editingListId,
-  editingName,
-  inputJustFocusedRef,
-  titleInputRef,
-  onStartRename,
-  onChangeName,
-  onCommitRename,
-  onCancelRename,
   appSettings,
   onUpdateAppSettings,
 }: TodoListHeaderProps): React.ReactElement {
+  const { lists, selectedListId } = useTodosContext();
+  const {
+    editingListId,
+    editingName,
+    inputJustFocusedRef,
+    titleInputRef,
+    startRename,
+    setEditingName,
+    commitRename,
+    cancelRename,
+  } = useListEditing();
+  const selectedList = lists.find((l) => l.id === selectedListId) ?? null;
+  const selectedListName = selectedList?.name ?? 'My List';
   const isEditing = editingListId === selectedList?.id;
   const displayValue = isEditing ? editingName : selectedListName;
   const setCleanupTimeout = useTimeout();
@@ -43,7 +38,7 @@ export default function TodoListHeader({
       const targetId = selectedList?.id ?? null;
       const currentName = selectedList?.name ?? 'My List';
       if (targetId) {
-        onStartRename(targetId, currentName);
+        startRename(targetId, currentName);
       }
     }
   };
@@ -68,7 +63,7 @@ export default function TodoListHeader({
       return;
     }
     if (isEditing) {
-      onCommitRename();
+      commitRename();
     }
   };
 
@@ -77,14 +72,14 @@ export default function TodoListHeader({
       e.preventDefault();
       e.stopPropagation();
       if (isEditing) {
-        onCommitRename();
+        commitRename();
       }
     }
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
       if (isEditing) {
-        onCancelRename();
+        cancelRename();
       }
     }
   };
@@ -96,7 +91,7 @@ export default function TodoListHeader({
           ref={titleInputRef}
           className={`${styles.titleInput} ${isEditing ? styles.titleInputEditing : ''}`}
           value={displayValue}
-          onChange={(e) => onChangeName(e.target.value)}
+          onChange={(e) => setEditingName(e.target.value)}
           onClick={handleClick}
           onFocus={handleFocus}
           onBlur={handleBlur}

@@ -1,6 +1,10 @@
 import React from 'react';
 import { TodoRow } from '../TodoRow/TodoRow';
-import type { EditorTodo } from '../../types';
+import type { EditorTodo, Section, AppSettings } from '../../types';
+import { useTodosActions } from '../../contexts';
+import useDragReorder from '../../hooks/useDragReorder';
+import useFilteredTodos from '../../hooks/useFilteredTodos';
+import useTodoFocus from '../../hooks/useTodoFocus';
 
 // import { debugLogger } from '../../../../utils/debug';
 
@@ -14,54 +18,79 @@ try {
 const styles = require('./TodoList.module.css');
 
 type Props = {
-  todos: EditorTodo[];
-  updateTodo: (id: number, text: string) => void;
-  toggleTodo: (id: number) => void;
+  appSettings: AppSettings;
   handleTodoKeyDown: (
     id: number,
   ) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  insertBelowAndFocus: (todoId: number, text?: string) => void;
-  changeIndent: (id: number, delta: number) => void;
-  removeAt: (index: number) => void;
-  // drag & drop
-  dragInfo: { id: number; section: 'active' | 'completed' } | null;
-  handleDragStart: (id: number) => void;
-  handleDragEnd: () => void;
-  handleDragOver: (e: React.DragEvent, targetId: number) => void;
-  handleDragLeave: (targetId: number) => void;
-  handleDropOn: (targetId: number) => void;
-  dropTargetId: number | null;
-  dropAtSectionEnd: 'active' | 'completed' | null;
-  handleDragOverEndZone: (
-    e: React.DragEvent,
-    section: 'active' | 'completed',
-  ) => void;
-  handleDragLeaveEndZone: (section: 'active' | 'completed') => void;
-  handleDropAtEnd: (section: 'active' | 'completed') => void;
   setInputRef: (id: number, el: HTMLTextAreaElement | null) => void;
 };
 
 const TodoList = React.memo(function TodoList({
-  todos,
-  updateTodo,
-  toggleTodo,
+  appSettings,
   handleTodoKeyDown,
-  insertBelowAndFocus,
-  changeIndent: _changeIndent,
-  removeAt: _removeAt,
-  dragInfo: _dragInfo,
-  handleDragStart,
-  handleDragEnd,
-  handleDragOver,
-  handleDragLeave,
-  handleDropOn,
-  dropTargetId,
-  dropAtSectionEnd,
-  handleDragOverEndZone,
-  handleDragLeaveEndZone,
-  handleDropAtEnd,
   setInputRef,
 }: Props) {
+  const {
+    updateTodo,
+    toggleTodo,
+    getSelectedTodos,
+    setSelectedTodos,
+    insertTodoBelow,
+    removeTodoAt,
+  } = useTodosActions();
+  const { focusTodo } = useTodoFocus();
+
+  const allTodos = getSelectedTodos();
+
+  const { filteredTodos: todos, insertBelowAndFocus } = useFilteredTodos(
+    allTodos,
+    appSettings.hideCompletedItems,
+    insertTodoBelow,
+    removeTodoAt,
+    setSelectedTodos,
+    focusTodo,
+  );
+
+  const sectionOf = (id: number): Section => {
+    const idx = todos.findIndex((x) => x.id === id);
+    if (idx === -1) return 'active';
+    const cur = todos[idx];
+    const indent = Number(cur.indent ?? 0);
+    if (indent <= 0) {
+      // parent effective completion: parent must be completed AND all its children completed
+      let allChildrenCompleted = true;
+      for (let i = idx + 1; i < todos.length; i++) {
+        if (Number(todos[i].indent ?? 0) === 0) break;
+        if (!todos[i].completed) {
+          allChildrenCompleted = false;
+          break;
+        }
+      }
+      return cur.completed && allChildrenCompleted ? 'completed' : 'active';
+    }
+    // child: completed only if child and parent are completed
+    let parentCompleted = false;
+    for (let i = idx - 1; i >= 0; i--) {
+      if (Number(todos[i].indent ?? 0) === 0) {
+        parentCompleted = !!todos[i].completed;
+        break;
+      }
+    }
+    return cur.completed && parentCompleted ? 'completed' : 'active';
+  };
+
+  const {
+    dropTargetId,
+    dropAtSectionEnd,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragLeave,
+    handleDropOn,
+    handleDragOverEndZone,
+    handleDragLeaveEndZone,
+    handleDropAtEnd,
+  } = useDragReorder(() => todos, setSelectedTodos, sectionOf);
   // Keep latest todos in a ref so cached handlers can access fresh data
   const todosRef = React.useRef(todos);
   React.useEffect(() => {

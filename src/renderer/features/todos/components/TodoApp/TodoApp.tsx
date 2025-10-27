@@ -2,12 +2,10 @@ import React from 'react';
 import ListSidebar from '../ListSidebar/ListSidebar';
 import TodoList from '../TodoList/TodoList';
 import TodoListHeader from '../TodoListHeader/TodoListHeader';
-import type { EditorTodo, Section, AppSettings } from '../../types';
+import type { AppSettings } from '../../types';
 import { useTodosContext, useTodosActions } from '../../contexts/TodosProvider';
-import useDragReorder from '../../hooks/useDragReorder';
 import useTodoFocus, { useTodoFocusEffect } from '../../hooks/useTodoFocus';
 import useListEditing from '../../hooks/useListEditing';
-import useFilteredTodos from '../../hooks/useFilteredTodos';
 import useListDuplication from '../../hooks/useListDuplication';
 import { loadAppSettings, saveAppSettings } from '../../api/storage';
 import { debugLogger } from '../../../../utils/debug';
@@ -15,24 +13,14 @@ import { debugLogger } from '../../../../utils/debug';
 const styles = require('./TodoApp.module.css');
 
 export default function TodoApp(): React.ReactElement {
-  const { lists, selectedListId } = useTodosContext();
-  const {
-    setSelectedListId,
-    getSelectedTodos,
-    setSelectedTodos,
-    updateTodo,
-    toggleTodo,
-    changeIndent,
-    insertTodoBelow,
-    removeTodoAt,
-    addList,
-    updateList,
-  } = useTodosActions();
+  const { lists: _lists, selectedListId: _selectedListId } = useTodosContext();
+  const { getSelectedTodos, changeIndent, insertTodoBelow, removeTodoAt } =
+    useTodosActions();
 
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
   });
-  const { statusMessage, focusListId } = useListDuplication();
+  const { statusMessage } = useListDuplication();
 
   React.useEffect(() => {
     loadAppSettings()
@@ -54,67 +42,10 @@ export default function TodoApp(): React.ReactElement {
     [],
   );
 
-  const allTodos: EditorTodo[] = getSelectedTodos();
+  const allTodos = getSelectedTodos();
 
   const { inputByIdRef, focusNextIdRef, setInputRef, focusTodo } =
     useTodoFocus();
-  const {
-    filteredTodos: todos,
-    insertBelowAndFocus,
-    removeAtAndManageFocus,
-  } = useFilteredTodos(
-    allTodos,
-    appSettings.hideCompletedItems,
-    insertTodoBelow,
-    removeTodoAt,
-    setSelectedTodos,
-    focusTodo,
-  );
-
-  const sectionOf = (id: number): Section => {
-    const idx = todos.findIndex((x) => x.id === id);
-    if (idx === -1) return 'active';
-    const cur = todos[idx];
-    const indent = Number(cur.indent ?? 0);
-    if (indent <= 0) {
-      // parent effective completion: parent must be completed AND all its children completed
-      let allChildrenCompleted = true;
-      for (let i = idx + 1; i < todos.length; i++) {
-        if (Number(todos[i].indent ?? 0) === 0) break;
-        if (!todos[i].completed) {
-          allChildrenCompleted = false;
-          break;
-        }
-      }
-      return cur.completed && allChildrenCompleted ? 'completed' : 'active';
-    }
-    // child: completed only if child and parent are completed
-    let parentCompleted = false;
-    for (let i = idx - 1; i >= 0; i--) {
-      if (Number(todos[i].indent ?? 0) === 0) {
-        parentCompleted = !!todos[i].completed;
-        break;
-      }
-    }
-    return cur.completed && parentCompleted ? 'completed' : 'active';
-  };
-  const {
-    dragInfo,
-    dropTargetId,
-    dropAtSectionEnd,
-    handleDragStart,
-    handleDragEnd,
-    handleDragOver,
-    handleDragLeave,
-    handleDropOn,
-    handleDragOverEndZone,
-    handleDragLeaveEndZone,
-    handleDropAtEnd,
-  } = useDragReorder(
-    () => getSelectedTodos(),
-    (updater) => setSelectedTodos(updater),
-    sectionOf,
-  );
 
   function handleTodoKeyDown(id: number) {
     return (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -147,7 +78,8 @@ export default function TodoApp(): React.ReactElement {
         }
         // Always insert based on the full list position so behavior
         // is consistent even when completed items are hidden
-        insertBelowAndFocus(id);
+        const newId = insertTodoBelow(index, '');
+        focusTodo(newId);
       } else if (event.key === 'Backspace') {
         const isEmpty = allTodos[index]?.text.length === 0;
         if (isEmpty) {
@@ -163,98 +95,37 @@ export default function TodoApp(): React.ReactElement {
           if (allTodos.length <= 1) return;
           // Always remove based on the full list position so deletion
           // still works when completed items are hidden
-          removeAtAndManageFocus(id);
+          removeTodoAt(index);
+          // Focus the previous todo after deletion
+          const prevTodo = allTodos[index - 1];
+          if (prevTodo) {
+            focusTodo(prevTodo.id);
+          }
         }
       }
     };
   }
 
-  const {
-    editingListId,
-    editingName,
-    inputJustFocusedRef,
-    titleInputRef,
-    isEditingRef,
-    startRename,
-    setEditingName,
-    cancelRename,
-    commitRename: commitRenameBase,
-  } = useListEditing();
+  const { isEditingRef } = useListEditing();
 
-  useTodoFocusEffect(todos, focusNextIdRef, inputByIdRef, isEditingRef);
-  const selectedList = lists.find((l) => l.id === selectedListId) || null;
-  const selectedListName = selectedList?.name || 'My List';
-
-  function onAddList() {
-    const id = addList();
-    startRename(id, `List ${lists.length + 1}`);
-  }
-
-  function commitRename() {
-    if (!editingListId || !isEditingRef.current) return;
-    const name = editingName.trim();
-    if (!name) {
-      cancelRename();
-      return;
-    }
-    updateList(editingListId, { name });
-    commitRenameBase();
-  }
+  useTodoFocusEffect(allTodos, focusNextIdRef, inputByIdRef, isEditingRef);
 
   return (
     <div className={styles.layout}>
       {/* Sidebar */}
-      <ListSidebar
-        lists={lists}
-        selectedListId={selectedListId}
-        onSelect={(id) => setSelectedListId(id)}
-        onAdd={onAddList}
-        editingListId={editingListId}
-        editingName={editingName}
-        onStartRename={startRename}
-        onChangeName={setEditingName}
-        onCommitRename={commitRename}
-        onCancelRename={cancelRename}
-        focusListId={focusListId}
-      />
+      <ListSidebar />
 
       {/* Main content */}
       <div className={styles.container}>
         <div className={styles.content}>
           <TodoListHeader
-            selectedList={selectedList}
-            selectedListName={selectedListName}
-            editingListId={editingListId}
-            editingName={editingName}
-            inputJustFocusedRef={inputJustFocusedRef}
-            titleInputRef={titleInputRef}
-            onStartRename={startRename}
-            onChangeName={setEditingName}
-            onCommitRename={commitRename}
-            onCancelRename={cancelRename}
             appSettings={appSettings}
             onUpdateAppSettings={updateAppSettings}
           />
 
           <TodoList
-            todos={todos}
-            updateTodo={updateTodo}
-            toggleTodo={toggleTodo}
-            insertBelowAndFocus={insertBelowAndFocus}
+            appSettings={appSettings}
             handleTodoKeyDown={handleTodoKeyDown}
-            changeIndent={changeIndent}
-            removeAt={removeAtAndManageFocus}
-            dragInfo={dragInfo}
-            handleDragStart={handleDragStart}
-            handleDragEnd={handleDragEnd}
-            handleDragOver={handleDragOver}
-            handleDragLeave={handleDragLeave}
-            handleDropOn={handleDropOn}
-            dropTargetId={dropTargetId}
-            dropAtSectionEnd={dropAtSectionEnd}
-            handleDragOverEndZone={handleDragOverEndZone}
-            handleDragLeaveEndZone={handleDragLeaveEndZone}
-            handleDropAtEnd={handleDropAtEnd}
             setInputRef={setInputRef}
           />
         </div>
