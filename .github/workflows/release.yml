@@ -10,11 +10,7 @@ jobs:
   build:
     strategy:
       matrix:
-        include:
-        - os: macos-latest
-          arch: arm64
-        - os: macos-13
-          arch: x64
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -26,9 +22,7 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
       - run: npm run build
-      - run: npm run rebuild
-        env:
-          npm_config_target_arch: ${{ matrix.arch }}
-      - run: npx electron-builder --publish always --${{ matrix.arch }}
+      - run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
