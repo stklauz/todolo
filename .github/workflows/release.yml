@@ -18,6 +18,7 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - name: Sync app version from tag
+        if: github.event_name == 'push'
         run: node ./.erb/scripts/sync-app-version.js
         env:
           VERSION: ${{ github.ref_name }}
