@@ -2,6 +2,8 @@
 TODOLO-MANIFEST
 ---
 
+# TODOLO
+
 TODOLO was made due to the lack of goddamn simple todo list apps out there.
 
 Its one of those products that doesnt shine on what it does, but rather,

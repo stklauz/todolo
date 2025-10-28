@@ -486,6 +486,7 @@ describe('Error Handling', () => {
       );
 
       // Error should not be logged when debug is disabled
+      // eslint-disable-next-line no-console
       expect(console.error).not.toHaveBeenCalled();
     });
   });

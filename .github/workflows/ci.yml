@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: macos-latest
+
+    # Skip if commit message contains [skip ci] (from semantic-release)
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+
+    # trunk-ignore(checkov/CKV2_GHA_1)
+    permissions:
+      contents: write # To push tags and commits
+      issues: write # To comment on issues
+      pull-requests: write # To comment on PRs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for semantic-release
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Report coverage to Codacy
+        uses: codacy/codacy-coverage-reporter-action@1.3.0
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: ./coverage/lcov.info
+
+      # Semantic Release determines if release is needed
+      - name: Semantic Release
+        id: semantic
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Only build/publish if semantic-release created a new version
+      - name: Build Electron app
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Releases
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            release/build/*.log
+            npm-debug.log*
+          if-no-files-found: ignore

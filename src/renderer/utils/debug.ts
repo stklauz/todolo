@@ -54,6 +54,7 @@ class DebugLogger {
     const message = `[DEBUG ${level.toUpperCase()}] ${operation}`;
     const consoleMethod =
       level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log';
+    // eslint-disable-next-line no-console
     console[consoleMethod](message, details || '');
   }
 

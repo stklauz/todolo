@@ -6,6 +6,7 @@ import { useTodosContext } from '../../../contexts';
 import { useTodosActions } from '../../../contexts/TodosProvider';
 import useListDuplication from '../../../hooks/useListDuplication';
 import { loadListsIndex } from '../../../api/storage';
+import { debugLogger } from '../../../../../utils/debug';
 
 const styles = require('./ActionsMenu.module.css');
 
@@ -49,8 +50,9 @@ export default function ActionsMenu({
         try {
           await loadListsIndex();
         } catch (error) {
-          console.error(
-            'Failed to reload list index after duplication:',
+          debugLogger.log(
+            'error',
+            'Failed to reload list index after duplication',
             error,
           );
         }

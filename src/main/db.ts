@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import path from 'path';
 import { app } from 'electron';
 import crypto from 'crypto';
