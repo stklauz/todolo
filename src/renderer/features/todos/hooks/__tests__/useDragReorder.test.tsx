@@ -625,7 +625,7 @@ describe('useDragReorder', () => {
     });
   });
 
-  describe('Slack-style Drag & Drop Behaviors', () => {
+  describe('Drag & Drop Indent Behaviors', () => {
     it('should insert level-0 item between level-1 siblings without snapping to parent', () => {
       // Scenario: A(0), B(1), C(1), X(0) -> drop X on C -> A, B, X, C
       const testTodos: EditorTodo[] = [
