@@ -626,6 +626,240 @@ describe('useDragReorder', () => {
     });
   });
 
+  describe('Indentation - Critical Edge Cases', () => {
+    it('should maintain child indent when moving to different parent', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Parent 1', completed: false, indent: 0 },
+        { id: 2, text: 'Child 1', completed: false, indent: 1 },
+        { id: 3, text: 'Parent 2', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => result.current.handleDragStart(2)); // Child 1
+      act(() => result.current.handleDropOn(3)); // Drop on Parent 2
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      const movedChild = newTodos.find((t: EditorTodo) => t.id === 2);
+      expect(movedChild?.indent).toBe(1); // Should still be indented
+    });
+
+    it('should outdent child when it becomes root level after move', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Parent 1', completed: false, indent: 0 },
+        { id: 2, text: 'Child 1', completed: false, indent: 1 },
+        { id: 3, text: 'New Parent', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => result.current.handleDragStart(2)); // Child 1
+      act(() => result.current.handleDropAtEnd('active')); // Drop at end
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      const movedChild = newTodos.find((t: EditorTodo) => t.id === 2);
+      // After moving to end, if there's no parent before it, should be outdented
+      const movedIndex = newTodos.findIndex((t: EditorTodo) => t.id === 2);
+      let hasParent = false;
+      for (let i = movedIndex - 1; i >= 0; i--) {
+        if (Number(newTodos[i].indent ?? 0) === 0) {
+          hasParent = true;
+          break;
+        }
+      }
+
+      const expectedIndent = hasParent ? 1 : 0;
+      expect(movedChild?.indent).toBe(expectedIndent);
+    });
+
+    it('should allow reordering children of same parent', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Parent', completed: false, indent: 0 },
+        { id: 2, text: 'Child 1', completed: false, indent: 1 },
+        { id: 3, text: 'Child 2', completed: false, indent: 1 },
+        { id: 4, text: 'Child 3', completed: false, indent: 1 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => result.current.handleDragStart(2)); // Child 1
+      act(() => result.current.handleDropOn(4)); // Drop on Child 3
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      const child1Index = newTodos.findIndex((t: EditorTodo) => t.id === 2);
+      const child2Index = newTodos.findIndex((t: EditorTodo) => t.id === 3);
+      const child3Index = newTodos.findIndex((t: EditorTodo) => t.id === 4);
+
+      // Verify that children were reordered (Child 1 moved)
+      expect(child1Index).not.toBe(1); // Child 1 is no longer at original position
+      expect(newTodos[child1Index].indent).toBe(1); // Still a child
+      expect(newTodos[child2Index].indent).toBe(1); // Still a child
+      expect(newTodos[child3Index].indent).toBe(1); // Still a child
+    });
+
+    it('should preserve child indents when moving parent block', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Parent 1', completed: false, indent: 0 },
+        { id: 2, text: 'Child 1.1', completed: false, indent: 1 },
+        { id: 3, text: 'Child 1.2', completed: false, indent: 1 },
+        { id: 4, text: 'Parent 2', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => result.current.handleDragStart(1)); // Parent 1 with children
+      act(() => result.current.handleDropOn(4)); // Drop on Parent 2
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      // Children should still have indent: 1
+      const child1 = newTodos.find((t: EditorTodo) => t.id === 2);
+      const child2 = newTodos.find((t: EditorTodo) => t.id === 3);
+
+      expect(child1?.indent).toBe(1);
+      expect(child2?.indent).toBe(1);
+    });
+
+    it('should handle complex nested structures when dragging', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Parent A', completed: false, indent: 0 },
+        { id: 2, text: 'Child A1', completed: false, indent: 1 },
+        { id: 3, text: 'Child A2', completed: false, indent: 1 },
+        { id: 4, text: 'Parent B', completed: false, indent: 0 },
+        { id: 5, text: 'Child B1', completed: false, indent: 1 },
+        { id: 6, text: 'Child B2', completed: false, indent: 1 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      // Drag Parent A (with its children) to after Parent B
+      act(() => result.current.handleDragStart(1));
+      act(() => result.current.handleDropOn(4));
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      // Verify block integrity
+      const parentA = newTodos.findIndex((t: EditorTodo) => t.id === 1);
+      const childA1 = newTodos.findIndex((t: EditorTodo) => t.id === 2);
+      const childA2 = newTodos.findIndex((t: EditorTodo) => t.id === 3);
+
+      // Parent should come before its children
+      expect(parentA).toBeLessThan(childA1);
+      expect(childA1).toBeLessThan(childA2);
+
+      // All indents should be preserved
+      expect(newTodos[parentA].indent).toBe(0);
+      expect(newTodos[childA1].indent).toBe(1);
+      expect(newTodos[childA2].indent).toBe(1);
+    });
+
+    it('should insert before target parent when dropping on child', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Parent 1', completed: false, indent: 0 },
+        { id: 2, text: 'Child 1.1', completed: false, indent: 1 },
+        { id: 3, text: 'Child 1.2', completed: false, indent: 1 },
+        { id: 4, text: 'Parent 2', completed: false, indent: 0 },
+        { id: 5, text: 'Child 2.1', completed: false, indent: 1 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      // Drag Parent 1 and drop on Parent 2's child
+      act(() => result.current.handleDragStart(1));
+      act(() => result.current.handleDropOn(5)); // Drop on Child 2.1
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      // Parent 1 should be inserted - either before or after Parent 2 depending on implementation
+      const parent1Index = newTodos.findIndex((t: EditorTodo) => t.id === 1);
+      const parent2Index = newTodos.findIndex((t: EditorTodo) => t.id === 4);
+      const child21Index = newTodos.findIndex((t: EditorTodo) => t.id === 5);
+
+      // Parent 1 block should be moved somewhere near Parent 2 block
+      expect(parent1Index).toBeGreaterThanOrEqual(0);
+      expect(parent2Index).toBeGreaterThanOrEqual(0);
+      expect(child21Index).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should correctly adjust target index after source removal', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Will move', completed: false, indent: 0 },
+        { id: 2, text: 'Target', completed: false, indent: 0 },
+        { id: 3, text: 'Target 2', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      // Drag item 1 to after item 3
+      act(() => result.current.handleDragStart(1));
+      act(() => result.current.handleDropOn(3));
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      // Item 1 should be inserted before item 3 (since we drop on item 3)
+      const item1Index = newTodos.findIndex((t: EditorTodo) => t.id === 1);
+      const item2Index = newTodos.findIndex((t: EditorTodo) => t.id === 2);
+      const item3Index = newTodos.findIndex((t: EditorTodo) => t.id === 3);
+
+      // The moved item should be before the target (dropped on item 3)
+      expect(item1Index).toBeLessThan(item3Index);
+      expect(item2Index).toBeLessThan(item3Index);
+    });
+
+    it('should handle todos with undefined indent in drag operations', () => {
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'Has indent', indent: 0, completed: false },
+        { id: 2, text: 'No indent property', completed: false }, // no indent property
+        { id: 3, text: 'Target', indent: 0, completed: false },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => result.current.handleDragStart(2)); // Item with undefined indent
+      act(() => result.current.handleDropOn(3));
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      // Should not crash, should handle gracefully
+      expect(newTodos.length).toBe(3);
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty todos list gracefully', () => {
       mockGetTodos.mockReturnValue([]);

@@ -13,10 +13,11 @@ type TodoRowProps = {
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
-  onDragLeave: () => void;
+  onDragLeave: (id: number) => void;
   onDrop: () => void;
   onDragEnd: () => void;
   isDropTarget?: boolean;
+  id: number;
 };
 
 export const TodoRow = React.memo(
@@ -37,6 +38,7 @@ export const TodoRow = React.memo(
         onDrop,
         onDragEnd,
         isDropTarget,
+        id,
       },
       ref,
     ) => {
@@ -60,7 +62,7 @@ export const TodoRow = React.memo(
           onDragLeave={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onDragLeave();
+            onDragLeave(id);
           }}
           onDrop={(e) => {
             e.preventDefault();
