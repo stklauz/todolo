@@ -596,12 +596,11 @@ describe('useDragReorder', () => {
     });
 
     it('should fix orphaned children by outdenting them', () => {
-      // Create a test scenario where a child will be orphaned after move
+      // Create a test scenario where a child will truly be orphaned after move
+      // C1 -> P1; drag C1 onto P1 -> C1 -> P1 (C1 has no parent before it, should become level 0)
       const orphanedTodos: EditorTodo[] = [
-        { id: 1, text: 'Parent 1', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: false, indent: 1 },
-        { id: 3, text: 'Parent 2', completed: false, indent: 0 },
-        { id: 4, text: 'Child 2', completed: false, indent: 1 },
+        { id: 1, text: 'Child 1', completed: false, indent: 1 },
+        { id: 2, text: 'Parent 1', completed: false, indent: 0 },
       ];
 
       mockGetTodos.mockReturnValue(orphanedTodos);
@@ -610,19 +609,84 @@ describe('useDragReorder', () => {
       );
 
       act(() => {
-        result.current.handleDragStart(2); // Child 1 - move it to after Parent 2
+        result.current.handleDragStart(1); // Child 1
       });
 
       act(() => {
-        result.current.handleDropOn(3); // Drop on Parent 2
+        result.current.handleDropOn(2); // Drop on Parent 1
       });
 
       const setTodosCall = mockSetTodos.mock.calls[0][0];
       const newTodos = setTodosCall(orphanedTodos);
 
-      const movedChild = newTodos.find((t: EditorTodo) => t.id === 2);
-      // The child should be outdented to 0 when it has no parent after the move
+      const movedChild = newTodos.find((t: EditorTodo) => t.id === 1);
+      // Child 1 is now at the start with no parent above it, so it should be outdented to 0
       expect(movedChild?.indent).toBe(0);
+    });
+  });
+
+  describe('Slack-style Drag & Drop Behaviors', () => {
+    it('should insert level-0 item between level-1 siblings without snapping to parent', () => {
+      // Scenario: A(0), B(1), C(1), X(0) -> drop X on C -> A, B, X, C
+      const testTodos: EditorTodo[] = [
+        { id: 1, text: 'A', completed: false, indent: 0 },
+        { id: 2, text: 'B', completed: false, indent: 1 },
+        { id: 3, text: 'C', completed: false, indent: 1 },
+        { id: 4, text: 'X', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(testTodos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(4); // X
+      });
+
+      act(() => {
+        result.current.handleDropOn(3); // C
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(testTodos);
+
+      // X should be inserted at C's position, pushing C down
+      expect(newTodos.map((t: EditorTodo) => t.text)).toEqual([
+        'A',
+        'B',
+        'X',
+        'C',
+      ]);
+    });
+
+    it('should keep level-1 sibling drag within group (no jump above parent)', () => {
+      // Scenario: 1(0), 2(1), 3(1) -> drag 3 over 2 -> 1, 3, 2
+      const testTodos: EditorTodo[] = [
+        { id: 1, text: '1', completed: false, indent: 0 },
+        { id: 2, text: '2', completed: false, indent: 1 },
+        { id: 3, text: '3', completed: false, indent: 1 },
+      ];
+
+      mockGetTodos.mockReturnValue(testTodos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(3); // item '3'
+      });
+
+      act(() => {
+        result.current.handleDropOn(2); // item '2'
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(testTodos);
+
+      // Parent '1' should remain first, and '3' should be before '2'
+      expect(newTodos[0].text).toBe('1');
+      expect(newTodos.map((t: EditorTodo) => t.text)).toEqual(['1', '3', '2']);
     });
   });
 
