@@ -136,20 +136,14 @@ export default function useDragReorder(
         // extract block
         const block = next.splice(srcStart, srcEnd - srcStart + 1);
         // compute target block start
+        // When dropping onto a child, insert at the child's row (do not snap to parent)
+        // This preserves child-group ordering and allows inserting a parent between children
         let tgtIndex = tgtIndex0;
-        if (Number(next[tgtIndex]?.indent ?? 0) === 1) {
-          for (let i = tgtIndex; i >= 0; i--) {
-            if (Number(next[i].indent ?? 0) === 0) {
-              tgtIndex = i;
-              break;
-            }
-          }
-        }
         // adjust target index after removal
         if (tgtIndex0 > srcEnd) {
           tgtIndex -= block.length;
         }
-        // insert before target block start
+        // insert before target row (or parent row, if target was a parent)
         next.splice(tgtIndex, 0, ...block);
         // Ensure no orphan children for child moves
         if (!srcIsParent) {
