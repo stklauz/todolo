@@ -242,6 +242,7 @@ const TodoList = React.memo(function TodoList({
         return (
           <TodoRow
             key={todo.id}
+            id={todo.id}
             value={todo.text}
             checked={todo.completed}
             indent={todo.indent ?? 0}
@@ -316,6 +317,7 @@ const TodoList = React.memo(function TodoList({
       {derived.completed.map((todo) => (
         <TodoRow
           key={todo.id}
+          id={todo.id}
           value={todo.text}
           checked={todo.completed}
           indent={todo.indent ?? 0}
