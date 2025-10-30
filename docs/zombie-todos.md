@@ -64,9 +64,9 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
 
 - [ ] Baseline diagnosis and a failing test
   - [ ] Add a minimal reproducible unit/integration test for resurfacing on delete
-    - Place under `src/renderer/__tests__/e2e/delete-parent-promotes-wrong-parent.test.tsx`
+    - Place under `src/renderer/__tests__/e2e/hierarchy-behavior.test.tsx`
   - [ ] Add a minimal reproducible unit/integration test for resurfacing on drag
-    - Place under `src/renderer/__tests__/e2e/resurface-completed-after-reorder.test.tsx`
+    - Place under `src/renderer/__tests__/e2e/hierarchy-behavior.test.tsx`
   - [ ] Verify tests fail on `main` to confirm we’re capturing the bug
 
 - [ ] Introduce explicit relationships in data model

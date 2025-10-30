@@ -39,7 +39,7 @@ describe('Drag & Drop behavior', () => {
     ]);
 
     // Get drag handles (span role="button" aria-label="Drag to reorder")
-    const handles = screen.getAllByRole('button', { name: /drag to reorder/i });
+    const handles = screen.getAllByTestId('todo-indent');
 
     // Source: X (index 3). Target: C (index 2)
     const sourceHandle = handles[3];
@@ -85,7 +85,7 @@ describe('Drag & Drop behavior', () => {
       '3',
     ]);
 
-    const handles = screen.getAllByRole('button', { name: /drag to reorder/i });
+    const handles = screen.getAllByTestId('todo-indent');
 
     // Drag item '3' over item '2'
     const sourceHandle = handles[2];
@@ -164,7 +164,7 @@ describe('Drag & Drop behavior', () => {
     );
 
     const inputs = screen.getAllByLabelText('Todo text');
-    const handles = screen.getAllByRole('button', { name: /drag to reorder/i });
+    const handles = screen.getAllByTestId('todo-indent');
 
     // Drag Third over First
     const sourceHandle = handles[2];

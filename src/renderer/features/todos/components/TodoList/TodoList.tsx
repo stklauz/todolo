@@ -236,40 +236,93 @@ const TodoList = React.memo(function TodoList({
 
   return (
     <div className={styles.list}>
-      {derived.active.map((todo) => {
-        const isEmpty = todo.text.trim().length === 0;
-        const toggleDisabled = isEmpty;
-        return (
+      <div data-testid="active-section">
+        {derived.active.map((todo) => {
+          const isEmpty = todo.text.trim().length === 0;
+          const toggleDisabled = isEmpty;
+          return (
+            <TodoRow
+              key={todo.id}
+              value={todo.text}
+              checked={todo.completed}
+              indent={todo.indent ?? 0}
+              indeterminate={derived.indeterminate.get(todo.id) === true}
+              onToggle={() => {
+                if (toggleDisabled) return;
+
+                // Play audio with better error handling
+                const audio = audioRef.current;
+                if (audio) {
+                  try {
+                    audio.currentTime = 0;
+                    audio.play().catch(() => {
+                      // console.warn('Audio playback failed:', error);
+                    });
+                  } catch {
+                    // console.warn('Audio error:', error);
+                  }
+                }
+
+                const index = idToIndex.get(todo.id) ?? -1;
+                toggleTodo(todo.id);
+                // If this was the only active non-empty todo, create a new empty one and focus it
+                if (isSingleActive && !isEmpty && index !== -1) {
+                  insertBelowAndFocus(todo.id, '');
+                }
+              }}
+              toggleDisabled={toggleDisabled}
+              onChange={(e) => updateTodo(todo.id, e.target.value)}
+              onKeyDown={handleTodoKeyDown(todo.id)}
+              onDragStart={getDragStart(todo.id)}
+              onDragEnd={handleDragEnd}
+              onDragOver={getDragOver(todo.id)}
+              onDragLeave={getDragLeave(todo.id)}
+              onDrop={getDropOn(todo.id)}
+              isDropTarget={dropTargetId === todo.id}
+              ref={(el) => setInputRef(todo.id, el)}
+            />
+          );
+        })}
+        {/* End drop zone for Active section */}
+        <div
+          className={
+            dropAtSectionEnd === 'active'
+              ? `${styles.dropZone} ${styles.dropZoneActive}`
+              : styles.dropZone
+          }
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDragOverEndZone(e, 'active');
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDragLeaveEndZone('active');
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDropAtEnd('active');
+          }}
+        />
+      </div>
+
+      {derived.completed.length > 0 && (
+        <div className={styles.sectionGroup}>
+          <div className={styles.sectionDivider} />
+        </div>
+      )}
+
+      <div data-testid="completed-section">
+        {derived.completed.map((todo) => (
           <TodoRow
             key={todo.id}
             value={todo.text}
             checked={todo.completed}
             indent={todo.indent ?? 0}
             indeterminate={derived.indeterminate.get(todo.id) === true}
-            onToggle={() => {
-              if (toggleDisabled) return;
-
-              // Play audio with better error handling
-              const audio = audioRef.current;
-              if (audio) {
-                try {
-                  audio.currentTime = 0;
-                  audio.play().catch(() => {
-                    // console.warn('Audio playback failed:', error);
-                  });
-                } catch {
-                  // console.warn('Audio error:', error);
-                }
-              }
-
-              const index = idToIndex.get(todo.id) ?? -1;
-              toggleTodo(todo.id);
-              // If this was the only active non-empty todo, create a new empty one and focus it
-              if (isSingleActive && !isEmpty && index !== -1) {
-                insertBelowAndFocus(todo.id, '');
-              }
-            }}
-            toggleDisabled={toggleDisabled}
+            onToggle={() => toggleTodo(todo.id)}
             onChange={(e) => updateTodo(todo.id, e.target.value)}
             onKeyDown={handleTodoKeyDown(todo.id)}
             onDragStart={getDragStart(todo.id)}
@@ -280,82 +333,31 @@ const TodoList = React.memo(function TodoList({
             isDropTarget={dropTargetId === todo.id}
             ref={(el) => setInputRef(todo.id, el)}
           />
-        );
-      })}
-
-      {/* End drop zone for Active section */}
-      <div
-        className={
-          dropAtSectionEnd === 'active'
-            ? `${styles.dropZone} ${styles.dropZoneActive}`
-            : styles.dropZone
-        }
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDragOverEndZone(e, 'active');
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDragLeaveEndZone('active');
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDropAtEnd('active');
-        }}
-      />
-
-      {derived.completed.length > 0 && (
-        <div className={styles.sectionGroup}>
-          <div className={styles.sectionDivider} />
-        </div>
-      )}
-
-      {derived.completed.map((todo) => (
-        <TodoRow
-          key={todo.id}
-          value={todo.text}
-          checked={todo.completed}
-          indent={todo.indent ?? 0}
-          indeterminate={derived.indeterminate.get(todo.id) === true}
-          onToggle={() => toggleTodo(todo.id)}
-          onChange={(e) => updateTodo(todo.id, e.target.value)}
-          onKeyDown={handleTodoKeyDown(todo.id)}
-          onDragStart={getDragStart(todo.id)}
-          onDragEnd={handleDragEnd}
-          onDragOver={getDragOver(todo.id)}
-          onDragLeave={getDragLeave(todo.id)}
-          onDrop={getDropOn(todo.id)}
-          isDropTarget={dropTargetId === todo.id}
-          ref={(el) => setInputRef(todo.id, el)}
+        ))}
+        {/* End drop zone for Completed section (bottom of list) */}
+        <div
+          className={
+            dropAtSectionEnd === 'completed'
+              ? `${styles.dropZone} ${styles.dropZoneActive}`
+              : styles.dropZone
+          }
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDragOverEndZone(e, 'completed');
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDragLeaveEndZone('completed');
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDropAtEnd('completed');
+          }}
         />
-      ))}
-
-      {/* End drop zone for Completed section (bottom of list) */}
-      <div
-        className={
-          dropAtSectionEnd === 'completed'
-            ? `${styles.dropZone} ${styles.dropZoneActive}`
-            : styles.dropZone
-        }
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDragOverEndZone(e, 'completed');
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDragLeaveEndZone('completed');
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleDropAtEnd('completed');
-        }}
-      />
+      </div>
     </div>
   );
 });
