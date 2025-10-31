@@ -3,8 +3,19 @@
 # Lint and format staged files, then re-stage them
 npx lint-staged || exit 1
 
-# Type check (runs on entire codebase)
+# Ensure tests/typecheck run against the STAGED snapshot, not local unstaged changes
+# Stash unstaged changes (including untracked) while keeping the index intact
+git stash -q --keep-index --include-untracked
+
+# Always attempt to restore the stash on exit
+restore_stash() {
+  # Pop only if there is a stash entry and pop succeeds
+  git stash pop -q 2>/dev/null || true
+}
+trap restore_stash EXIT
+
+# Type check (runs on entire codebase) against staged snapshot
 npm run typecheck || exit 1
 
-# Tests with coverage threshold enforcement
+# Tests with coverage threshold enforcement against staged snapshot
 npm test --silent -- --bail --coverage || exit 1

@@ -125,7 +125,7 @@ describe('Drag & Drop behavior', () => {
     );
 
     const inputs = screen.getAllByLabelText('Todo text');
-    const handles = screen.getAllByRole('button', { name: /drag to reorder/i });
+    const handles = screen.getAllByTestId('todo-indent');
 
     // Drag Parent A (with children) over Parent B
     const sourceHandle = handles[0];

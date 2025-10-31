@@ -62,12 +62,13 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
 
 ### Implementation checklist (step by step)
 
-- [ ] Baseline diagnosis and a failing test
-  - [ ] Add a minimal reproducible unit/integration test for resurfacing on delete
+- [x] Baseline diagnosis and a failing test
+  - [x] Add a minimal reproducible unit/integration test for resurfacing on delete
     - Place under `src/renderer/__tests__/e2e/hierarchy-behavior.test.tsx`
   - [ ] Add a minimal reproducible unit/integration test for resurfacing on drag
     - Place under `src/renderer/__tests__/e2e/hierarchy-behavior.test.tsx`
-  - [ ] Verify tests fail on `main` to confirm we’re capturing the bug
+  - [-] Verify tests fail on `main` to confirm we’re capturing the bug
+    - Had to skip all tests to commit, tests arent working in full
 
 - [ ] Introduce explicit relationships in data model
   - [ ] Extend `src/renderer/features/todos/types.ts` with `parentId: string | null` and `section: 'active' | 'completed'`
