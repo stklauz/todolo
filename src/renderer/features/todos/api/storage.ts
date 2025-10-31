@@ -1,5 +1,6 @@
 import type { EditorTodo, AppSettings } from '../types';
 import { debugLogger } from '../../../utils/debug';
+import { runTodosMigration } from '../utils/migration';
 
 // v2 index file format
 export type ListsIndexV2 = {
@@ -14,6 +15,7 @@ export type ListsIndexV2 = {
 };
 
 export type ListTodosV2 = { version: 2; todos: EditorTodo[] };
+export type ListTodosV3 = { version: 3; todos: EditorTodo[] };
 
 export async function loadListsIndex(): Promise<ListsIndexV2> {
   return debugLogger.measureAsync('storage.loadListsIndex', async () => {
@@ -122,7 +124,7 @@ export async function saveListsIndex(doc: ListsIndexV2): Promise<boolean> {
   });
 }
 
-export async function loadListTodos(listId: string): Promise<ListTodosV2> {
+export async function loadListTodos(listId: string): Promise<ListTodosV3> {
   return debugLogger.measureAsync('storage.loadListTodos', async () => {
     try {
       debugLogger.log('info', 'Loading list todos', { listId });
@@ -136,11 +138,15 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
         (res as unknown as { version?: unknown }).version === 2 &&
         Array.isArray((res as unknown as { todos?: unknown }).todos)
       ) {
+        const { todos: migratedTodos, stats } = runTodosMigration(res.todos);
         debugLogger.log('info', 'List todos loaded successfully', {
           listId,
           todoCount: res.todos.length,
+          migratedTo: 3,
+          inferredParentIds: stats.inferredParentIds,
+          reparented: stats.reparentedDueToInvariant,
         });
-        return res;
+        return { version: 3 as const, todos: migratedTodos };
       }
       // Validation failed without throwing: log a warning for visibility
       debugLogger.log(
@@ -159,13 +165,13 @@ export async function loadListTodos(listId: string): Promise<ListTodosV2> {
     } catch (error) {
       debugLogger.log('error', 'Failed to load list todos', { listId, error });
     }
-    return { version: 2, todos: [] };
+    return { version: 3, todos: [] };
   });
 }
 
 export async function saveListTodos(
   listId: string,
-  doc: ListTodosV2,
+  doc: ListTodosV2 | ListTodosV3,
 ): Promise<boolean> {
   return debugLogger.measureAsync('storage.saveListTodos', async () => {
     try {
@@ -176,7 +182,16 @@ export async function saveListTodos(
       const res = (await window.electron.ipcRenderer.invoke(
         'save-list-todos',
         listId,
-        doc,
+        // Persist v2-compatible shape: strip runtime-only fields
+        {
+          version: 2,
+          todos: doc.todos.map((t) => ({
+            id: t.id,
+            text: t.text,
+            completed: t.completed,
+            indent: Number(t.indent ?? 0),
+          })),
+        } satisfies ListTodosV2,
       )) as { success?: boolean; error?: string };
       const success = !!res?.success;
       debugLogger.log(success ? 'info' : 'error', 'List todos save result', {

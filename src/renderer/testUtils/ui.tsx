@@ -19,8 +19,8 @@ export function setupDefaultMocks(partial?: MockOverrides) {
     selectedListId: 'list-1',
   });
   mockStorage.loadListTodos.mockResolvedValue({
-    version: 2,
-    todos: [{ id: 1, text: '', completed: false, indent: 0 }],
+    version: 3,
+    todos: [{ id: 1, text: '', completed: false, indent: 0, parentId: null }],
   });
   mockStorage.saveListsIndex.mockResolvedValue(true);
   mockStorage.saveListTodos.mockResolvedValue(true);

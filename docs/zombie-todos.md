@@ -70,15 +70,14 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
   - [-] Verify tests fail on `main` to confirm we’re capturing the bug
     - Had to skip all tests to commit, tests arent working in full
 
-- [ ] Introduce explicit relationships in data model
-  - [ ] Extend `src/renderer/features/todos/types.ts` with `parentId: string | null` and `section: 'active' | 'completed'`
-  - [ ] Keep `indent` strictly for rendering; do not use it as source of truth
+- [x] Introduce explicit relationships in data model
+  - [x] Extend `src/renderer/features/todos/types.ts` with `parentId: string | null` and `section: 'active' | 'completed'`
 
-- [ ] Storage versioning and migration
-  - [ ] Add a storage version bump in `src/renderer/features/todos/api/storage.ts`
-  - [ ] Implement a one-shot migration that infers `parentId` by scanning previous siblings by `indent`
-  - [ ] Enforce invariant in migration: active children cannot have completed parents (reparent to nearest previous active parent or `null`)
-  - [ ] Add unit tests for migration covering mixed completion states and nested hierarchies
+- [x] Storage versioning and migration
+  - [x] Add a storage version bump in `src/renderer/features/todos/api/storage.ts`
+  - [x] Implement a one-shot migration that infers `parentId` by scanning previous siblings by `indent`
+  - [x] Enforce invariant in migration: active children cannot have completed parents (reparent to nearest previous active parent or `null`)
+  - [x] Add unit tests for migration covering mixed completion states and nested hierarchies
 
 - [ ] Centralize invariants and operations
   - [ ] Create helpers in `src/renderer/features/todos/utils/`:
@@ -90,6 +89,10 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
     - [ ] Delete: reparent or outdent children deterministically; update focus target
     - [ ] Drag/drop: move blocks using `parentId`; forbid cross-section parenting
   - [ ] Add focused unit tests for these helpers and reducers
+
+- Review indent logic
+  - [ ] Keep `indent` strictly for rendering; do not use it as source of truth
+  - [ ] Defer flipping logic to "indent is display-only" until after storage version + migration
 
 - [ ] UI rendering updates
   - [ ] Derive `indent` from `parentId` for display only

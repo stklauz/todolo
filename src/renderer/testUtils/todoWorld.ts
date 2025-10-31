@@ -18,7 +18,7 @@ export function setupStorage(
     ],
     selectedListId: 'list-1',
   });
-  mockStorage.loadListTodos.mockResolvedValue({ version: 2, todos: [] });
+  mockStorage.loadListTodos.mockResolvedValue({ version: 3, todos: [] });
   mockStorage.saveListsIndex.mockResolvedValue(true);
   mockStorage.saveListTodos.mockResolvedValue(true);
   mockStorage.duplicateList.mockResolvedValue({
@@ -140,7 +140,7 @@ export function createWorld(overrides?: Parameters<typeof setupStorage>[0]) {
     const mockStorage = storage as jest.Mocked<typeof storage>;
     if (newListTodos) {
       mockStorage.loadListTodos.mockResolvedValueOnce({
-        version: 2,
+        version: 3,
         todos: newListTodos,
       });
     }

@@ -44,7 +44,7 @@ describe('useTodosPersistence', () => {
       ];
 
       mockStorage.loadListTodos.mockResolvedValue({
-        version: 2,
+        version: 3,
         todos: todosWithHighIds,
       });
 
@@ -73,7 +73,7 @@ describe('useTodosPersistence', () => {
       ];
 
       mockStorage.loadListTodos.mockResolvedValue({
-        version: 2,
+        version: 3,
         todos: todosWithLowIds,
       });
 
@@ -102,7 +102,7 @@ describe('useTodosPersistence', () => {
 
     it('should handle empty todo list without affecting counter', async () => {
       mockStorage.loadListTodos.mockResolvedValue({
-        version: 2,
+        version: 3,
         todos: [],
       });
 
@@ -141,12 +141,12 @@ describe('useTodosPersistence', () => {
 
       mockStorage.loadListTodos.mockImplementation(async (listId: string) => {
         if (listId === 'list-1') {
-          return { version: 2, todos: list1Todos };
+          return { version: 3, todos: list1Todos };
         }
         if (listId === 'list-2') {
-          return { version: 2, todos: list2Todos };
+          return { version: 3, todos: list2Todos };
         }
-        return { version: 2, todos: [] };
+        return { version: 3, todos: [] };
       });
 
       const { rerender } = renderHook((props) => useTodosPersistence(props), {

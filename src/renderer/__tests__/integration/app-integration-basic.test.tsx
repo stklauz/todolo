@@ -58,8 +58,16 @@ describe('E2E Basic Flow Tests', () => {
       });
 
       mockStorage.loadListTodos.mockResolvedValue({
-        version: 2,
-        todos: [{ id: 1, text: 'Existing todo', completed: false, indent: 0 }],
+        version: 3,
+        todos: [
+          {
+            id: 1,
+            text: 'Existing todo',
+            completed: false,
+            indent: 0,
+            parentId: null,
+          },
+        ],
       });
 
       render(

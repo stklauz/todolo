@@ -130,20 +130,30 @@ describe('Storage API', () => {
 
       const result = await loadListTodos('list-1');
 
-      expect(result).toEqual({ version: 2, todos: [] });
+      expect(result).toEqual({ version: 3, todos: [] });
       expect(mockInvoke).toHaveBeenCalledWith('load-list-todos', 'list-1');
     });
 
     it('should return loaded todos when valid', async () => {
-      const mockData = {
+      const incoming = {
         version: 2,
         todos: [{ id: 1, text: 'Test todo', completed: false, indent: 0 }],
       };
-      mockInvoke.mockResolvedValue(mockData);
+      mockInvoke.mockResolvedValue(incoming);
 
       const result = await loadListTodos('list-1');
-
-      expect(result).toEqual(mockData);
+      expect(result).toEqual({
+        version: 3,
+        todos: [
+          {
+            id: 1,
+            text: 'Test todo',
+            completed: false,
+            indent: 0,
+            parentId: null,
+          },
+        ],
+      });
     });
 
     it('should return default data when invalid response', async () => {
@@ -151,7 +161,7 @@ describe('Storage API', () => {
 
       const result = await loadListTodos('list-1');
 
-      expect(result).toEqual({ version: 2, todos: [] });
+      expect(result).toEqual({ version: 3, todos: [] });
     });
   });
 

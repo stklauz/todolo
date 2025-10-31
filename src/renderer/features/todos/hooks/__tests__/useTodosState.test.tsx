@@ -17,7 +17,7 @@ describe('useTodosState', () => {
       selectedListId: undefined,
     });
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: [],
     });
     mockStorage.saveListsIndex.mockResolvedValue(true);
@@ -149,7 +149,7 @@ describe('useTodosState', () => {
       { id: 1, text: 'Original text', completed: false, indent: 0 },
     ];
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: mockTodos,
     });
 
@@ -172,7 +172,7 @@ describe('useTodosState', () => {
       { id: 1, text: 'Test todo', completed: false, indent: 0 },
     ];
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: mockTodos,
     });
 
@@ -195,7 +195,7 @@ describe('useTodosState', () => {
       { id: 1, text: 'First todo', completed: false, indent: 0 },
     ];
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: mockTodos,
     });
 
@@ -221,7 +221,7 @@ describe('useTodosState', () => {
       { id: 1, text: 'Test todo', completed: false, indent: 0 },
     ];
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: mockTodos,
     });
 
@@ -244,7 +244,7 @@ describe('useTodosState', () => {
       { id: 1, text: 'Test todo', completed: false, indent: 0 },
     ];
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: mockTodos,
     });
 
@@ -338,7 +338,7 @@ describe('useTodosState', () => {
 
     // Mock loadListTodos for the duplicated list
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: duplicatedTodos,
     });
 
@@ -391,9 +391,9 @@ describe('useTodosState', () => {
     mockStorage.loadListTodos.mockImplementation(async (listId: string) => {
       loadCallCount++;
       if (listId === 'new-list-id') {
-        return { version: 2, todos: sourceTodos };
+        return { version: 3, todos: sourceTodos };
       }
-      return { version: 2, todos: [] };
+      return { version: 3, todos: [] };
     });
 
     const { result } = renderHook(() => useTodosState());
@@ -445,7 +445,7 @@ describe('useTodosState', () => {
     });
 
     // When duplicating, the hook will load todos for the new list id
-    mockStorage.loadListTodos.mockResolvedValue({ version: 2, todos: [] });
+    mockStorage.loadListTodos.mockResolvedValue({ version: 3, todos: [] });
 
     const { result } = renderHook(() => useTodosState());
 
@@ -470,7 +470,7 @@ describe('useTodosState', () => {
     // Prepare duplicated list payload to mirror current state
     const currentTodos = result.current.getSelectedTodos();
     mockStorage.loadListTodos.mockResolvedValueOnce({
-      version: 2,
+      version: 3,
       todos: currentTodos.map((t) => ({
         id: t.id,
         text: t.text,
@@ -510,7 +510,7 @@ describe('useTodosState', () => {
 
     // Mock loadListTodos for the duplicated list
     mockStorage.loadListTodos.mockResolvedValue({
-      version: 2,
+      version: 3,
       todos: [
         { id: 1, text: 'Task 1', completed: true, indent: 0 },
         { id: 2, text: 'Task 2', completed: false, indent: 0 },

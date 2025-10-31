@@ -168,7 +168,7 @@ describe('Storage API (minimal)', () => {
 
       const res = await loadListTodos('x');
       expect(mockInvoke).toHaveBeenCalledWith('load-list-todos', 'x');
-      expect(res).toEqual({ version: 2, todos: [] });
+      expect(res).toEqual({ version: 3, todos: [] });
     });
 
     test('malformed payload: wrong type for todos → safe default and warn', async () => {
@@ -177,7 +177,7 @@ describe('Storage API (minimal)', () => {
       mockInvoke.mockResolvedValue({ version: 2, todos: 'nope' } as any);
 
       const res = await loadListTodos('list-123');
-      expect(res).toEqual({ version: 2, todos: [] });
+      expect(res).toEqual({ version: 3, todos: [] });
       const warns = debugLogger.getLogs().filter((l) => l.level === 'warn');
       const operations = warns.map((e) => e.operation).join(' | ');
       expect(operations).toContain('Malformed todos payload');
@@ -189,7 +189,7 @@ describe('Storage API (minimal)', () => {
       mockInvoke.mockResolvedValue({ version: 3, todos: [] } as any);
 
       const res = await loadListTodos('list-abc');
-      expect(res).toEqual({ version: 2, todos: [] });
+      expect(res).toEqual({ version: 3, todos: [] });
       const warns = debugLogger.getLogs().filter((l) => l.level === 'warn');
       const operations = warns.map((e) => e.operation).join(' | ');
       expect(operations).toContain('Malformed todos payload');

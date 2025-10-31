@@ -22,7 +22,7 @@ describe('Delete List - UI to DB wiring', () => {
       ],
       selectedListId: 'list-a',
     });
-    mockStorage.loadListTodos.mockResolvedValue({ version: 2, todos: [] });
+    mockStorage.loadListTodos.mockResolvedValue({ version: 3, todos: [] });
     mockStorage.saveListsIndex.mockResolvedValue(true);
     mockStorage.saveListTodos.mockResolvedValue(true);
     mockStorage.deleteList.mockResolvedValue({ success: true });
