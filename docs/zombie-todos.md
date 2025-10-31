@@ -90,9 +90,21 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
     - [x] Drag/drop: move blocks using `parentId`; forbid cross-section parenting
   - [x] Add focused unit tests for these helpers and reducers
 
-- Review indent logic
-  - [ ] Keep `indent` strictly for rendering; do not use it as source of truth
-  - [ ] Defer flipping logic to "indent is display-only" until after storage version + migration
+- [ ] Review indent logic
+  - [x] Keep `indent` strictly for rendering; do not use it as source of truth
+  - [x] Defer flipping logic to "indent is display-only" until after storage version + migration
+
+- [ ] Persist parentId and section to database
+  - [ ] Add database schema migration to add `parent_id` column to `todos` table
+  - [ ] Add database schema migration to add `section` column to `todos` table (optional, can be derived)
+  - [ ] Update `saveListTodos` in `src/main/db.ts` to persist `parentId` (not just derived `indent`)
+  - [ ] Update `loadListTodos` in `src/main/db.ts` to load `parentId` directly
+  - [ ] Update migration to populate `parent_id` from existing data on first load
+  - [ ] Update storage version to v4 to reflect schema change
+  - [ ] Add unit tests for database persistence of `parentId`
+  - [ ] Verify data integrity: save → reload → verify `parentId` relationships maintained
+  - [ ] Stop persisting `indent` in the database; derive it from `parentId` for display only
+  - [ ] Ensure all UI uses `deriveIndentFromParentId()`; never read stored `indent` for logic
 
 - [ ] UI rendering updates
   - [ ] Derive `indent` from `parentId` for display only
@@ -110,6 +122,7 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
   - [ ] Remove any remaining implicit-indent logic used as source of truth
   - [ ] Keep legacy reader for one release if desired; otherwise remove after verifying migration
   - [ ] Update `docs/TODOLO.md` and `docs/releases.md` with migration note and recovery steps
+  - [ ] Optional (v5): drop the `indent` column after one grace release once telemetry confirms no rollbacks
 
 ### Long-term: explicit relationships and sections
 

@@ -1,10 +1,11 @@
 import React from 'react';
 import { TodoRow } from '../TodoRow/TodoRow';
-import type { EditorTodo, Section, AppSettings } from '../../types';
+import type { Section, AppSettings } from '../../types';
 import { useTodosActions } from '../../contexts';
 import useDragReorder from '../../hooks/useDragReorder';
 import useFilteredTodos from '../../hooks/useFilteredTodos';
 import useTodoKeyboardHandlers from '../../hooks/useTodoKeyboardHandlers';
+import { groupTodosBySection, computeSectionById } from '../../utils/todoUtils';
 
 // import { debugLogger } from '../../../../utils/debug';
 
@@ -58,31 +59,7 @@ const TodoList = React.memo(function TodoList({
   );
 
   const sectionOf = (id: number): Section => {
-    const idx = todos.findIndex((x) => x.id === id);
-    if (idx === -1) return 'active';
-    const cur = todos[idx];
-    const indent = Number(cur.indent ?? 0);
-    if (indent <= 0) {
-      // parent effective completion: parent must be completed AND all its children completed
-      let allChildrenCompleted = true;
-      for (let i = idx + 1; i < todos.length; i++) {
-        if (Number(todos[i].indent ?? 0) === 0) break;
-        if (!todos[i].completed) {
-          allChildrenCompleted = false;
-          break;
-        }
-      }
-      return cur.completed && allChildrenCompleted ? 'completed' : 'active';
-    }
-    // child: completed only if child and parent are completed
-    let parentCompleted = false;
-    for (let i = idx - 1; i >= 0; i--) {
-      if (Number(todos[i].indent ?? 0) === 0) {
-        parentCompleted = !!todos[i].completed;
-        break;
-      }
-    }
-    return cur.completed && parentCompleted ? 'completed' : 'active';
+    return computeSectionById(id, todos);
   };
 
   const {
@@ -109,51 +86,9 @@ const TodoList = React.memo(function TodoList({
     return m;
   }, [todos]);
 
+  // Use groupTodosBySection which uses parentId relationships, not indent scanning
   const derived = React.useMemo(() => {
-    const indeterminate = new Map<number, boolean>();
-    const section = new Map<number, 'active' | 'completed'>();
-    for (let i = 0; i < todos.length; i++) {
-      const t = todos[i];
-      const indent = Number(t.indent ?? 0);
-      if (indent <= 0) {
-        // parent: compute indeterminate and effective completion
-        let hasChild = false;
-        let allChildrenCompleted = true;
-        let anyChildCompleted = false;
-        for (let j = i + 1; j < todos.length; j++) {
-          if (Number(todos[j].indent ?? 0) === 0) break;
-          hasChild = true;
-          if (todos[j].completed) anyChildCompleted = true;
-          if (!todos[j].completed) allChildrenCompleted = false;
-        }
-        const effCompleted = t.completed && (!hasChild || allChildrenCompleted);
-        section.set(t.id, effCompleted ? 'completed' : 'active');
-        indeterminate.set(
-          t.id,
-          hasChild && anyChildCompleted && !allChildrenCompleted,
-        );
-      } else {
-        // child: completed only if child and nearest parent are completed
-        let parentCompleted = false;
-        for (let j = i - 1; j >= 0; j--) {
-          if (Number(todos[j].indent ?? 0) === 0) {
-            parentCompleted = !!todos[j].completed;
-            break;
-          }
-        }
-        section.set(
-          t.id,
-          t.completed && parentCompleted ? 'completed' : 'active',
-        );
-        indeterminate.set(t.id, false);
-      }
-    }
-    const active: EditorTodo[] = [];
-    const completed: EditorTodo[] = [];
-    todos.forEach((t) =>
-      section.get(t.id) === 'completed' ? completed.push(t) : active.push(t),
-    );
-    return { indeterminate, section, active, completed } as const;
+    return groupTodosBySection(todos);
   }, [todos]);
 
   const isSingleActive = derived.active.length === 1;

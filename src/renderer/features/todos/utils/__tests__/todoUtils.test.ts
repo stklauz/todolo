@@ -4,6 +4,7 @@ import {
   isChildOf,
   groupTodosBySection,
   computeIndeterminateState,
+  deriveIndentFromParentId,
 } from '../todoUtils';
 
 import type { EditorTodo } from '../../types';
@@ -23,12 +24,64 @@ describe('todoUtils.createNewTodo defaults', () => {
   });
 });
 
+describe('deriveIndentFromParentId', () => {
+  it('should return 0 for top-level todo (parentId === null)', () => {
+    const todo: EditorTodo = {
+      id: 1,
+      text: 'Top-level',
+      completed: false,
+      parentId: null,
+    };
+    expect(deriveIndentFromParentId(todo)).toBe(0);
+  });
+
+  it('should return 1 for child todo (parentId !== null)', () => {
+    const todo: EditorTodo = {
+      id: 2,
+      text: 'Child',
+      completed: false,
+      parentId: 1,
+    };
+    expect(deriveIndentFromParentId(todo)).toBe(1);
+  });
+
+  it('should return 0 when parentId is undefined (treats as null)', () => {
+    const todo: EditorTodo = {
+      id: 3,
+      text: 'Undefined parent',
+      completed: false,
+      parentId: undefined as any,
+    };
+    expect(deriveIndentFromParentId(todo)).toBe(0);
+  });
+
+  it('should ignore existing indent field (parentId is source of truth)', () => {
+    const todoWithIndent1: EditorTodo = {
+      id: 4,
+      text: 'Mismatched indent',
+      completed: false,
+      parentId: null,
+      indent: 1, // This should be ignored
+    };
+    expect(deriveIndentFromParentId(todoWithIndent1)).toBe(0);
+
+    const todoWithIndent0: EditorTodo = {
+      id: 5,
+      text: 'Child with indent 0',
+      completed: false,
+      parentId: 1,
+      indent: 0, // This should be ignored
+    };
+    expect(deriveIndentFromParentId(todoWithIndent0)).toBe(1);
+  });
+});
+
 describe('enhanced todoUtils', () => {
   describe('computeSectionById', () => {
     it('should return active for uncompleted parent', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
       ];
 
       expect(computeSectionById(1, todos)).toBe('active');
@@ -36,8 +89,8 @@ describe('enhanced todoUtils', () => {
 
     it('should return active for completed parent with uncompleted child', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: true, indent: 0 },
-        { id: 2, text: 'Child', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: true, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
       ];
 
       expect(computeSectionById(1, todos)).toBe('active');
@@ -45,9 +98,9 @@ describe('enhanced todoUtils', () => {
 
     it('should return completed for completed parent with all children completed', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: true, indent: 0 },
-        { id: 2, text: 'Child 1', completed: true, indent: 1 },
-        { id: 3, text: 'Child 2', completed: true, indent: 1 },
+        { id: 1, text: 'Parent', completed: true, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: true, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: true, indent: 1, parentId: 1 },
       ];
 
       expect(computeSectionById(1, todos)).toBe('completed');
@@ -55,8 +108,8 @@ describe('enhanced todoUtils', () => {
 
     it('should return active for child when parent is not completed', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child', completed: true, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: true, indent: 1, parentId: 1 },
       ];
 
       expect(computeSectionById(2, todos)).toBe('active');
@@ -64,8 +117,8 @@ describe('enhanced todoUtils', () => {
 
     it('should return completed for child when both parent and child are completed', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: true, indent: 0 },
-        { id: 2, text: 'Child', completed: true, indent: 1 },
+        { id: 1, text: 'Parent', completed: true, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: true, indent: 1, parentId: 1 },
       ];
 
       expect(computeSectionById(2, todos)).toBe('completed');
@@ -83,8 +136,8 @@ describe('enhanced todoUtils', () => {
   describe('isChildOf', () => {
     it('should return true for direct child relationship', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
       ];
 
       expect(isChildOf(1, 2, todos)).toBe(true);
@@ -92,10 +145,10 @@ describe('enhanced todoUtils', () => {
 
     it('should return true for nested child relationship', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: false, indent: 1 },
-        { id: 3, text: 'Child 2', completed: false, indent: 1 },
-        { id: 4, text: 'Grandchild', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: false, indent: 1, parentId: 1 },
+        { id: 4, text: 'Grandchild', completed: false, indent: 1, parentId: 2 },
       ];
 
       expect(isChildOf(1, 4, todos)).toBe(true);
@@ -111,8 +164,8 @@ describe('enhanced todoUtils', () => {
 
     it('should return false for parent-child relationship with different completion status', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child', completed: true, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: true, indent: 1, parentId: 1 },
       ];
 
       expect(isChildOf(1, 2, todos)).toBe(false);
@@ -120,28 +173,40 @@ describe('enhanced todoUtils', () => {
 
     it('should return false when target comes before source', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
       ];
 
       expect(isChildOf(2, 1, todos)).toBe(false);
     });
 
-    it('should return false when target is not indented more than source', () => {
+    it('should return false when target is not a descendant', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Sibling', completed: false, indent: 0 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Sibling', completed: false, indent: 0, parentId: null },
       ];
 
       expect(isChildOf(1, 2, todos)).toBe(false);
     });
 
-    it('should return false when relationship is broken by intermediate todo', () => {
+    it('should return false when relationship is broken by different parent', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent 1', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: false, indent: 1 },
-        { id: 3, text: 'Parent 2', completed: false, indent: 0 },
-        { id: 4, text: 'Child 2', completed: false, indent: 1 },
+        {
+          id: 1,
+          text: 'Parent 1',
+          completed: false,
+          indent: 0,
+          parentId: null,
+        },
+        { id: 2, text: 'Child 1', completed: false, indent: 1, parentId: 1 },
+        {
+          id: 3,
+          text: 'Parent 2',
+          completed: false,
+          indent: 0,
+          parentId: null,
+        },
+        { id: 4, text: 'Child 2', completed: false, indent: 1, parentId: 3 },
       ];
 
       expect(isChildOf(1, 4, todos)).toBe(false);
@@ -160,10 +225,34 @@ describe('enhanced todoUtils', () => {
   describe('groupTodosBySection', () => {
     it('should group todos correctly by section', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Active Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Active Child', completed: false, indent: 1 },
-        { id: 3, text: 'Completed Parent', completed: true, indent: 0 },
-        { id: 4, text: 'Completed Child', completed: true, indent: 1 },
+        {
+          id: 1,
+          text: 'Active Parent',
+          completed: false,
+          indent: 0,
+          parentId: null,
+        },
+        {
+          id: 2,
+          text: 'Active Child',
+          completed: false,
+          indent: 1,
+          parentId: 1,
+        },
+        {
+          id: 3,
+          text: 'Completed Parent',
+          completed: true,
+          indent: 0,
+          parentId: null,
+        },
+        {
+          id: 4,
+          text: 'Completed Child',
+          completed: true,
+          indent: 1,
+          parentId: 3,
+        },
       ];
 
       const result = groupTodosBySection(todos);
@@ -176,9 +265,9 @@ describe('enhanced todoUtils', () => {
 
     it('should handle mixed completion states correctly', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: true, indent: 0 },
-        { id: 2, text: 'Child 1', completed: true, indent: 1 },
-        { id: 3, text: 'Child 2', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: true, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: true, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: false, indent: 1, parentId: 1 },
       ];
 
       const result = groupTodosBySection(todos);
@@ -201,9 +290,9 @@ describe('enhanced todoUtils', () => {
   describe('computeIndeterminateState', () => {
     it('should mark parent as indeterminate when some children are completed', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: true, indent: 1 },
-        { id: 3, text: 'Child 2', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: true, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: false, indent: 1, parentId: 1 },
       ];
 
       const result = computeIndeterminateState(todos);
@@ -215,9 +304,9 @@ describe('enhanced todoUtils', () => {
 
     it('should not mark parent as indeterminate when all children are completed', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: true, indent: 1 },
-        { id: 3, text: 'Child 2', completed: true, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: true, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: true, indent: 1, parentId: 1 },
       ];
 
       const result = computeIndeterminateState(todos);
@@ -227,9 +316,9 @@ describe('enhanced todoUtils', () => {
 
     it('should not mark parent as indeterminate when no children are completed', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: false, indent: 1 },
-        { id: 3, text: 'Child 2', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: false, indent: 1, parentId: 1 },
       ];
 
       const result = computeIndeterminateState(todos);
@@ -239,8 +328,8 @@ describe('enhanced todoUtils', () => {
 
     it('should never mark children as indeterminate', () => {
       const todos: EditorTodo[] = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child', completed: true, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: true, indent: 1, parentId: 1 },
       ];
 
       const result = computeIndeterminateState(todos);

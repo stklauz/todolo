@@ -1,6 +1,12 @@
 // import React from 'react'; // Not needed in this file
 import type { EditorTodo } from '../types';
-import { reparentChildren, outdentChildren } from '../utils/todoUtils';
+import {
+  reparentChildren,
+  outdentChildren,
+  canAttachChild,
+  computeSectionById,
+  deriveIndentFromParentId,
+} from '../utils/todoUtils';
 import { debugLogger } from '../../../utils/debug';
 
 type UseTodosOperationsProps = {
@@ -113,17 +119,57 @@ export default function useTodosOperations({
     });
   }
 
+  /**
+   * Sets indent by manipulating parentId (indent is display-only).
+   * - indent === 0: outdent (set parentId = null)
+   * - indent === 1: indent (find nearest previous top-level active parent and attach)
+   */
   function setIndent(id: number, indent: number) {
     const clamped = Math.max(0, Math.min(1, indent | 0));
     setSelectedTodos((prev) => {
-      const updated = prev.map((t) => {
-        if (t.id === id) {
-          // Only update if indent actually changed
-          if (t.indent === clamped) return t;
-          return { ...t, indent: clamped };
+      const targetIndex = prev.findIndex((t) => t.id === id);
+      if (targetIndex === -1) return prev;
+
+      const target = prev[targetIndex];
+      const currentIndent = deriveIndentFromParentId(target);
+
+      // Only update if indent actually changed
+      if (currentIndent === clamped) return prev;
+
+      const updated = [...prev];
+
+      if (clamped === 0) {
+        // Outdent: set parentId to null
+        updated[targetIndex] = {
+          ...target,
+          parentId: null,
+          indent: 0,
+        };
+      } else {
+        // Indent: find nearest previous top-level (parentId === null) active parent
+        const targetSection = computeSectionById(id, prev);
+        let newParentId: number | null = null;
+
+        // Search backward for nearest top-level active parent
+        for (let i = targetIndex - 1; i >= 0; i--) {
+          const candidate = prev[i];
+          if (candidate.parentId == null) {
+            // Found a top-level todo
+            const candidateSection = computeSectionById(candidate.id, prev);
+            if (canAttachChild(candidateSection, targetSection)) {
+              newParentId = candidate.id;
+              break;
+            }
+          }
         }
-        return t;
-      });
+
+        // If no valid parent found, still allow visual indent (display-only)
+        updated[targetIndex] =
+          newParentId == null
+            ? { ...target, indent: 1 }
+            : { ...target, parentId: newParentId, indent: 1 };
+      }
+
       // Only trigger save if something actually changed
       if (updated !== prev) {
         saveWithStrategy('debounced', 200);
@@ -132,24 +178,55 @@ export default function useTodosOperations({
     });
   }
 
+  /**
+   * Changes indent by delta, delegating to setIndent.
+   */
   function changeIndent(id: number, delta: number) {
     setSelectedTodos((prev) => {
-      const updated = prev.map((t) => {
-        if (t.id === id) {
-          const newIndent = Math.max(
-            0,
-            Math.min(1, Number(t.indent ?? 0) + delta),
-          );
-          // Only update if indent actually changed
-          if (t.indent === newIndent) return t;
-          return { ...t, indent: newIndent };
+      const target = prev.find((t) => t.id === id);
+      if (!target) return prev;
+
+      const currentIndent = deriveIndentFromParentId(target);
+      const newIndent = Math.max(0, Math.min(1, currentIndent + delta));
+
+      // Only update if indent would actually change
+      if (currentIndent === newIndent) return prev;
+
+      // Call setIndent logic inline to avoid double save
+      const targetIndex = prev.findIndex((t) => t.id === id);
+      const updated = [...prev];
+
+      if (newIndent === 0) {
+        // Outdent: set parentId to null
+        updated[targetIndex] = {
+          ...target,
+          parentId: null,
+          indent: 0,
+        };
+      } else {
+        // Indent: find nearest previous top-level active parent
+        const targetSection = computeSectionById(id, prev);
+        let newParentId: number | null = null;
+
+        for (let i = targetIndex - 1; i >= 0; i--) {
+          const candidate = prev[i];
+          if (candidate.parentId == null) {
+            const candidateSection = computeSectionById(candidate.id, prev);
+            if (canAttachChild(candidateSection, targetSection)) {
+              newParentId = candidate.id;
+              break;
+            }
+          }
         }
-        return t;
-      });
-      // Only trigger save if something actually changed
-      if (updated !== prev) {
-        saveWithStrategy('debounced', 200);
+
+        // If no valid parent found, still allow visual indent (display-only)
+        updated[targetIndex] =
+          newParentId == null
+            ? { ...target, indent: 1 }
+            : { ...target, parentId: newParentId, indent: 1 };
       }
+
+      saveWithStrategy('debounced', 200);
       return updated;
     });
   }
@@ -181,15 +258,20 @@ export default function useTodosOperations({
       }
 
       const next = [...prev];
-      const baseIndent = Math.max(
-        0,
-        Math.min(1, Number(prev[index]?.indent ?? 0)),
-      );
+      const baseTodo = prev[index];
+      // New todo inherits parentId from base todo (indent is derived from parentId)
+      const baseParentId = baseTodo?.parentId ?? null;
       next.splice(index + 1, 0, {
         id,
         text,
         completed: false,
-        indent: baseIndent,
+        parentId: baseParentId,
+        indent: deriveIndentFromParentId({
+          id,
+          text,
+          completed: false,
+          parentId: baseParentId,
+        }),
       });
       return next;
     });

@@ -8,6 +8,21 @@ export const clampIndent = (indent: number): number =>
   Math.max(MIN_INDENT, Math.min(MAX_INDENT, indent));
 
 /**
+ * Derives display indent from parentId relationship.
+ * This ensures indent is a display-only concern, not source of truth.
+ * Current model: 0 = top-level (parentId === null || parentId === undefined), 1 = child (parentId !== null && parentId !== undefined)
+ */
+export const deriveIndentFromParentId = (todo: EditorTodo): number => {
+  // If parentId is explicitly null, it's top-level (display indent 0)
+  if (todo.parentId === null) return 0;
+  // If parentId is a number, it's a child (display indent 1)
+  if (typeof todo.parentId === 'number') return 1;
+  // Legacy case: parentId is undefined, fall back to stored indent
+  const legacy = Number(todo.indent ?? 0);
+  return legacy > 0 ? 1 : 0;
+};
+
+/**
  * Validates if todo text is not empty
  */
 export const validateTodoText = (text: string): boolean =>
@@ -15,70 +30,53 @@ export const validateTodoText = (text: string): boolean =>
 
 /**
  * Computes the effective section (active/completed) for a todo based on its completion status
- * and the completion status of its children (for parents) or parent (for children)
+ * and the completion status of its children (for parents) or parent (for children).
+ * Uses parentId relationships instead of indent scanning.
  */
 export const computeTodoSection = (
   todo: EditorTodo,
   todos: EditorTodo[],
-  index: number,
+  _index: number,
 ): Section => {
-  const indent = Number(todo.indent ?? 0);
-
-  if (indent <= 0) {
-    // Parent: effective completion requires parent AND all children to be completed
-    let allChildrenCompleted = true;
-    for (let i = index + 1; i < todos.length; i++) {
-      if (Number(todos[i].indent ?? 0) === 0) break;
-      if (!todos[i].completed) {
-        allChildrenCompleted = false;
-        break;
-      }
-    }
+  // Top-level todo (parentId === null): check if it and all its children are completed
+  if (todo.parentId == null) {
+    // Find all immediate children by parentId
+    const children = todos.filter((t) => t.parentId === todo.id);
+    const allChildrenCompleted = children.every((child) => child.completed);
     return todo.completed && allChildrenCompleted ? 'completed' : 'active';
   }
-  // Child: completed only if child and parent are completed
-  let parentCompleted = false;
-  for (let i = index - 1; i >= 0; i--) {
-    if (Number(todos[i].indent ?? 0) === 0) {
-      parentCompleted = !!todos[i].completed;
-      break;
-    }
-  }
+
+  // Child todo: completed only if both child and parent are completed
+  const parent = todos.find((t) => t.id === todo.parentId);
+  const parentCompleted = parent ? !!parent.completed : false;
   return todo.completed && parentCompleted ? 'completed' : 'active';
 };
 
 /**
- * Computes indeterminate state for todos (when parent has some but not all children completed)
+ * Computes indeterminate state for todos (when parent has some but not all children completed).
+ * Uses parentId relationships instead of indent scanning.
  */
 export const computeIndeterminateState = (
   todos: EditorTodo[],
 ): Map<number, boolean> => {
   const indeterminate = new Map<number, boolean>();
 
-  for (let i = 0; i < todos.length; i++) {
-    const t = todos[i];
-    const indent = Number(t.indent ?? 0);
-
-    if (indent <= 0) {
-      // Parent: check if has children and some are completed but not all
-      let hasChild = false;
-      let allChildrenCompleted = true;
-      let anyChildCompleted = false;
-
-      for (let j = i + 1; j < todos.length; j++) {
-        if (Number(todos[j].indent ?? 0) === 0) break;
-        hasChild = true;
-        if (todos[j].completed) anyChildCompleted = true;
-        if (!todos[j].completed) allChildrenCompleted = false;
-      }
+  for (const todo of todos) {
+    // Only top-level todos (parents) can be indeterminate
+    if (todo.parentId == null) {
+      // Find all immediate children by parentId
+      const children = todos.filter((t) => t.parentId === todo.id);
+      const hasChild = children.length > 0;
+      const anyChildCompleted = children.some((child) => child.completed);
+      const allChildrenCompleted = children.every((child) => child.completed);
 
       indeterminate.set(
-        t.id,
+        todo.id,
         hasChild && anyChildCompleted && !allChildrenCompleted,
       );
     } else {
       // Child: never indeterminate
-      indeterminate.set(t.id, false);
+      indeterminate.set(todo.id, false);
     }
   }
 
@@ -171,46 +169,25 @@ export const updateTodoIndent = (
 });
 
 /**
- * Computes the section for a todo by ID in the todos array (used in drag/drop)
- * This is a simplified version that matches the logic in useDragReorder
+ * Computes the section for a todo by ID in the todos array (used in drag/drop).
+ * Uses parentId relationships instead of indent scanning.
  */
 export const computeSectionById = (
   id: number,
   todos: EditorTodo[],
 ): Section => {
+  const todo = todos.find((t) => t.id === id);
+  if (!todo) return 'active';
+
+  // Delegate to computeTodoSection which uses parentId
   const idx = todos.findIndex((t) => t.id === id);
-  if (idx === -1) return 'active';
-
-  const cur = todos[idx];
-  const indent = Number(cur.indent ?? 0);
-
-  if (indent <= 0) {
-    // Parent: effective completion requires parent AND all children to be completed
-    let allChildrenCompleted = true;
-    for (let i = idx + 1; i < todos.length; i++) {
-      if (Number(todos[i].indent ?? 0) === 0) break;
-      if (!todos[i].completed) {
-        allChildrenCompleted = false;
-        break;
-      }
-    }
-    return cur.completed && allChildrenCompleted ? 'completed' : 'active';
-  }
-
-  // Child: completed only if child and parent are completed
-  let parentCompleted = false;
-  for (let i = idx - 1; i >= 0; i--) {
-    if (Number(todos[i].indent ?? 0) === 0) {
-      parentCompleted = !!todos[i].completed;
-      break;
-    }
-  }
-  return cur.completed && parentCompleted ? 'completed' : 'active';
+  return computeTodoSection(todo, todos, idx);
 };
 
 /**
- * Checks if targetId is a child of sourceId in the todos array
- * Used for drag/drop validation
+ * Checks if targetId is a descendant of sourceId in the todos array.
+ * Uses parentId relationships instead of indent scanning.
+ * Used for drag/drop validation.
  */
 export const isChildOf = (
   sourceId: number,
@@ -230,23 +207,42 @@ export const isChildOf = (
   // Must be in same section (same completion status)
   if (sourceTodo.completed !== targetTodo.completed) return false;
 
-  // Target must come after source
+  // Target must come after source in array order
   if (targetIndex <= sourceIndex) return false;
 
-  const sourceIndent = sourceTodo.indent ?? 0;
-  const targetIndent = targetTodo.indent ?? 0;
+  // Walk up the parentId chain from target to see if sourceId is an ancestor
+  let currentId: number | null | undefined = targetTodo.parentId;
+  const guard = new Set<number>();
+  const idToTodo = new Map<number, EditorTodo>();
+  todos.forEach((t) => {
+    if (t.id != null) idToTodo.set(t.id, t);
+  });
+  while (currentId != null) {
+    if (guard.has(currentId)) break; // Safety against cycles
+    guard.add(currentId);
+    if (currentId === sourceId) {
+      return true;
+    }
+    const parent = idToTodo.get(currentId);
+    currentId = parent?.parentId;
+  }
 
-  // Target must be indented more than source
+  // Fallback for legacy/visual-only indentation:
+  // Treat a consecutive deeper-indented block after the source as its visual children.
+  const sourceIndent = Number(sourceTodo.indent ?? 0);
+  const targetIndent = Number(targetTodo.indent ?? 0);
   if (targetIndent <= sourceIndent) return false;
 
-  // Check if there's any todo between source and target that breaks the relationship
-  for (let i = sourceIndex + 1; i < targetIndex; i++) {
-    const todo = todos[i];
-    if (todo && (todo.indent ?? 0) <= sourceIndent) {
+  // Ensure target lies within the immediate visual block of the source
+  for (let i = sourceIndex + 1; i <= targetIndex; i++) {
+    const t = todos[i];
+    if (!t) return false;
+    const ind = Number(t.indent ?? 0);
+    if (ind <= sourceIndent) {
+      // We reached a sibling/parent boundary before target
       return false;
     }
   }
-
   return true;
 };
 
@@ -274,7 +270,10 @@ export const reparentChildren = (
       ? {
           ...t,
           parentId: newParentId,
-          indent: newParentId == null ? 0 : (t.indent ?? 0),
+          indent: deriveIndentFromParentId({
+            ...t,
+            parentId: newParentId,
+          }),
         }
       : t,
   );
