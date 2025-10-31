@@ -1,10 +1,27 @@
 import {
+  createNewTodo,
   computeSectionById,
   isChildOf,
   groupTodosBySection,
   computeIndeterminateState,
 } from '../todoUtils';
+
 import type { EditorTodo } from '../../types';
+
+describe('todoUtils.createNewTodo defaults', () => {
+  test('sets parentId=null and section=active by default', () => {
+    const todo = createNewTodo('hello', 1);
+    expect((todo as any).parentId).toBeNull();
+    expect((todo as any).section).toBe('active');
+  });
+
+  test('indent remains a rendering concern and is clamped', () => {
+    const low = createNewTodo('low', 2, -10);
+    const high = createNewTodo('high', 3, 999);
+    expect(low.indent).toBeGreaterThanOrEqual(0);
+    expect(high.indent).toBeLessThanOrEqual(1);
+  });
+});
 
 describe('enhanced todoUtils', () => {
   describe('computeSectionById', () => {

@@ -24,6 +24,8 @@ describe('todosReducer', () => {
         text: 'Test todo',
         completed: false,
         indent: 0,
+        section: 'active',
+        parentId: null,
       });
       expect(result.nextId).toBe(2);
     });

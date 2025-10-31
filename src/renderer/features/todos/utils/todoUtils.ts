@@ -139,6 +139,8 @@ export const createNewTodo = (
   text,
   completed: false,
   indent: clampIndent(indent),
+  parentId: null,
+  section: 'active',
 });
 
 /**

@@ -29,6 +29,8 @@ export type EditorTodo = {
   text: string;
   completed: boolean;
   indent?: number;
+  parentId?: number | null;
+  section?: 'active' | 'completed';
 };
 
 export type ListsIndexV2 = {
