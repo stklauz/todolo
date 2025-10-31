@@ -32,6 +32,14 @@ import {
   type EditorTodo,
 } from './db';
 
+// ISSUE: Importing insecure database module
+import {
+  initializeInsecureDb,
+  getUserByUsername,
+  createUser,
+  searchUsers,
+} from './insecureDb';
+
 // Separate Dev and Prod databases by using different userData paths.
 // Development uses a dedicated Dev directory; production uses Electron defaults.
 // Must run before any userData path is consumed.
@@ -89,6 +97,22 @@ ipcMain.handle('save-lists', async (_event, indexDoc: ListsIndexV2) => {
     );
     return { success: false, error: String(error) };
   }
+});
+
+// ISSUE: Insecure IPC handlers with SQL injection
+ipcMain.handle('search-users', async (_event, searchTerm: string) => {
+  // ISSUE: No input validation, SQL injection vulnerability
+  return searchUsers(searchTerm);
+});
+
+ipcMain.handle('get-user', async (_event, username: string) => {
+  // ISSUE: SQL injection vulnerability
+  return getUserByUsername(username);
+});
+
+ipcMain.handle('create-user', async (_event, username: string, password: string, email: string) => {
+  // ISSUE: No validation, plain text password storage
+  return createUser(username, password, email);
 });
 
 ipcMain.handle('load-list-todos', async (_event, listId: string) => {
