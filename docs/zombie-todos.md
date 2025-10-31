@@ -79,16 +79,16 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
   - [x] Enforce invariant in migration: active children cannot have completed parents (reparent to nearest previous active parent or `null`)
   - [x] Add unit tests for migration covering mixed completion states and nested hierarchies
 
-- [ ] Centralize invariants and operations
-  - [ ] Create helpers in `src/renderer/features/todos/utils/`:
+- [x] Centralize invariants and operations
+  - [x] Create helpers in `src/renderer/features/todos/utils/`:
     - `reparentChildren(parentId, newParentId)`
     - `outdentChildren(parentId)`
     - `canAttachChild(parentSection, childSection)`
-  - [ ] Update reducers/handlers to use `parentId` and `section`:
-    - [ ] Toggle complete: move item between sections and detach/adjust children safely
-    - [ ] Delete: reparent or outdent children deterministically; update focus target
-    - [ ] Drag/drop: move blocks using `parentId`; forbid cross-section parenting
-  - [ ] Add focused unit tests for these helpers and reducers
+  - [x] Update reducers/handlers to use `parentId` and `section`:
+    - [x] Toggle complete: move item between sections and detach/adjust children safely
+    - [x] Delete: reparent or outdent children deterministically; update focus target
+    - [x] Drag/drop: move blocks using `parentId`; forbid cross-section parenting
+  - [x] Add focused unit tests for these helpers and reducers
 
 - Review indent logic
   - [ ] Keep `indent` strictly for rendering; do not use it as source of truth

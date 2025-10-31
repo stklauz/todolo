@@ -249,3 +249,49 @@ export const isChildOf = (
 
   return true;
 };
+
+/**
+ * Returns whether a child with given section can attach to a parent with given section.
+ * Cross-section parenting is forbidden.
+ */
+export const canAttachChild = (
+  parentSection: Section,
+  childSection: Section,
+): boolean => parentSection === childSection;
+
+/**
+ * Reparents all immediate children of a parent to a new parent.
+ * - Only updates todos whose parentId === parentId
+ * - Preserves subtree relationships of those children
+ */
+export const reparentChildren = (
+  parentId: number,
+  newParentId: number | null,
+  todos: EditorTodo[],
+): EditorTodo[] => {
+  const next = todos.map((t) =>
+    t.parentId === parentId
+      ? {
+          ...t,
+          parentId: newParentId,
+          indent: newParentId == null ? 0 : (t.indent ?? 0),
+        }
+      : t,
+  );
+  return next;
+};
+
+/**
+ * Outdents all immediate children of a parent to top-level.
+ * - Sets parentId to null
+ * - Sets indent to 0 (display-only)
+ */
+export const outdentChildren = (
+  parentId: number,
+  todos: EditorTodo[],
+): EditorTodo[] => {
+  const next = todos.map((t) =>
+    t.parentId === parentId ? { ...t, parentId: null, indent: 0 } : t,
+  );
+  return next;
+};

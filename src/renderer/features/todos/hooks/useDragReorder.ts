@@ -145,19 +145,30 @@ export default function useDragReorder(
         }
         // insert before target row (or parent row, if target was a parent)
         next.splice(tgtIndex, 0, ...block);
-        // Ensure no orphan children for child moves
+        // Ensure no orphan children for child moves and set parentId accordingly
         if (!srcIsParent) {
           const movedIndex = next.findIndex((t) => t.id === sourceId);
           if (movedIndex !== -1 && Number(next[movedIndex].indent ?? 0) === 1) {
-            let hasParent = false;
+            let parentId: number | null = null;
             for (let i = movedIndex - 1; i >= 0; i--) {
               if (Number(next[i].indent ?? 0) === 0) {
-                hasParent = true;
+                parentId = next[i].id;
                 break;
               }
             }
-            if (!hasParent)
-              next[movedIndex] = { ...next[movedIndex], indent: 0 };
+            if (parentId == null) {
+              next[movedIndex] = {
+                ...next[movedIndex],
+                parentId: null,
+                indent: 0,
+              } as any;
+            } else {
+              next[movedIndex] = {
+                ...next[movedIndex],
+                parentId,
+                indent: 1,
+              } as any;
+            }
           }
         }
         return next;
@@ -216,19 +227,30 @@ export default function useDragReorder(
           }
         }
         next.splice(lastIdx + 1, 0, ...block);
-        // orphan fix for child-only moves
+        // orphan fix for child-only moves and set parentId accordingly
         if (!srcIsParent) {
           const movedIndex = next.findIndex((t) => t.id === sourceId);
           if (movedIndex !== -1 && Number(next[movedIndex].indent ?? 0) === 1) {
-            let hasParent = false;
+            let parentId: number | null = null;
             for (let i = movedIndex - 1; i >= 0; i--) {
               if (Number(next[i].indent ?? 0) === 0) {
-                hasParent = true;
+                parentId = next[i].id;
                 break;
               }
             }
-            if (!hasParent)
-              next[movedIndex] = { ...next[movedIndex], indent: 0 };
+            if (parentId == null) {
+              next[movedIndex] = {
+                ...next[movedIndex],
+                parentId: null,
+                indent: 0,
+              } as any;
+            } else {
+              next[movedIndex] = {
+                ...next[movedIndex],
+                parentId,
+                indent: 1,
+              } as any;
+            }
           }
         }
         return next;

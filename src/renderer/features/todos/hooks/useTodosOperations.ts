@@ -1,5 +1,6 @@
 // import React from 'react'; // Not needed in this file
 import type { EditorTodo } from '../types';
+import { reparentChildren, outdentChildren } from '../utils/todoUtils';
 import { debugLogger } from '../../../utils/debug';
 
 type UseTodosOperationsProps = {
@@ -9,6 +10,24 @@ type UseTodosOperationsProps = {
   saveWithStrategy: (type: 'immediate' | 'debounced', delay?: number) => void;
   nextId: () => number;
 };
+
+/* eslint-disable no-loop-func */
+const isDescendantInList = (
+  list: EditorTodo[],
+  candidateId: number,
+  ancestorId: number,
+): boolean => {
+  let current: EditorTodo | undefined = list.find((t) => t.id === candidateId);
+  const guard = new Set<number>();
+  while (current && current.parentId != null) {
+    if (guard.has(current.id)) break; // safety against cycles
+    guard.add(current.id);
+    if (current.parentId === ancestorId) return true;
+    current = list.find((t) => t.id === (current as EditorTodo).parentId!);
+  }
+  return false;
+};
+/* eslint-enable no-loop-func */
 
 export default function useTodosOperations({
   setSelectedTodos,
@@ -42,19 +61,52 @@ export default function useTodosOperations({
       const next = [...prev];
       const cur = next[idx];
       const newCompleted = !cur.completed;
+      const newSection = newCompleted ? 'completed' : 'active';
 
       // Only update if completion status actually changed
       if (cur.completed === newCompleted) return prev;
 
-      next[idx] = { ...cur, completed: newCompleted };
-      // If toggling a parent (indent 0), apply to all consecutive children
-      if (Number(cur.indent ?? 0) === 0) {
-        for (let i = idx + 1; i < next.length; i++) {
-          const ind = Number(next[i].indent ?? 0);
-          if (ind === 0) break;
-          next[i] = { ...next[i], completed: newCompleted };
+      // Update the toggled item
+      next[idx] = {
+        ...cur,
+        completed: newCompleted,
+        section: newSection,
+      } as any;
+
+      // If toggling a parent (identified by parentId === null), apply to descendants.
+      if (cur.parentId == null) {
+        // Prefer explicit parentId relationships when present
+        const anyLinkedChild = next.some((t) => t.parentId === cur.id);
+        if (anyLinkedChild) {
+          for (let i = 0; i < next.length; i++) {
+            if (
+              next[i].id !== cur.id &&
+              isDescendantInList(next, next[i].id, cur.id)
+            ) {
+              next[i] = {
+                ...next[i],
+                completed: newCompleted,
+                section: newSection as any,
+              } as any;
+            }
+          }
+        } else {
+          // Fallback for legacy data: use indent-based consecutive children block
+          for (let i = idx + 1; i < next.length; i++) {
+            const ind = Number(next[i].indent ?? 0);
+            if (ind === 0) break;
+            next[i] = {
+              ...next[i],
+              completed: newCompleted,
+              section: newSection as any,
+            } as any;
+          }
         }
+      } else {
+        // If toggling a child, optionally ensure section consistency with parent if needed.
+        // We do not force parent toggle here; parent effective section is computed in UI.
       }
+
       // Batch completion saves to avoid main-thread stalls
       saveWithStrategy('debounced', 75);
       return next;
@@ -149,7 +201,29 @@ export default function useTodosOperations({
   function removeTodoAt(index: number) {
     setSelectedTodos((prev) => {
       const next = [...prev];
+      const removed = next[index];
+      if (!removed) return prev;
+      // Remove the item
       next.splice(index, 1);
+      // If removed item was a parent (parentId === null), reparent/outdent its immediate children
+      if (removed.parentId == null) {
+        // Find nearest previous ACTIVE parent candidate in the updated array
+        let newParentId: number | null = null;
+        for (let i = Math.min(index, next.length - 1); i >= 0; i--) {
+          const cand = next[i];
+          if (cand && cand.parentId == null && !cand.completed) {
+            newParentId = cand.id;
+            break;
+          }
+        }
+        const updated =
+          newParentId == null
+            ? outdentChildren(removed.id, next)
+            : reparentChildren(removed.id, newParentId, next);
+        return updated;
+      }
+      // If removed item was a child, no hierarchy mass-change needed
+
       return next;
     });
     // Batch delete saves to avoid main-thread stalls

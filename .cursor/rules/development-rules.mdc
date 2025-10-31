@@ -1,0 +1,51 @@
+---
+alwaysApply: true
+---
+# Development Rules: New Feature Checklist
+
+Use this as a simple, implementation‑doc checklist. Keep changes small, incremental, and well‑tested.
+
+## Quick Checklist (TL;DR)
+
+- Get context of the app structure;
+- Reuse existing code/utilities; avoid duplication.
+- Prefer the simplest solution that meets requirements; minimize complexity.
+- Keep files and code organized per framework/library best practices.
+- Design minimal interfaces and data flow; name things clearly.
+- Write tests as you build (happy path, edges, failures).
+- Validate inputs; fail fast with helpful errors.
+- Add observability (logs/metrics) for key paths.
+- Handle timeouts, retries, and idempotency where needed.
+- Update docs/usage when necessary.
+- Run tests; Run lint; Run tsc; Clean up as you go: remove dead code and noisy logs.
+
+## Testing (Do It As You Build)
+
+- Add or extend tests with each change—not only at the end.
+- **Unit Tests**: Fast, isolated tests for individual functions/components
+- **Integration Tests**: Test interactions between modules
+- **Edge Cases**: Test boundary conditions, error states, and invalid inputs
+- **Performance Tests**: For time-sensitive operations (if applicable)
+- Focus on fast unit tests; add integration/e2e for cross-boundary behavior.
+- Keep tests deterministic and readable; avoid over-mocking.
+- Target: >80% code coverage for new code, 100% for critical paths.
+
+## Quality Assurance Requirements
+
+### After Any Code Generation/Changes
+
+**MANDATORY**: Run these commands after any code changes to ensure quality:
+
+```bash
+npm run lint        # Check for ESLint issues
+npm run typecheck   # TypeScript compilation check
+npm test           # Run test suite with coverage enforcement
+```
+
+**Coverage Requirements**: All changes must maintain or improve code coverage:
+
+- Global coverage thresholds are enforced via pre-commit hooks
+- New code should target >80% coverage for statements, functions, and lines
+- Critical paths (utils, reducers) require >90% coverage
+- Use `npm run test:coverage` to check coverage before committing
+

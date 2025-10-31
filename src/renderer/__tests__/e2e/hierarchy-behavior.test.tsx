@@ -93,6 +93,76 @@ describe('Hierarchy Behavior', () => {
     });
   });
 
+  it.skip('no resurfacing on delete: checked parent should not reappear as active parent', async () => {
+    // Structure per docs: one, two, three(a,b,c), four. Then check "two", delete "three".
+    renderAppWithDefaults({
+      loadAppSettings: jest
+        .fn()
+        .mockResolvedValue({ hideCompletedItems: false }),
+      loadListTodos: jest.fn().mockResolvedValue({
+        version: 2,
+        todos: [
+          { id: 1, text: 'one', completed: false, indent: 0 },
+          { id: 2, text: 'two', completed: false, indent: 0 },
+          { id: 3, text: 'three', completed: false, indent: 0 },
+          { id: 4, text: 'a', completed: false, indent: 1 },
+          { id: 5, text: 'b', completed: false, indent: 1 },
+          { id: 6, text: 'c', completed: false, indent: 1 },
+          { id: 7, text: 'four', completed: false, indent: 0 },
+        ],
+      }),
+    });
+
+    const getCheckboxFor = (value: string) => {
+      const input = screen.getByDisplayValue(value);
+      const span = input.closest('span') as HTMLElement;
+      return span.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    };
+
+    // Check "two"
+    await waitFor(() => expect(getCheckboxFor('two')).toBeInTheDocument());
+    await user.click(getCheckboxFor('two'));
+
+    await waitFor(() => {
+      expect(getCheckboxFor('two')).toBeChecked();
+      // two should be in completed section
+      expect(
+        within(screen.getByTestId('completed-section')).getByDisplayValue(
+          'two',
+        ),
+      ).toBeInTheDocument();
+    });
+
+    // Delete "three": clear then backspace
+    const threeInput = screen.getByDisplayValue('three') as HTMLTextAreaElement;
+    await user.click(threeInput);
+    await user.clear(threeInput);
+    await user.keyboard('{Backspace}');
+
+    // Expectations: "two" remains completed and does not resurface; children reparent under "one"
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('three')).not.toBeInTheDocument();
+      expect(getCheckboxFor('two')).toBeChecked();
+      // Ensure "two" did not resurface in the active section
+      const active = within(screen.getByTestId('active-section'));
+      expect(active.queryByDisplayValue('two')).toBeNull();
+      // a, b, c should remain in active section (implicitly under one)
+      expect(active.getByDisplayValue('a')).toBeInTheDocument();
+      expect(active.getByDisplayValue('b')).toBeInTheDocument();
+      expect(active.getByDisplayValue('c')).toBeInTheDocument();
+    });
+
+    // Focus should move to the previous parent ("one")
+    const oneInput = screen.getByDisplayValue('one') as HTMLTextAreaElement;
+    await waitFor(() => {
+      expect(document.activeElement).toBe(oneInput);
+    });
+  });
+
+  it.skip('no resurfacing on drag: dragging child under another parent should not resurface completed parent', async () => {
+    // Will implement by simulating DnD per repo helpers; kept skipped for now.
+  });
+
   it.skip('unchecking a parent should not uncheck all its children', async () => {
     renderAppWithDefaults({
       loadAppSettings: jest
@@ -150,68 +220,6 @@ describe('Hierarchy Behavior', () => {
       expect(parent).not.toBeChecked();
       expect(child1).toBeChecked();
       expect(child2).not.toBeChecked();
-    });
-  });
-
-  it.skip('parent promotion on delete', async () => {
-    renderAppWithDefaults({
-      loadAppSettings: jest
-        .fn()
-        .mockResolvedValue({ hideCompletedItems: false }),
-      loadListTodos: jest.fn().mockResolvedValue({
-        version: 2,
-        todos: [
-          { id: 1, text: 'Parent 1', completed: false, indent: 0 },
-          { id: 2, text: 'Parent 2', completed: false, indent: 0 },
-          { id: 3, text: 'Parent 3', completed: false, indent: 0 },
-          { id: 4, text: 'Child 1', completed: false, indent: 1 },
-        ],
-      }),
-    });
-
-    // check parent 2
-    const getBoxes = () =>
-      screen.getAllByRole('checkbox', { name: /toggle completed/i });
-    const getCheckboxFor = (value: string) => {
-      const input = screen.getByDisplayValue(value);
-      const span = input.closest('span') as HTMLElement;
-      return span.querySelector('input[type="checkbox"]') as HTMLInputElement;
-    };
-    await waitFor(() => expect(getBoxes().length).toBe(4));
-
-    await user.click(getCheckboxFor('Parent 2'));
-    await waitFor(() => {
-      expect(getCheckboxFor('Parent 1')).not.toBeChecked();
-      expect(getCheckboxFor('Parent 2')).toBeChecked();
-      expect(getCheckboxFor('Parent 3')).not.toBeChecked();
-      expect(getCheckboxFor('Child 1')).not.toBeChecked();
-
-      expect(
-        within(screen.getByTestId('completed-section')).getByDisplayValue(
-          'Parent 2',
-        ),
-      ).toBeInTheDocument();
-    });
-
-    // delete parent 3: clear its text and press Backspace on empty input
-    const inputParent3 = screen.getByDisplayValue(
-      'Parent 3',
-    ) as HTMLTextAreaElement;
-    await user.click(inputParent3);
-    await user.clear(inputParent3);
-    await user.keyboard('{Backspace}');
-
-    await waitFor(() => {
-      // Parent 3 removed and Child 1 reparented under Parent 2
-      expect(screen.queryByDisplayValue('Parent 3')).not.toBeInTheDocument();
-      expect(getCheckboxFor('Parent 1')).not.toBeChecked();
-      expect(getCheckboxFor('Parent 2')).toBeChecked();
-      expect(getCheckboxFor('Child 1')).not.toBeChecked();
-      expect(
-        within(screen.getByTestId('completed-section')).getByDisplayValue(
-          'Parent 2',
-        ),
-      ).toBeInTheDocument();
     });
   });
 });
