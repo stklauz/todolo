@@ -1,3 +1,9 @@
+## [1.5.3](https://github.com/stklauz/todolo/compare/v1.5.2...v1.5.3) (2025-11-01)
+
+### Bug Fixes
+
+- ci fix part II ([a7cfd88](https://github.com/stklauz/todolo/commit/a7cfd8806c64e51ef0004537595314020faf5754))
+
 ## [1.5.2](https://github.com/stklauz/todolo/compare/v1.5.1...v1.5.2) (2025-11-01)
 
 ### Bug Fixes
