@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
-const rootPkgPath = path.join(__dirname, '../..', 'package.json');
-const appPkgPath = path.join(
+const defaultRootPkgPath = path.join(__dirname, '../..', 'package.json');
+const defaultAppPkgPath = path.join(
   __dirname,
   '../..',
   'release',
@@ -10,49 +11,86 @@ const appPkgPath = path.join(
   'package.json',
 );
 
-function readJson(p) {
-  return JSON.parse(fs.readFileSync(p, 'utf8'));
+function readJson(fsImpl, filePath) {
+  return JSON.parse(fsImpl.readFileSync(filePath, 'utf8'));
 }
 
-function writeJson(p, obj) {
-  const content = `${JSON.stringify(obj, null, 2)}\n`;
-  fs.writeFileSync(p, content, 'utf8');
+function writeJson(fsImpl, filePath, data) {
+  const content = `${JSON.stringify(data, null, 2)}\n`;
+  fsImpl.writeFileSync(filePath, content, 'utf8');
 }
 
-function main() {
-  const appPkg = readJson(appPkgPath);
+function normalizeVersion(value) {
+  if (!value) {
+    return undefined;
+  }
 
-  // Prefer explicit VERSION env (e.g., from tag name in CI)
-  let targetVersion = process.env.VERSION;
-  if (targetVersion) {
-    // Normalize: strip leading 'v' if present
-    targetVersion = String(targetVersion).replace(/^v/i, '');
-  } else {
-    // Fallback to root package.json version locally
-    const rootPkg = readJson(rootPkgPath);
+  return String(value).replace(/^v/i, '').trim();
+}
+
+function syncAppVersion({
+  rootPkgPath = defaultRootPkgPath,
+  appPkgPath = defaultAppPkgPath,
+  envVersion,
+  fsImpl = fs,
+  execSyncImpl = execSync,
+  logger = console,
+} = {}) {
+  const normalizedEnvVersion = normalizeVersion(envVersion);
+
+  const rootPkg = readJson(fsImpl, rootPkgPath);
+  const appPkg = readJson(fsImpl, appPkgPath);
+
+  let targetVersion = normalizedEnvVersion;
+  if (!targetVersion) {
     if (!rootPkg.version) {
-      console.error('Root package.json has no version');
-      process.exit(1);
+      throw new Error('Root package.json has no version');
     }
     targetVersion = rootPkg.version;
   }
 
-  if (appPkg.version === targetVersion) {
-    console.log(`App version already ${targetVersion}`);
+  const updatedFiles = [];
+
+  if (normalizedEnvVersion && rootPkg.version !== targetVersion) {
+    rootPkg.version = targetVersion;
+    writeJson(fsImpl, rootPkgPath, rootPkg);
+    logger.log(`Synced root package version to ${targetVersion}`);
+    updatedFiles.push(rootPkgPath);
   } else {
-    appPkg.version = targetVersion;
-    writeJson(appPkgPath, appPkg);
-    console.log(`Synced app version to ${targetVersion}`);
+    logger.log(`Root package version is ${rootPkg.version || targetVersion}`);
   }
 
-  // Stage the change when used during `npm version`
+  if (appPkg.version !== targetVersion) {
+    appPkg.version = targetVersion;
+    writeJson(fsImpl, appPkgPath, appPkg);
+    logger.log(`Synced app version to ${targetVersion}`);
+    updatedFiles.push(appPkgPath);
+  } else {
+    logger.log(`App version already ${targetVersion}`);
+  }
+
+  updatedFiles.forEach((filePath) => {
+    try {
+      execSyncImpl(`git add ${filePath}`, { stdio: 'ignore' });
+    } catch {
+      // ignore when git is not available (e.g., local testing)
+    }
+  });
+
+  return { targetVersion, updatedFiles };
+}
+
+function main() {
   try {
-    require('child_process').execSync(`git add ${appPkgPath}`, {
-      stdio: 'ignore',
-    });
-  } catch {
-    // ignore if git not available
+    syncAppVersion({ envVersion: process.env.VERSION });
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { syncAppVersion };

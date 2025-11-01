@@ -7,7 +7,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "node ./.erb/scripts/sync-app-version.js"
+        "prepareCmd": "npx cross-env VERSION=${nextRelease.version} node ./.erb/scripts/sync-app-version.js"
       }
     ],
     [
