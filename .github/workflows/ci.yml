@@ -65,11 +65,15 @@ jobs:
         run: |
           set -euo pipefail
           DRYRUN_LOG="$(mktemp)"
-          npx semantic-release --dry-run --no-ci | tee "$DRYRUN_LOG"
-          if grep -q "No release will be published." "$DRYRUN_LOG"; then
-            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          if npx semantic-release --dry-run --no-ci | tee "$DRYRUN_LOG"; then
+            if grep -q "The next release version is" "$DRYRUN_LOG"; then
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "semantic-release dry run failed; skipping release" >&2
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
           fi
           rm -f "$DRYRUN_LOG"
 
