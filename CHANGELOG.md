@@ -1,3 +1,9 @@
+## [1.5.6](https://github.com/stklauz/todolo/compare/v1.5.5...v1.5.6) (2025-11-01)
+
+### Bug Fixes
+
+- ci update version in assets ([01ca016](https://github.com/stklauz/todolo/commit/01ca0162d807cdf667a33972d0bcde0ec24e4e20))
+
 ## [1.5.5](https://github.com/stklauz/todolo/compare/v1.5.4...v1.5.5) (2025-11-01)
 
 ### Bug Fixes
