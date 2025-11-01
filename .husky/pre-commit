@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Pull latest changes before committing
+git pull || exit 1
+
 # Lint and format staged files, then re-stage them
 npx lint-staged || exit 1
 

@@ -26,16 +26,10 @@
       "@semantic-release/github",
       {
         "assets": [
-          { "path": "release/build/*.dmg", "label": "macOS installer (*.dmg)" },
-          { "path": "release/build/*.zip", "label": "macOS zip (*.zip)" },
-          {
-            "path": "release/build/*.blockmap",
-            "label": "Blockmap (*.blockmap)"
-          },
-          {
-            "path": "release/build/latest*.yml",
-            "label": "Auto-update manifest (latest*.yml)"
-          }
+          "release/build/*.dmg",
+          "release/build/*.zip",
+          "release/build/*.blockmap",
+          "release/build/latest*.yml"
         ]
       }
     ]
