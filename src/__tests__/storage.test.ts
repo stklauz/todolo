@@ -156,6 +156,54 @@ describe('Storage API', () => {
       });
     });
 
+    it('should return loaded todos with parentId and section', async () => {
+      const incoming = {
+        version: 2,
+        todos: [
+          {
+            id: 1,
+            text: 'Parent',
+            completed: false,
+            indent: 0,
+            parentId: null,
+            section: 'active' as const,
+          },
+          {
+            id: 2,
+            text: 'Child',
+            completed: false,
+            indent: 1,
+            parentId: 1,
+            section: 'active' as const,
+          },
+        ],
+      };
+      mockInvoke.mockResolvedValue(incoming);
+
+      const result = await loadListTodos('list-1');
+      expect(result).toEqual({
+        version: 3,
+        todos: [
+          {
+            id: 1,
+            text: 'Parent',
+            completed: false,
+            indent: 0,
+            parentId: null,
+            section: 'active' as const,
+          },
+          {
+            id: 2,
+            text: 'Child',
+            completed: false,
+            indent: 1,
+            parentId: 1,
+            section: 'active' as const,
+          },
+        ],
+      });
+    });
+
     it('should return default data when invalid response', async () => {
       mockInvoke.mockResolvedValue(null);
 
@@ -170,6 +218,40 @@ describe('Storage API', () => {
       const mockData = {
         version: 2 as const,
         todos: [{ id: 1, text: 'Test todo', completed: false, indent: 0 }],
+      };
+      mockInvoke.mockResolvedValue({ success: true });
+
+      const result = await saveListTodos('list-1', mockData);
+
+      expect(result).toBe(true);
+      expect(mockInvoke).toHaveBeenCalledWith(
+        'save-list-todos',
+        'list-1',
+        mockData,
+      );
+    });
+
+    it('should save todos with parentId and section', async () => {
+      const mockData = {
+        version: 2 as const,
+        todos: [
+          {
+            id: 1,
+            text: 'Parent',
+            completed: false,
+            indent: 0,
+            parentId: null,
+            section: 'active' as const,
+          },
+          {
+            id: 2,
+            text: 'Child',
+            completed: false,
+            indent: 1,
+            parentId: 1,
+            section: 'active' as const,
+          },
+        ],
       };
       mockInvoke.mockResolvedValue({ success: true });
 

@@ -5,7 +5,11 @@ import { useTodosActions } from '../../contexts';
 import useDragReorder from '../../hooks/useDragReorder';
 import useFilteredTodos from '../../hooks/useFilteredTodos';
 import useTodoKeyboardHandlers from '../../hooks/useTodoKeyboardHandlers';
-import { groupTodosBySection, computeSectionById } from '../../utils/todoUtils';
+import {
+  groupTodosBySection,
+  computeSectionById,
+  deriveIndentFromParentId,
+} from '../../utils/todoUtils';
 
 // import { debugLogger } from '../../../../utils/debug';
 
@@ -180,7 +184,7 @@ const TodoList = React.memo(function TodoList({
               key={todo.id}
               value={todo.text}
               checked={todo.completed}
-              indent={todo.indent ?? 0}
+              indent={deriveIndentFromParentId(todo)}
               indeterminate={derived.indeterminate.get(todo.id) === true}
               onToggle={() => {
                 if (toggleDisabled) return;
@@ -255,7 +259,7 @@ const TodoList = React.memo(function TodoList({
             key={todo.id}
             value={todo.text}
             checked={todo.completed}
-            indent={todo.indent ?? 0}
+            indent={deriveIndentFromParentId(todo)}
             indeterminate={derived.indeterminate.get(todo.id) === true}
             onToggle={() => toggleTodo(todo.id)}
             onChange={(e) => updateTodo(todo.id, e.target.value)}

@@ -95,10 +95,30 @@ export function enforceParentChildInvariant(todos: EditorTodo[]): {
 
 /**
  * One-shot migration applied on load: infer parentId and enforce invariant.
+ * Only runs migration if parentId is not already present in todos (legacy data).
+ *
+ * Note: All todos from database already have parentId defined (null or number),
+ * so migration only applies to legacy v2 storage data where parentId is undefined.
+ * Partial migrations (mix of defined/undefined) are not possible in practice.
  */
 export function runTodosMigration(todos: EditorTodo[]): {
   todos: EditorTodo[];
   stats: MigrationStats;
 } {
+  // Check if any todo already has parentId defined
+  const hasParentIds = todos.some((t) => t.parentId !== undefined);
+
+  // If todos already have parentId, just return them as-is (already migrated)
+  if (hasParentIds) {
+    return {
+      todos,
+      stats: {
+        inferredParentIds: 0,
+        reparentedDueToInvariant: 0,
+      },
+    };
+  }
+
+  // Otherwise, run the migration to infer from indent
   return enforceParentChildInvariant(todos);
 }

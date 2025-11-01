@@ -142,16 +142,36 @@ export default function useTodosPersistence({
         selectedListId,
       });
       const fetched = await loadListTodos(selectedListId);
-      const todosNorm = (fetched.todos || []).map((t: any, i: number) => ({
-        id: typeof t.id === 'number' ? t.id : i + 1,
-        text: typeof t.text === 'string' ? t.text : String(t.text ?? ''),
-        completed: Boolean((t as any).completed ?? (t as any).checked ?? false),
-        indent: Math.max(0, Math.min(1, Number((t as any).indent ?? 0))),
-      }));
+      const todosNorm = (fetched.todos || []).map((t: any, i: number) => {
+        const todo: any = {
+          id: typeof t.id === 'number' ? t.id : i + 1,
+          text: typeof t.text === 'string' ? t.text : String(t.text ?? ''),
+          completed: Boolean(
+            (t as any).completed ?? (t as any).checked ?? false,
+          ),
+          indent: Math.max(0, Math.min(1, Number((t as any).indent ?? 0))),
+        };
+        // Preserve parentId and section from database
+        if (t.parentId !== undefined) {
+          todo.parentId = t.parentId;
+        }
+        if (t.section !== undefined) {
+          todo.section = t.section;
+        }
+        return todo;
+      });
 
       if (todosNorm.length === 0) {
         const firstId = nextId();
-        const seed = [{ id: firstId, text: '', completed: false, indent: 0 }];
+        const seed = [
+          {
+            id: firstId,
+            text: '',
+            completed: false,
+            indent: 0,
+            parentId: null,
+          },
+        ];
         setLists((prev) =>
           prev.map((l) =>
             l.id === selectedListId ? { ...l, todos: seed } : l,

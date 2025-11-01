@@ -182,15 +182,10 @@ export async function saveListTodos(
       const res = (await window.electron.ipcRenderer.invoke(
         'save-list-todos',
         listId,
-        // Persist v2-compatible shape: strip runtime-only fields
+        // Send full EditorTodo array, database will persist parentId and section
         {
           version: 2,
-          todos: doc.todos.map((t) => ({
-            id: t.id,
-            text: t.text,
-            completed: t.completed,
-            indent: Number(t.indent ?? 0),
-          })),
+          todos: doc.todos,
         } satisfies ListTodosV2,
       )) as { success?: boolean; error?: string };
       const success = !!res?.success;

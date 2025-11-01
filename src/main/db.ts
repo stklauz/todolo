@@ -148,6 +148,28 @@ function applyMigrations(database: DB) {
   database.exec(
     `${createMeta}${createLists}${createTodos}${createTodosListOrderIdx}${createAppSettings}`,
   );
+
+  // Migration to v4: Add parent_id and section columns for explicit hierarchy
+  try {
+    // Check if parent_id column exists
+    const tableInfo = database
+      .prepare('PRAGMA table_info(todos)')
+      .all() as Array<{ name: string; type: string }>;
+    const columnNames = tableInfo.map((col) => col.name);
+    const hasParentId = columnNames.includes('parent_id');
+    const hasSection = columnNames.includes('section');
+
+    if (!hasParentId) {
+      console.log('[DB] Adding parent_id column to todos table');
+      database.exec('ALTER TABLE todos ADD COLUMN parent_id INTEGER');
+    }
+    if (!hasSection) {
+      console.log('[DB] Adding section column to todos table');
+      database.exec('ALTER TABLE todos ADD COLUMN section TEXT');
+    }
+  } catch (e: any) {
+    console.error('[DB] Error applying v4 migration:', e);
+  }
 }
 
 export function loadListsIndex(): ListsIndexV2 {
@@ -285,16 +307,29 @@ export function loadListTodos(listId: string): {
   const database = openDatabase();
   const rows = database
     .prepare(
-      'SELECT id, text, completed, indent FROM todos WHERE list_id = ? ORDER BY order_index ASC',
+      'SELECT id, text, completed, indent, parent_id, section FROM todos WHERE list_id = ? ORDER BY order_index ASC',
     )
     .all(listId);
   // rows loaded from todos
-  const todos: EditorTodo[] = rows.map((r: DatabaseRow) => ({
-    id: Number(r.id),
-    text: String(r.text),
-    completed: !!r.completed,
-    indent: Number(r.indent ?? 0),
-  }));
+  const todos: EditorTodo[] = rows.map((r: DatabaseRow) => {
+    const todo: EditorTodo = {
+      id: Number(r.id),
+      text: String(r.text),
+      completed: !!r.completed,
+      indent: Number(r.indent ?? 0),
+    };
+    // Load parentId if present
+    if (r.parent_id !== null && r.parent_id !== undefined) {
+      todo.parentId = Number(r.parent_id);
+    } else {
+      todo.parentId = null;
+    }
+    // Load section if present
+    if (r.section === 'active' || r.section === 'completed') {
+      todo.section = r.section;
+    }
+    return todo;
+  });
   return { version: 2, todos };
 }
 
@@ -307,7 +342,7 @@ export function saveListTodos(
     // replace list todos atomically
     const del = database.prepare('DELETE FROM todos WHERE list_id = ?');
     const ins = database.prepare(
-      'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (@list_id, @id, @text, @completed, @indent, @order_index)',
+      'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id, section) VALUES (@list_id, @id, @text, @completed, @indent, @order_index, @parent_id, @section)',
     );
     const ensureList = database.prepare('SELECT id FROM lists WHERE id = ?');
     const createList = database.prepare(
@@ -351,6 +386,13 @@ export function saveListTodos(
           completed: t.completed ? 1 : 0,
           indent: Number(t.indent ?? 0),
           order_index: idx++,
+          parent_id:
+            t.parentId !== undefined
+              ? t.parentId !== null
+                ? t.parentId
+                : null
+              : null,
+          section: t.section || null,
         });
       }
     });
@@ -455,32 +497,49 @@ export function duplicateList(
       // Copy todos but assign NEW ids within the new list to ensure
       // global uniqueness across lists and avoid any coupling via ids.
       const selectTodos = database.prepare(
-        `SELECT text, completed, indent, order_index
+        `SELECT id, text, completed, indent, order_index, parent_id, section
          FROM todos
          WHERE list_id = ?
          ORDER BY order_index`,
       );
       const insertTodo = database.prepare(
-        'INSERT INTO todos (list_id, id, text, completed, indent, order_index) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       );
 
       const rows = selectTodos.all(sourceListId) as Array<{
+        id: number;
         text: string;
         completed: number;
         indent: number;
         order_index: number;
+        parent_id: number | null;
+        section: string | null;
       }>;
 
       // Assign sequential ids in the duplicated list, preserving order.
+      // Build a map to remap parent_ids to the new sequential ids
+      const idMap = new Map<number, number>();
       let nextId = 1;
+
       for (const r of rows) {
+        idMap.set(r.id, nextId);
+        nextId++;
+      }
+
+      for (const r of rows) {
+        const newId = idMap.get(r.id)!;
+        const newParentId = r.parent_id
+          ? (idMap.get(r.parent_id) ?? null)
+          : null;
         insertTodo.run(
           newListId,
-          nextId++,
+          newId,
           r.text,
           r.completed ? 1 : 0,
           Number(r.indent ?? 0),
           r.order_index,
+          newParentId,
+          r.section,
         );
       }
     });

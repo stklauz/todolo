@@ -90,25 +90,25 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
     - [x] Drag/drop: move blocks using `parentId`; forbid cross-section parenting
   - [x] Add focused unit tests for these helpers and reducers
 
-- [ ] Review indent logic
+- [x] Review indent logic
   - [x] Keep `indent` strictly for rendering; do not use it as source of truth
   - [x] Defer flipping logic to "indent is display-only" until after storage version + migration
 
-- [ ] Persist parentId and section to database
-  - [ ] Add database schema migration to add `parent_id` column to `todos` table
-  - [ ] Add database schema migration to add `section` column to `todos` table (optional, can be derived)
-  - [ ] Update `saveListTodos` in `src/main/db.ts` to persist `parentId` (not just derived `indent`)
-  - [ ] Update `loadListTodos` in `src/main/db.ts` to load `parentId` directly
-  - [ ] Update migration to populate `parent_id` from existing data on first load
-  - [ ] Update storage version to v4 to reflect schema change
-  - [ ] Add unit tests for database persistence of `parentId`
-  - [ ] Verify data integrity: save → reload → verify `parentId` relationships maintained
-  - [ ] Stop persisting `indent` in the database; derive it from `parentId` for display only
-  - [ ] Ensure all UI uses `deriveIndentFromParentId()`; never read stored `indent` for logic
+- [x] Persist parentId and section to database
+  - [x] Add database schema migration to add `parent_id` column to `todos` table
+  - [x] Add database schema migration to add `section` column to `todos` table (optional, can be derived)
+  - [x] Update `saveListTodos` in `src/main/db.ts` to persist `parentId` (not just derived `indent`)
+  - [x] Update `loadListTodos` in `src/main/db.ts` to load `parentId` directly
+  - [x] Update migration to populate `parent_id` from existing data on first load
+  - [x] Update storage version to v4 to reflect schema change (skipped: using v2 DB format with EditorTodo support)
+  - [x] Add unit tests for database persistence of `parentId`
+  - [x] Verify data integrity: save → reload → verify `parentId` relationships maintained
+  - [x] Stop persisting `indent` in the database; derive it from `parentId` for display only
+  - [x] Ensure all UI uses `deriveIndentFromParentId()`; never read stored `indent` for logic
 
-- [ ] UI rendering updates
-  - [ ] Derive `indent` from `parentId` for display only
-  - [ ] Ensure lists render strictly by `section`, no implicit cross-section linking
+- [x] UI rendering updates
+  - [x] Derive `indent` from `parentId` for display only
+  - [x] Ensure lists render strictly by `section`, no implicit cross-section linking
 
 - [ ] Observability
   - [ ] Log key transitions and invariant violations via `src/renderer/utils/debug.ts`
