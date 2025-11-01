@@ -93,20 +93,34 @@ export default function useDragReorder(
   const handleDropOn = React.useCallback(
     (targetId: number) => {
       const currentDragInfo = dragInfoRef.current;
+      debugLogger.log('info', 'handleDropOn called', {
+        currentDragInfo,
+        targetId,
+      });
       if (!currentDragInfo) {
+        debugLogger.log('warn', 'No drag info available, aborting drop');
         return;
       }
       const sourceId = currentDragInfo.id;
       const targetSection = sectionOf(targetId);
       if (targetSection !== currentDragInfo.section) {
+        debugLogger.log('info', 'Sections differ, aborting drop', {
+          sourceSection: currentDragInfo.section,
+          targetSection,
+        });
         return handleDragEnd();
       }
       if (sourceId === targetId) {
+        debugLogger.log('info', 'Source === target, aborting drop');
         return handleDragEnd();
       }
 
       // Check if trying to drop parent under its child - prevent this
       if (checkIsChildOf(sourceId, targetId)) {
+        debugLogger.log(
+          'info',
+          'Would create parent->child inversion, aborting drop',
+        );
         return handleDragEnd();
       }
 
@@ -148,14 +162,46 @@ export default function useDragReorder(
         // Ensure no orphan children for child moves and set parentId accordingly
         if (!srcIsParent) {
           const movedIndex = next.findIndex((t) => t.id === sourceId);
+          debugLogger.log('info', 'Handling child move', {
+            movedIndex,
+            sourceId,
+            movedTodo: movedIndex !== -1 ? next[movedIndex] : null,
+            indent: movedIndex !== -1 ? next[movedIndex].indent : null,
+          });
           if (movedIndex !== -1 && Number(next[movedIndex].indent ?? 0) === 1) {
+            // Find nearest previous ACTIVE top-level parent by parentId (not just indent)
             let parentId: number | null = null;
-            for (let i = movedIndex - 1; i >= 0; i--) {
-              if (Number(next[i].indent ?? 0) === 0) {
-                parentId = next[i].id;
-                break;
+
+            // First, check if targetId itself is a valid parent (direct drop onto parent)
+            // This handles the case where a child is dragged onto a parent
+            const targetIndex = next.findIndex((t) => t.id === targetId);
+            if (targetIndex !== -1) {
+              const targetTodo = next[targetIndex];
+              if (
+                targetTodo.parentId == null &&
+                !targetTodo.completed &&
+                targetIndex > movedIndex
+              ) {
+                // Target is an active top-level parent positioned after the moved child
+                parentId = targetId;
               }
             }
+
+            // Otherwise search backward for nearest active parent
+            if (parentId == null) {
+              for (let i = movedIndex - 1; i >= 0; i--) {
+                const cand = next[i];
+                if (cand.parentId == null && !cand.completed) {
+                  // Found a top-level active parent - use it as new parent
+                  parentId = cand.id;
+                  break;
+                }
+              }
+            }
+            debugLogger.log('info', 'Computed new parent for moved child', {
+              sourceId,
+              parentId,
+            });
             if (parentId == null) {
               next[movedIndex] = {
                 ...next[movedIndex],
@@ -231,10 +277,13 @@ export default function useDragReorder(
         if (!srcIsParent) {
           const movedIndex = next.findIndex((t) => t.id === sourceId);
           if (movedIndex !== -1 && Number(next[movedIndex].indent ?? 0) === 1) {
+            // Find nearest previous ACTIVE top-level parent by parentId (not just indent)
             let parentId: number | null = null;
             for (let i = movedIndex - 1; i >= 0; i--) {
-              if (Number(next[i].indent ?? 0) === 0) {
-                parentId = next[i].id;
+              const cand = next[i];
+              if (cand.parentId == null && !cand.completed) {
+                // Found a top-level active parent - use it as new parent
+                parentId = cand.id;
                 break;
               }
             }

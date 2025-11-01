@@ -595,9 +595,8 @@ describe('useDragReorder', () => {
       expect(mockSetTodos).not.toHaveBeenCalled();
     });
 
-    it('should fix orphaned children by outdenting them', () => {
-      // Create a test scenario where a child will truly be orphaned after move
-      // C1 -> P1; drag C1 onto P1 -> C1 -> P1 (C1 has no parent before it, should become level 0)
+    it('should attach child to the drop target parent when dropped onto active parent', () => {
+      // C1 -> P1; drag C1 onto P1 -> C1 becomes child of P1 (active parent)
       const orphanedTodos: EditorTodo[] = [
         { id: 1, text: 'Child 1', completed: false, indent: 1 },
         { id: 2, text: 'Parent 1', completed: false, indent: 0 },
@@ -620,8 +619,9 @@ describe('useDragReorder', () => {
       const newTodos = setTodosCall(orphanedTodos);
 
       const movedChild = newTodos.find((t: EditorTodo) => t.id === 1);
-      // Child 1 is now at the start with no parent above it, so it should be outdented to 0
-      expect(movedChild?.indent).toBe(0);
+      // Child 1 is dragged onto active Parent 1, so it should become a child of Parent 1
+      expect(movedChild?.indent).toBe(1);
+      expect(movedChild?.parentId).toBe(2); // parentId should be Parent 1's id
     });
   });
 

@@ -82,6 +82,31 @@ function handleBackspaceKey(
 
   if (allTodos.length <= 1) return;
 
+  // If deleting a parent (top-level item), compute correct focus target:
+  // - If it has children and we can find a new parent, focus that new parent
+  // - Otherwise, focus the previous item
+  if (cur.parentId == null) {
+    // Check if this parent has children
+    const hasChildren = allTodos.some((t) => t.parentId === cur.id);
+    if (hasChildren) {
+      // Find nearest previous ACTIVE parent candidate (same logic as removeTodoAt)
+      let newParentId: number | null = null;
+      for (let i = index - 1; i >= 0; i--) {
+        const cand = allTodos[i];
+        if (cand && cand.parentId == null && !cand.completed) {
+          newParentId = cand.id;
+          break;
+        }
+      }
+      if (newParentId != null) {
+        removeTodoAt(index);
+        focusTodo(newParentId);
+        return;
+      }
+    }
+  }
+
+  // Default: remove and focus previous item
   removeTodoAt(index);
   const prevTodo = allTodos[index - 1];
   if (prevTodo) {

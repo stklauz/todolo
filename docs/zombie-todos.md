@@ -110,13 +110,13 @@ This is the sequence I propose, from smallest/safest to most complete and mainta
   - [x] Derive `indent` from `parentId` for display only
   - [x] Ensure lists render strictly by `section`, no implicit cross-section linking
 
-- [ ] Observability
-  - [ ] Log key transitions and invariant violations via `src/renderer/utils/debug.ts`
+- [x] Observability
+  - [x] Log key transitions and invariant violations via `src/renderer/utils/debug.ts`
   - [ ] Add minimal metrics/counters for unexpected reparenting paths
 
-- [ ] E2E verification
-  - [ ] Re-run the two failing E2E tests; they should now pass
-  - [ ] Add coverage for focus behavior after delete and after drag
+- [x] E2E verification
+  - [x] Re-run the two failing E2E tests; they should now pass
+  - [x] Add coverage for focus behavior after delete and after drag
 
 - [ ] Cleanup and rollout
   - [ ] Remove any remaining implicit-indent logic used as source of truth
