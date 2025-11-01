@@ -7,8 +7,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "node ./.erb/scripts/sync-app-version.js",
-        "successCmd": "npx electron-builder --publish always"
+        "prepareCmd": "node ./.erb/scripts/sync-app-version.js"
       }
     ],
     [
@@ -23,6 +22,22 @@
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    "@semantic-release/github"
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "release/build/*.dmg", "label": "macOS installer (*.dmg)" },
+          { "path": "release/build/*.zip", "label": "macOS zip (*.zip)" },
+          {
+            "path": "release/build/*.blockmap",
+            "label": "Blockmap (*.blockmap)"
+          },
+          {
+            "path": "release/build/latest*.yml",
+            "label": "Auto-update manifest (latest*.yml)"
+          }
+        ]
+      }
+    ]
   ]
 }

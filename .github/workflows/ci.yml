@@ -49,18 +49,22 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      # Build installers without publishing; artifacts land in release/build
+      - name: Package Electron app (no publish)
+        run: npm run package
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
       - name: Report coverage to Codacy
         uses: codacy/codacy-coverage-reporter-action@v1.3.0
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: ./coverage/lcov.info
 
-      # Semantic Release creates the release
+      # Semantic Release creates the release and uploads prepared assets
       - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
         run: npx semantic-release
 
       - name: Upload build logs on failure
