@@ -1,3 +1,9 @@
+## [1.5.5](https://github.com/stklauz/todolo/compare/v1.5.4...v1.5.5) (2025-11-01)
+
+### Bug Fixes
+
+- ci asset names ([1010f5c](https://github.com/stklauz/todolo/commit/1010f5c9b41eb529e65a98feaac32356810ba366))
+
 ## [1.5.4](https://github.com/stklauz/todolo/compare/v1.5.3...v1.5.4) (2025-11-01)
 
 ### Bug Fixes
