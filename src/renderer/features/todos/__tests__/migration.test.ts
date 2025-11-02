@@ -78,4 +78,30 @@ describe('Todos migration', () => {
     // After reparent of 5 to A (indent 1), 6 stays child of 5
     expect(byId.get(6)?.parentId).toBe(5);
   });
+
+  test('infers missing parentId when column exists but values are null', () => {
+    const todos: EditorTodo[] = [
+      { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+      {
+        id: 2,
+        text: 'Child missing parent',
+        completed: false,
+        indent: 1,
+        parentId: null,
+      },
+      {
+        id: 3,
+        text: 'Sibling child',
+        completed: true,
+        indent: 1,
+        parentId: null,
+      },
+    ];
+
+    const { todos: migrated } = runTodosMigration(todos);
+    const byId = new Map(migrated.map((x) => [x.id, x] as const));
+
+    expect(byId.get(2)?.parentId).toBe(1);
+    expect(byId.get(3)?.parentId).toBe(1);
+  });
 });

@@ -105,20 +105,24 @@ export function runTodosMigration(todos: EditorTodo[]): {
   todos: EditorTodo[];
   stats: MigrationStats;
 } {
-  // Check if any todo already has parentId defined
-  const hasParentIds = todos.some((t) => t.parentId !== undefined);
+  const hasParentIdProperty = todos.some((t) => t.parentId !== undefined);
+  const hasIndentedWithoutParent = todos.some((t) => {
+    const indent = Number(t.indent ?? 0);
+    if (indent <= 0) return false;
+    return t.parentId === undefined || t.parentId === null;
+  });
 
-  // If todos already have parentId, just return them as-is (already migrated)
-  if (hasParentIds) {
-    return {
-      todos,
-      stats: {
-        inferredParentIds: 0,
-        reparentedDueToInvariant: 0,
-      },
-    };
+  // Run migration whenever parentId field is missing entirely (legacy JSON data)
+  // or when indented rows lack a parentId (legacy DB rows pre-migration).
+  if (!hasParentIdProperty || hasIndentedWithoutParent) {
+    return enforceParentChildInvariant(todos);
   }
 
-  // Otherwise, run the migration to infer from indent
-  return enforceParentChildInvariant(todos);
+  return {
+    todos,
+    stats: {
+      inferredParentIds: 0,
+      reparentedDueToInvariant: 0,
+    },
+  };
 }
