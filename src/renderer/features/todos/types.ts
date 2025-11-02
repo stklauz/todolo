@@ -7,7 +7,6 @@ export type EditorTodo = {
   // indentation level: 0..1 (clamped)
   indent?: number;
   parentId?: number | null;
-  section?: Section; // 'active' | 'completed'
 };
 
 export type TodoList = {

@@ -30,7 +30,6 @@ export type EditorTodo = {
   completed: boolean;
   indent?: number;
   parentId?: number | null;
-  section?: 'active' | 'completed';
 };
 
 export type ListsIndexV2 = {
@@ -324,10 +323,6 @@ export function loadListTodos(listId: string): {
     } else {
       todo.parentId = null;
     }
-    // Load section if present
-    if (r.section === 'active' || r.section === 'completed') {
-      todo.section = r.section;
-    }
     return todo;
   });
   return { version: 2, todos };
@@ -342,7 +337,7 @@ export function saveListTodos(
     // replace list todos atomically
     const del = database.prepare('DELETE FROM todos WHERE list_id = ?');
     const ins = database.prepare(
-      'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id, section) VALUES (@list_id, @id, @text, @completed, @indent, @order_index, @parent_id, @section)',
+      'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id, section) VALUES (@list_id, @id, @text, @completed, @indent, @order_index, @parent_id, NULL)',
     );
     const ensureList = database.prepare('SELECT id FROM lists WHERE id = ?');
     const createList = database.prepare(
@@ -392,7 +387,6 @@ export function saveListTodos(
                 ? t.parentId
                 : null
               : null,
-          section: t.section || null,
         });
       }
     });

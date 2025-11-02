@@ -138,7 +138,6 @@ export const createNewTodo = (
   completed: false,
   indent: clampIndent(indent),
   parentId: null,
-  section: 'active',
 });
 
 /**
@@ -254,6 +253,40 @@ export const canAttachChild = (
   parentSection: Section,
   childSection: Section,
 ): boolean => parentSection === childSection;
+
+/**
+ * Finds the appropriate parent for a todo when changing its indent level.
+ * Used by setIndent and changeIndent to avoid duplication.
+ *
+ * @param todos - The full list of todos
+ * @param targetId - The ID of the todo whose indent is changing
+ * @param targetIndent - The new indent level (0 or 1)
+ * @returns The parent ID, or null if indent is 0 or no valid parent found
+ */
+export const computeParentForIndentChange = (
+  todos: EditorTodo[],
+  targetId: number,
+  targetIndent: number,
+): number | null => {
+  if (targetIndent === 0) return null;
+
+  const targetIndex = todos.findIndex((t) => t.id === targetId);
+  if (targetIndex === -1) return null;
+
+  const targetSection = computeSectionById(targetId, todos);
+
+  // Search backward for nearest top-level (parentId === null) parent
+  for (let i = targetIndex - 1; i >= 0; i--) {
+    const candidate = todos[i];
+    if (candidate.parentId == null) {
+      const candidateSection = computeSectionById(candidate.id, todos);
+      if (canAttachChild(candidateSection, targetSection)) {
+        return candidate.id;
+      }
+    }
+  }
+  return null;
+};
 
 /**
  * Reparents all immediate children of a parent to a new parent.

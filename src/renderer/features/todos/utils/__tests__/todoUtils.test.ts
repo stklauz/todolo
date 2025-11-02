@@ -10,10 +10,9 @@ import {
 import type { EditorTodo } from '../../types';
 
 describe('todoUtils.createNewTodo defaults', () => {
-  test('sets parentId=null and section=active by default', () => {
+  test('sets parentId=null by default', () => {
     const todo = createNewTodo('hello', 1);
     expect((todo as any).parentId).toBeNull();
-    expect((todo as any).section).toBe('active');
   });
 
   test('indent remains a rendering concern and is clamped', () => {

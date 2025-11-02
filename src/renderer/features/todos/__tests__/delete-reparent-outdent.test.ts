@@ -36,7 +36,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: false,
         indent: 0,
         parentId: null,
-        section: 'active',
       },
       {
         id: 2,
@@ -44,7 +43,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: false,
         indent: 1,
         parentId: 1,
-        section: 'active',
       },
       {
         id: 3,
@@ -52,7 +50,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: true,
         indent: 0,
         parentId: null,
-        section: 'completed',
       },
       {
         id: 4,
@@ -60,7 +57,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: false,
         indent: 1,
         parentId: 3,
-        section: 'active',
       },
       {
         id: 5,
@@ -68,7 +64,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: false,
         indent: 0,
         parentId: null,
-        section: 'active',
       },
     ];
     const { ops, getState } = setup(initial);
@@ -89,7 +84,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: true,
         indent: 0,
         parentId: null,
-        section: 'completed',
       },
       {
         id: 11,
@@ -97,7 +91,6 @@ describe('delete reparent/outdent behavior', () => {
         completed: false,
         indent: 1,
         parentId: 10,
-        section: 'active',
       },
     ];
     const { ops, getState } = setup(initial);

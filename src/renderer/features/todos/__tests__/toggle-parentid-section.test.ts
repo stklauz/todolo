@@ -22,7 +22,7 @@ function setup(initial: EditorTodo[]) {
 }
 
 describe('toggle using parentId/section', () => {
-  it('toggling a parent updates all descendants completion and section', () => {
+  it('toggling a parent updates all descendants completion', () => {
     const initial: EditorTodo[] = [
       {
         id: 1,
@@ -30,7 +30,6 @@ describe('toggle using parentId/section', () => {
         completed: false,
         indent: 0,
         parentId: null,
-        section: 'active',
       },
       {
         id: 2,
@@ -38,7 +37,6 @@ describe('toggle using parentId/section', () => {
         completed: false,
         indent: 1,
         parentId: 1,
-        section: 'active',
       },
       {
         id: 3,
@@ -46,7 +44,6 @@ describe('toggle using parentId/section', () => {
         completed: false,
         indent: 1,
         parentId: 2,
-        section: 'active',
       },
       {
         id: 4,
@@ -54,7 +51,6 @@ describe('toggle using parentId/section', () => {
         completed: false,
         indent: 1,
         parentId: 1,
-        section: 'active',
       },
     ];
     const { ops, getState } = setup(initial);
@@ -62,17 +58,13 @@ describe('toggle using parentId/section', () => {
     const after = getState();
     const byId = new Map(after.map((t) => [t.id, t] as const));
     expect(byId.get(1)?.completed).toBe(true);
-    expect(byId.get(1)?.section).toBe('completed');
     expect(byId.get(2)?.completed).toBe(true);
-    expect(byId.get(2)?.section).toBe('completed');
     expect(byId.get(4)?.completed).toBe(true);
-    expect(byId.get(4)?.section).toBe('completed');
     // grandchild also toggled
     expect(byId.get(3)?.completed).toBe(true);
-    expect(byId.get(3)?.section).toBe('completed');
   });
 
-  it('toggling a child updates its own completion and section only', () => {
+  it('toggling a child updates its own completion only', () => {
     const initial: EditorTodo[] = [
       {
         id: 1,
@@ -80,7 +72,6 @@ describe('toggle using parentId/section', () => {
         completed: false,
         indent: 0,
         parentId: null,
-        section: 'active',
       },
       {
         id: 2,
@@ -88,7 +79,6 @@ describe('toggle using parentId/section', () => {
         completed: false,
         indent: 1,
         parentId: 1,
-        section: 'active',
       },
     ];
     const { ops, getState } = setup(initial);
@@ -96,9 +86,7 @@ describe('toggle using parentId/section', () => {
     const after = getState();
     const byId = new Map(after.map((t) => [t.id, t] as const));
     expect(byId.get(2)?.completed).toBe(true);
-    expect(byId.get(2)?.section).toBe('completed');
     // parent unchanged
     expect(byId.get(1)?.completed).toBe(false);
-    expect(byId.get(1)?.section).toBe('active');
   });
 });

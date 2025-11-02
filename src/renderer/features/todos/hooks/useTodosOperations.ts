@@ -3,9 +3,8 @@ import type { EditorTodo } from '../types';
 import {
   reparentChildren,
   outdentChildren,
-  canAttachChild,
-  computeSectionById,
   deriveIndentFromParentId,
+  computeParentForIndentChange,
 } from '../utils/todoUtils';
 import { debugLogger } from '../../../utils/debug';
 
@@ -67,7 +66,6 @@ export default function useTodosOperations({
       const next = [...prev];
       const cur = next[idx];
       const newCompleted = !cur.completed;
-      const newSection = newCompleted ? 'completed' : 'active';
 
       // Only update if completion status actually changed
       if (cur.completed === newCompleted) return prev;
@@ -76,8 +74,7 @@ export default function useTodosOperations({
       next[idx] = {
         ...cur,
         completed: newCompleted,
-        section: newSection,
-      } as any;
+      };
 
       // If toggling a parent (identified by parentId === null), apply to descendants.
       if (cur.parentId == null) {
@@ -92,8 +89,7 @@ export default function useTodosOperations({
               next[i] = {
                 ...next[i],
                 completed: newCompleted,
-                section: newSection as any,
-              } as any;
+              };
             }
           }
         } else {
@@ -104,8 +100,7 @@ export default function useTodosOperations({
             next[i] = {
               ...next[i],
               completed: newCompleted,
-              section: newSection as any,
-            } as any;
+            };
           }
         }
       } else {
@@ -138,37 +133,14 @@ export default function useTodosOperations({
 
       const updated = [...prev];
 
-      if (clamped === 0) {
-        // Outdent: set parentId to null
-        updated[targetIndex] = {
-          ...target,
-          parentId: null,
-          indent: 0,
-        };
-      } else {
-        // Indent: find nearest previous top-level (parentId === null) active parent
-        const targetSection = computeSectionById(id, prev);
-        let newParentId: number | null = null;
+      // Use shared utility to compute parent
+      const newParentId = computeParentForIndentChange(prev, id, clamped);
 
-        // Search backward for nearest top-level active parent
-        for (let i = targetIndex - 1; i >= 0; i--) {
-          const candidate = prev[i];
-          if (candidate.parentId == null) {
-            // Found a top-level todo
-            const candidateSection = computeSectionById(candidate.id, prev);
-            if (canAttachChild(candidateSection, targetSection)) {
-              newParentId = candidate.id;
-              break;
-            }
-          }
-        }
-
-        // If no valid parent found, still allow visual indent (display-only)
-        updated[targetIndex] =
-          newParentId == null
-            ? { ...target, indent: 1 }
-            : { ...target, parentId: newParentId, indent: 1 };
-      }
+      // If no valid parent found, still allow visual indent (display-only)
+      updated[targetIndex] =
+        newParentId == null
+          ? { ...target, parentId: null, indent: clamped }
+          : { ...target, parentId: newParentId, indent: clamped };
 
       // Only trigger save if something actually changed
       if (updated !== prev) {
@@ -192,39 +164,17 @@ export default function useTodosOperations({
       // Only update if indent would actually change
       if (currentIndent === newIndent) return prev;
 
-      // Call setIndent logic inline to avoid double save
+      // Use shared utility to compute parent (inline to avoid double save)
       const targetIndex = prev.findIndex((t) => t.id === id);
       const updated = [...prev];
 
-      if (newIndent === 0) {
-        // Outdent: set parentId to null
-        updated[targetIndex] = {
-          ...target,
-          parentId: null,
-          indent: 0,
-        };
-      } else {
-        // Indent: find nearest previous top-level active parent
-        const targetSection = computeSectionById(id, prev);
-        let newParentId: number | null = null;
+      const newParentId = computeParentForIndentChange(prev, id, newIndent);
 
-        for (let i = targetIndex - 1; i >= 0; i--) {
-          const candidate = prev[i];
-          if (candidate.parentId == null) {
-            const candidateSection = computeSectionById(candidate.id, prev);
-            if (canAttachChild(candidateSection, targetSection)) {
-              newParentId = candidate.id;
-              break;
-            }
-          }
-        }
-
-        // If no valid parent found, still allow visual indent (display-only)
-        updated[targetIndex] =
-          newParentId == null
-            ? { ...target, indent: 1 }
-            : { ...target, parentId: newParentId, indent: 1 };
-      }
+      // If no valid parent found, still allow visual indent (display-only)
+      updated[targetIndex] =
+        newParentId == null
+          ? { ...target, parentId: null, indent: newIndent }
+          : { ...target, parentId: newParentId, indent: newIndent };
 
       saveWithStrategy('debounced', 200);
       return updated;
