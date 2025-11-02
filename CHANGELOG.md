@@ -1,3 +1,9 @@
+## [1.5.7](https://github.com/stklauz/todolo/compare/v1.5.6...v1.5.7) (2025-11-02)
+
+### Bug Fixes
+
+- migration, indented items with no parentID, breaks todos visually ([4d81d4b](https://github.com/stklauz/todolo/commit/4d81d4b5fd2fa3ee7c2512c1409b52d3eff9eccd))
+
 ## [1.5.6](https://github.com/stklauz/todolo/compare/v1.5.5...v1.5.6) (2025-11-01)
 
 ### Bug Fixes
