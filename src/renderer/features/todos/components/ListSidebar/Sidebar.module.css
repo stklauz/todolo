@@ -1,12 +1,23 @@
 .sidebar {
   width: 240px;
-  padding: 3rem 8px;
-  border-right: 1px solid #eee;
+  padding: var(--spacing-3xl) var(--spacing-sm);
+  border-right: 1px solid var(--color-border-default);
   display: none;
   height: 100vh; /* full height */
   box-sizing: border-box;
   overflow-y: auto;
-  background: #fff;
+  background: var(--color-bg-secondary);
+}
+
+/* Lighter border in light mode */
+:root:not([data-theme='dark']) .sidebar {
+  border-right: 1px solid var(--palette-gray-100);
+}
+
+@media (prefers-color-scheme: light) {
+  .sidebar {
+    border-right: 1px solid var(--palette-gray-100);
+  }
 }
 
 @media (min-width: 600px) {
@@ -19,43 +30,44 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-left: 8px;
-  margin-bottom: 8px;
+  margin-left: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-primary);
 }
 
 .logo {
   height: 16px;
   width: auto;
   display: block;
-  fill: currentColor;
+  color: var(--color-text-primary);
 }
 
 .lists {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .listItem {
-  padding: 8px 12px;
+  padding: var(--spacing-sm) var(--spacing-base);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
   transition: background 120ms ease;
-  font-size: 14px;
-  color: var(--color-grey-dark);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
 }
 
 .listItem:hover {
-  background: #f8fafc;
-  color: var(--color-black);
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 
 .listItemActive {
-  background: #f1f5f9;
-  color: var(--color-black);
+  background: var(--color-bg-selected);
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 
@@ -70,21 +82,27 @@
 .renameInput {
   width: 100%;
   box-sizing: border-box;
-  padding: 4px 6px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--color-text-primary);
+  background: transparent;
+  border: var(--border-width-thin) solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: var(--font-size-base);
 }
 
 .iconBtn {
   border: none;
   background: transparent;
-  padding: 4px;
-  border-radius: 4px;
-  color: #64748b; /* slate-500 */
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
   cursor: pointer;
   opacity: 0.7;
 }
 
 .iconBtn:hover {
-  background: #f1f5f9;
-  color: #0f172a; /* slate-900 */
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
   opacity: 1;
 }

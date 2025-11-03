@@ -1,5 +1,5 @@
 .list {
-  padding-bottom: 2.5rem;
+  padding-bottom: var(--spacing-2xl);
 }
 /* Drag target indicator */
 .dropZone {
@@ -10,7 +10,7 @@
 }
 
 .dropZoneActive {
-  background-color: #f0f9ff; /* blue-50 */
+  background-color: var(--color-bg-dropzone);
 }
 
 .dropZoneActive::before {
@@ -20,15 +20,15 @@
   left: 0;
   right: 0;
   height: 0;
-  border-top: 3px solid #3b82f6; /* blue-500 - more visible */
+  border-top: 3px solid var(--color-interactive-default);
   z-index: 10;
 }
 
 /* Section header for Completed */
 .sectionHeader {
-  margin: 16px 0 8px;
-  color: #64748b; /* slate-500 */
-  font-size: 12px;
+  margin: var(--spacing-md) 0 var(--spacing-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -36,9 +36,9 @@
 
 .sectionDivider {
   height: 1px;
-  background: #e5e7eb; /* gray-200 */
+  background: var(--color-border-default);
 }
 
 .sectionGroup {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
 }

@@ -1,11 +1,229 @@
-:root {
-  --color-black: #333333;
-  --color-grey-dark: #575757;
-  --color-grey: #858585;
-  --color-grey-light: #dddddd;
-  --color-white: #ffffff;
+/* ============================================================================
+   DESIGN TOKEN SYSTEM
+   ============================================================================
+   This system uses a two-tier approach:
+   1. Palette tokens: Raw color values (black/white, gray, blue, red)
+   2. Semantic tokens: Named by purpose, referencing palette tokens
+   
+   Dark mode support: Add [data-theme="dark"] selector to override semantic tokens
+   ============================================================================ */
 
-  --color-main: #007acc;
+:root {
+  /* ==========================================================================
+     COLOR PALETTE TOKENS (Raw color values)
+     ========================================================================== */
+
+  /* Neutral Colors */
+  --palette-white: #ffffff;
+  --palette-black: #000000;
+
+  /* macOS System Gray Scale (Light Mode) */
+  --palette-gray-50: #fafafa;
+  --palette-gray-100: #f5f5f5;
+  --palette-gray-200: #e8e8e8;
+  --palette-gray-300: #d1d1d1;
+  --palette-gray-400: #a8a8a8;
+  --palette-gray-500: #8e8e93;
+  --palette-gray-600: #636366;
+  --palette-gray-700: #48484a;
+  --palette-gray-800: #3a3a3c;
+  --palette-gray-900: #1c1c1e;
+
+  /* macOS System Gray Scale (Dark Mode) - Native App Colors */
+  --palette-neutral-900: #252525;
+  --palette-neutral-800: #2d2d2d;
+  --palette-neutral-700: #353535;
+  --palette-neutral-600: #3d3d3d;
+  --palette-neutral-500: #48484a;
+  --palette-neutral-400: #636366;
+  --palette-neutral-300: #8e8e93;
+  --palette-neutral-200: #a8a8a8;
+  --palette-neutral-100: #d1d1d1;
+  --palette-neutral-50: #e8e8e8;
+
+  /* macOS System Blue (Primary) - RGB(0, 122, 255) */
+  --palette-blue: #007aff;
+  --palette-blue-light: #0a84ff;
+  --palette-blue-lighter: #3d9eff;
+  --palette-blue-dark: #0051d5;
+  --palette-blue-50: #e3f2fd;
+  --palette-blue-500: #007aff;
+
+  /* macOS System Red (Danger) - RGB(255, 59, 48) */
+  --palette-red: #ff3b30;
+  --palette-red-light: #ff453a;
+  --palette-red-dark: #ff2d55;
+  --palette-red-50: #ffe5e3;
+  --palette-red-100: #ffcdca;
+
+  /* ==========================================================================
+     SEMANTIC COLOR TOKENS (Light Mode - Default)
+     ========================================================================== */
+
+  /* Text Colors */
+  --color-text-primary: var(--palette-gray-900);
+  --color-text-secondary: var(--palette-gray-600);
+  --color-text-tertiary: var(--palette-gray-500);
+  --color-text-muted: var(--palette-gray-500);
+  --color-text-disabled: var(--palette-gray-400);
+  --color-text-inverse: var(--palette-white);
+  --color-text-link: var(--palette-blue);
+  --color-text-danger: var(--palette-red);
+
+  /* Background Colors */
+  --color-bg-primary: var(--palette-white);
+  --color-bg-secondary: var(--palette-gray-50);
+  --color-bg-hover: var(--palette-gray-50);
+  --color-bg-active: var(--palette-gray-100);
+  --color-bg-selected: var(--palette-gray-100);
+  --color-bg-dropzone: var(--palette-blue-50);
+  --color-bg-danger: var(--palette-red-50);
+  --color-bg-danger-hover: var(--palette-red-100);
+
+  /* Border Colors */
+  --color-border-default: var(--palette-gray-200);
+  --color-border-focus: var(--palette-blue);
+  --color-border-hover: var(--palette-blue-light);
+  --color-border-danger: var(--palette-red);
+
+  /* Interactive Colors */
+  --color-interactive-default: var(--palette-blue);
+  --color-interactive-hover: var(--palette-blue-dark);
+  --color-interactive-disabled: var(--palette-gray-400);
+
+  /* ==========================================================================
+     SPACING TOKENS (Semantic only)
+     ========================================================================== */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-base: 0.75rem; /* 12px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+  --spacing-2xl: 2.5rem; /* 40px */
+  --spacing-3xl: 3rem; /* 48px */
+
+  /* ==========================================================================
+     FONT SIZE TOKENS
+     ========================================================================== */
+  --font-size-xs: 0.625rem; /* 10px */
+  --font-size-sm: 0.75rem; /* 12px */
+  --font-size-base: 0.875rem; /* 14px */
+  --font-size-md: 1rem; /* 16px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+  --font-size-4xl: 2.25rem; /* 36px */
+
+  /* ==========================================================================
+     LINE HEIGHT (Default for all text)
+     ========================================================================== */
+  --line-height-default: 1.4;
+
+  /* ==========================================================================
+     BORDER WIDTH TOKENS
+     ========================================================================== */
+  --border-width-thin: 1px;
+  --border-width-medium: 1.5px;
+  --border-width-thick: 2px;
+
+  /* ==========================================================================
+     BORDER RADIUS TOKENS
+     ========================================================================== */
+  --radius-xs: 0.125rem; /* 2px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.375rem; /* 6px */
+  --radius-lg: 0.5rem; /* 8px */
+  --radius-xl: 0.75rem; /* 12px */
+
+  /* ==========================================================================
+     SHADOW TOKENS
+     ========================================================================== */
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================================================
+   DARK MODE SUPPORT
+   ============================================================================
+   To enable dark mode, add [data-theme="dark"] to the root element
+   or use @media (prefers-color-scheme: dark)
+   ============================================================================ */
+
+/* Dark mode via data attribute */
+[data-theme='dark'] {
+  /* Text Colors - Dark Mode */
+  --color-text-primary: var(--palette-neutral-50);
+  --color-text-secondary: var(--palette-neutral-300);
+  --color-text-tertiary: var(--palette-neutral-400);
+  --color-text-muted: var(--palette-neutral-400);
+  --color-text-disabled: var(--palette-neutral-500);
+  --color-text-inverse: var(--palette-neutral-900);
+  --color-text-link: var(--palette-blue-light);
+  --color-text-danger: var(--palette-red);
+
+  /* Background Colors - Dark Mode */
+  --color-bg-primary: var(--palette-neutral-900);
+  --color-bg-secondary: var(--palette-neutral-800);
+  --color-bg-hover: var(--palette-neutral-800);
+  --color-bg-active: var(--palette-neutral-700);
+  --color-bg-selected: var(--palette-neutral-700);
+  --color-bg-dropzone: var(--palette-neutral-800);
+  --color-bg-danger: var(--palette-neutral-800);
+  --color-bg-danger-hover: var(--palette-neutral-700);
+
+  /* Border Colors - Dark Mode */
+  --color-border-default: var(--palette-neutral-600);
+  --color-border-focus: var(--palette-blue-light);
+  --color-border-hover: var(--palette-blue-lighter);
+  --color-border-danger: var(--palette-red);
+
+  /* Interactive Colors - Dark Mode */
+  --color-interactive-default: var(--palette-blue-light);
+  --color-interactive-hover: var(--palette-blue);
+  --color-interactive-disabled: var(--palette-neutral-500);
+
+  /* Shadows - Dark Mode */
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark mode via system preference */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Text Colors - Dark Mode */
+    --color-text-primary: var(--palette-neutral-50);
+    --color-text-secondary: var(--palette-neutral-300);
+    --color-text-tertiary: var(--palette-neutral-400);
+    --color-text-muted: var(--palette-neutral-400);
+    --color-text-disabled: var(--palette-neutral-500);
+    --color-text-inverse: var(--palette-neutral-900);
+    --color-text-link: var(--palette-blue-light);
+    --color-text-danger: var(--palette-red);
+
+    /* Background Colors - Dark Mode */
+    --color-bg-primary: var(--palette-neutral-900);
+    --color-bg-secondary: var(--palette-neutral-800);
+    --color-bg-hover: var(--palette-neutral-800);
+    --color-bg-active: var(--palette-neutral-700);
+    --color-bg-selected: var(--palette-neutral-700);
+    --color-bg-dropzone: var(--palette-neutral-800);
+    --color-bg-danger: var(--palette-neutral-800);
+    --color-bg-danger-hover: var(--palette-neutral-700);
+
+    /* Border Colors - Dark Mode */
+    --color-border-default: var(--palette-neutral-600);
+    --color-border-focus: var(--palette-blue-light);
+    --color-border-hover: var(--palette-blue-lighter);
+    --color-border-danger: var(--palette-red);
+
+    /* Interactive Colors - Dark Mode */
+    --color-interactive-default: var(--palette-blue-light);
+    --color-interactive-hover: var(--palette-blue);
+    --color-interactive-disabled: var(--palette-neutral-500);
+
+    /* Shadows - Dark Mode */
+    --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
 }
 
 /* Inter variable font (self-hosted) */
@@ -35,10 +253,13 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-white);
-  color: var(--color-black);
-  height: 100vh; /* Add this */
-  overflow: hidden; /* Add this */
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-weight: 400; /* normal */
+  line-height: var(--line-height-default);
+  height: 100vh;
+  overflow: hidden;
 }
 
 *,

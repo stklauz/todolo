@@ -9,77 +9,8 @@
   left: 0;
   right: 0;
   height: 0;
-  border-top: 3px solid #3b82f6; /* blue-500 - more visible */
+  border-top: 3px solid var(--color-interactive-default);
   z-index: 10;
-}
-
-/* Custom checkbox – consistent, friendly visuals */
-.checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid #cbd5e1;
-  /* slate-300 */
-  background: #ffffff;
-  display: grid;
-  place-items: center;
-  box-sizing: border-box;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease;
-}
-
-.checkbox:hover {
-  border-color: #94a3b8;
-  cursor: pointer;
-  /* slate-400 */
-}
-
-.checkbox:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
-}
-
-.checkbox:disabled {
-  opacity: 0.5;
-}
-
-.checkbox:checked {
-  background-color: var(--color-main);
-  border-color: var(--color-main);
-}
-
-.checkbox::after {
-  content: '';
-  width: 10px;
-  height: 10px;
-  background: white;
-  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%);
-  transform: scale(0);
-  transform-origin: center;
-  transition: transform 120ms ease;
-}
-
-.checkbox:checked::after {
-  transform: scale(1);
-}
-
-/* Indeterminate state (for partially-complete parents) */
-.checkbox:indeterminate {
-  background-color: var(--color-main);
-  border-color: var(--color-main);
-}
-
-.checkbox:indeterminate::after {
-  clip-path: none;
-  width: 10px;
-  height: 2px;
-  background: #ffffff;
-  border-radius: 1px;
-  transform: none;
 }
 
 /* Row + Inputs styling */
@@ -87,9 +18,9 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 8px;
-  border-radius: 8px;
-  border: 1px solid transparent;
+  gap: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  border: var(--border-width-thin) solid transparent;
   transition:
     background 120ms ease,
     border-color 120ms ease,
@@ -110,26 +41,26 @@
 }
 
 .row:hover {
-  background: #f8fafc;
-  /* slate-50 */
+  background: var(--color-bg-hover);
 }
 
-.row:hover .checkbox {
-  border-color: #94a3b8;
+/* Row hover affects checkbox border */
+.row:hover :global(input[type='checkbox']):not(:disabled) {
+  border-color: var(--color-border-hover);
 }
 
 .draggable {
   display: inline-flex;
   align-items: center;
   width: 100%;
-  padding: 4px;
-  border-radius: 8px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-lg);
   transition: background-color 150ms ease;
+  position: relative;
 }
 
 .draggable:hover {
-  background-color: #f8fafc;
-  /* slate-50 */
+  background-color: var(--color-bg-hover);
 }
 
 .draggable:active {
@@ -140,19 +71,19 @@
 
 .input {
   flex: 1;
-  font-size: 14px;
-  border: 1px solid transparent;
+  font-size: var(--font-size-base);
+  border: var(--border-width-thin) solid transparent;
   background: transparent;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
   outline: none;
-  color: var(--color-black);
+  color: var(--color-text-primary);
   /* For textarea-based inputs */
   width: 100%;
   display: block;
   resize: none;
   overflow: hidden; /* hide scrollbar; height grows instead */
-  line-height: 1.4;
+  line-height: var(--line-height-default);
   /* Wrap very long words/URLs instead of overflowing */
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -164,7 +95,7 @@
 }
 
 .input::placeholder {
-  color: #9aa3ac;
+  color: var(--color-text-disabled);
 }
 
 .input:focus {
@@ -172,6 +103,6 @@
 }
 
 .inputCompleted {
-  color: var(--color-grey);
+  color: var(--color-text-tertiary);
   text-decoration: line-through;
 }

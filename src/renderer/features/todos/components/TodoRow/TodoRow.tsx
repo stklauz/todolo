@@ -1,4 +1,5 @@
 import React from 'react';
+import { Checkbox } from '../Checkbox';
 
 const styles = require('./TodoRow.module.css');
 
@@ -41,12 +42,6 @@ export const TodoRow = React.memo(
       ref,
     ) => {
       const indentLevel = Math.max(0, Math.min(1, Number(indent)));
-      const checkboxRef = React.useRef<HTMLInputElement | null>(null);
-      React.useEffect(() => {
-        if (checkboxRef.current) {
-          checkboxRef.current.indeterminate = Boolean(indeterminate);
-        }
-      }, [indeterminate]);
       const indentClass =
         indentLevel > 0 ? (styles as any)[`indent${indentLevel}`] || '' : '';
       return (
@@ -82,14 +77,13 @@ export const TodoRow = React.memo(
               onDragEnd();
             }}
           >
-            <input
-              type="checkbox"
-              aria-label="Toggle completed"
+            <Checkbox
               checked={checked}
-              onChange={onToggle}
+              indeterminate={indeterminate}
               disabled={toggleDisabled}
-              className={styles.checkbox}
-              ref={checkboxRef}
+              onToggle={onToggle}
+              ariaLabel="Toggle completed"
+              spacing="sm"
             />
             <textarea
               aria-label="Todo text"

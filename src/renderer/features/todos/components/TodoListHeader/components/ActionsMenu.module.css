@@ -3,31 +3,31 @@
 .iconBtn {
   border: none;
   background: transparent;
-  padding: 4px;
-  border-radius: 4px;
-  color: #64748b; /* slate-500 */
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 
 .iconBtn:hover {
-  background: #f1f5f9;
-  color: #0f172a; /* slate-900 */
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 
 .dangerTextBtn {
   border: none;
   background: transparent;
-  color: #6b7280; /* red-500 */
-  font-size: 12px;
-  padding: 4px 6px;
-  border-radius: 4px;
+  color: var(--color-text-danger);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .dangerTextBtn:hover {
-  background: #fee2e2; /* red-100 */
+  background: var(--color-bg-danger);
 }
 .dangerTextBtn:disabled {
-  color: #94a3b8; /* slate-400 */
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 
@@ -37,72 +37,72 @@
 .menuBtn {
   border: none;
   background: transparent;
-  padding: 4px;
-  border-radius: 4px;
-  color: #64748b;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 .menuBtn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 .menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 4px);
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  top: calc(100% + var(--spacing-xs));
+  background: var(--color-bg-primary);
+  border: var(--border-width-thin) solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xs);
+  box-shadow: var(--shadow-menu);
   z-index: 10;
   min-width: 160px;
 }
 .menuItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   width: 100%;
   text-align: left;
   background: transparent;
   border: none;
-  color: #374151; /* gray-700 */
-  padding: 8px 10px;
-  border-radius: 4px;
-  font-size: 13px;
+  color: var(--color-text-secondary);
+  padding: var(--spacing-sm) var(--spacing-base);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 .menuItem:hover {
-  background: #f9fafb; /* gray-50 */
-  color: #111827; /* gray-900 */
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 .menuItem:disabled {
-  color: #94a3b8; /* slate-400 */
+  color: var(--color-text-disabled);
   cursor: not-allowed;
   opacity: 0.6;
 }
 .menuItem:disabled:hover {
   background: transparent;
-  color: #94a3b8;
+  color: var(--color-text-disabled);
 }
 
 /* Duplicate list button specific styling */
 .menuItemDuplicate {
-  color: #374151; /* gray-700 - same as completed items */
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 .menuItemDuplicate:hover {
-  background: #f9fafb; /* gray-50 - same as completed items hover */
-  color: #111827; /* gray-900 */
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 .menuItemDuplicate:disabled {
-  color: #94a3b8; /* slate-400 */
-  font-weight: normal;
+  color: var(--color-text-disabled);
+  font-weight: 400;
 }
 .menuItemDuplicate:disabled:hover {
   background: transparent;
-  color: #94a3b8;
+  color: var(--color-text-disabled);
 }
 
 .menuItemDanger {
@@ -111,49 +111,45 @@
   text-align: left;
   background: transparent;
   border: none;
-  color: #ef4444; /* red-500 */
-  padding: 8px 10px;
-  border-radius: 4px;
-  font-size: 13px;
+  color: var(--color-text-danger);
+  padding: var(--spacing-sm) var(--spacing-base);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 .menuItemDanger:hover {
-  background: #fee2e2;
+  background: var(--color-bg-danger);
 }
 .menuItemDanger:disabled {
-  color: #94a3b8;
+  color: var(--color-text-disabled);
   cursor: not-allowed;
 }
 .menuDivider {
   height: 1px;
-  background: #e5e7eb;
-  margin: 4px 0;
+  background: var(--color-border-default);
+  margin: var(--spacing-xs) 0;
 }
 .menuSection {
-  padding: 4px 0;
+  padding: var(--spacing-xs) 0;
 }
 .menuSectionTitle {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
-  color: #6b7280;
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 6px 10px 4px;
+  padding: var(--spacing-sm) var(--spacing-base) var(--spacing-xs);
 }
 .menuToggleItem {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 4px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-base);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 13px;
-  color: #374151;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 .menuToggleItem:hover {
-  background: #f9fafb;
-}
-.menuToggleItem input[type='checkbox'] {
-  margin: 0;
-  cursor: pointer;
+  background: var(--color-bg-hover);
 }

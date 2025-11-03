@@ -21,6 +21,7 @@ function Content() {
     };
 
     // Listen for IPC message from main process and get cleanup function
+    // eslint-disable-next-line no-undef
     const cleanup = window.electron.ipcRenderer.on(
       'toggle-debug-mode',
       handleToggleDebug,
@@ -28,6 +29,36 @@ function Content() {
 
     return cleanup;
   }, [isDebugVisible]);
+
+  // Set theme based on system preference
+  useEffect(() => {
+    const mm =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : undefined;
+
+    const updateTheme = () => {
+      const isDark = mm?.matches ?? false;
+      const root = document.documentElement;
+      if (isDark) {
+        root.dataset.theme = 'dark';
+      } else {
+        delete root.dataset.theme;
+      }
+    };
+
+    // Set initial theme
+    updateTheme();
+
+    // Listen for system theme changes when supported
+    if (mm) {
+      mm.addEventListener('change', updateTheme);
+    }
+
+    return () => {
+      if (mm) mm.removeEventListener('change', updateTheme);
+    };
+  }, []);
 
   return (
     <>

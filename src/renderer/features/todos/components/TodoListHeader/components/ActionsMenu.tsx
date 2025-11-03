@@ -1,5 +1,6 @@
 import React from 'react';
 import { IoEllipsisHorizontal } from 'react-icons/io5';
+import { Checkbox } from '../../Checkbox';
 import Spinner from '../../../../../components/Spinner';
 import type { AppSettings } from '../../../types';
 import { useTodosStore } from '../../../store/useTodosStore';
@@ -81,8 +82,7 @@ export default function ActionsMenu({
           <div className={styles.menuSection}>
             <div className={styles.menuSectionTitle}>App Settings</div>
             <label className={styles.menuToggleItem}>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={!appSettings.hideCompletedItems}
                 onChange={(e) => {
                   onUpdateAppSettings({
@@ -90,6 +90,8 @@ export default function ActionsMenu({
                     hideCompletedItems: !e.target.checked,
                   });
                 }}
+                ariaLabel="Toggle completed items visibility"
+                spacing="none"
               />
               <span>Completed items</span>
             </label>
