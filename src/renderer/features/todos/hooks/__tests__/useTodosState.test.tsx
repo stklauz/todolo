@@ -1,7 +1,7 @@
-import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import useTodosState from '../useTodosState';
 import * as storage from '../../api/storage';
+import { useTodosStore } from '../../store/useTodosStore';
 
 // Mock the storage module
 jest.mock('../../api/storage');
@@ -10,6 +10,16 @@ const mockStorage = storage as jest.Mocked<typeof storage>;
 describe('useTodosState', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Reset Zustand store to initial state
+    useTodosStore.setState({
+      lists: [],
+      selectedListId: null,
+      indexLoaded: false,
+      loadedLists: new Set(),
+      idCounter: 1,
+    });
+
     // Mock successful storage operations by default
     mockStorage.loadListsIndex.mockResolvedValue({
       version: 2,
@@ -316,13 +326,6 @@ describe('useTodosState', () => {
       { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
     ];
 
-    // Mock the source list with some completed todos
-    const sourceTodos = [
-      { id: 1, text: 'Task 1', completed: true, indent: 0 },
-      { id: 2, text: 'Task 2', completed: false, indent: 0 },
-      { id: 3, text: 'Task 3', completed: true, indent: 0 },
-    ];
-
     // Mock the duplicated list todos (should mirror the source)
     const duplicatedTodos = [
       { id: 1, text: 'Task 1', completed: true, indent: 0 },
@@ -387,9 +390,7 @@ describe('useTodosState', () => {
       selectedListId: '1',
     });
 
-    let loadCallCount = 0;
     mockStorage.loadListTodos.mockImplementation(async (listId: string) => {
-      loadCallCount++;
       if (listId === 'new-list-id') {
         return { version: 3, todos: sourceTodos };
       }

@@ -518,9 +518,9 @@ describe('Todo Filtering', () => {
   describe('Filtering with Parent-Child Relationships', () => {
     it('applies parent completion to children when toggling', async () => {
       const initialTodos = [
-        { id: 1, text: 'Parent', completed: false, indent: 0 },
-        { id: 2, text: 'Child 1', completed: false, indent: 1 },
-        { id: 3, text: 'Child 2', completed: false, indent: 1 },
+        { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child 1', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'Child 2', completed: false, indent: 1, parentId: 1 },
       ];
 
       const user = setupUser();
@@ -537,13 +537,23 @@ describe('Todo Filtering', () => {
       await waitFor(() =>
         expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
       );
-      // Note: loadListTodos might not be called if the list is empty or has issues
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
-      // The test is failing because the app doesn't load the todos properly
-      // Let's check what's actually rendered
-      const inputs = screen.queryAllByLabelText('Todo text');
-      // When parent is completed and filtering is active, all todos should be hidden
-      expect(inputs).toHaveLength(0);
+      // Initially all todos should be visible
+      const inputs = screen.getAllByLabelText('Todo text');
+      expect(inputs).toHaveLength(3);
+
+      // Toggle parent checkbox to complete it (and cascade to children)
+      const checkboxes = screen.getAllByRole('checkbox', {
+        name: /toggle completed/i,
+      });
+      await user.click(checkboxes[0]); // Click parent checkbox
+
+      // When parent (and children) are completed and filtering is active, all should be hidden
+      await waitFor(() => {
+        const hiddenInputs = screen.queryAllByLabelText('Todo text');
+        expect(hiddenInputs).toHaveLength(0);
+      });
     });
 
     it('shows children when parent is active but some children are completed', async () => {

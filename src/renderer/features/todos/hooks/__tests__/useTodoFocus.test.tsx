@@ -123,9 +123,6 @@ describe('useTodoFocus', () => {
 
       const firstTodo = screen.getByTestId('todo-1') as HTMLTextAreaElement;
 
-      // Simulate clicking in the middle of the text
-      const clickPosition = Math.floor(firstTodo.value.length / 2);
-
       // Mock setSelectionRange to track calls
       const setSelectionRangeSpy = jest.spyOn(firstTodo, 'setSelectionRange');
 

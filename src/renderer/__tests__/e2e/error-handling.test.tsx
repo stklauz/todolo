@@ -440,16 +440,25 @@ describe('Error Handling', () => {
       await waitFor(() =>
         expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
       );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
       // Try to perform operations
       const addListButton = screen.getByRole('button', { name: /add list/i });
       await user.click(addListButton);
 
+      // Advance timers to let debounced saves and state updates complete
+      jest.advanceTimersByTime(300);
+
       // App should maintain consistent state
-      expect(addListButton).toBeInTheDocument();
-      // Check for title input instead of heading (the app renders an input for editing)
-      const titleInput = screen.getByDisplayValue('List 1');
-      expect(titleInput).toBeInTheDocument();
+      await waitFor(() => {
+        expect(addListButton).toBeInTheDocument();
+      });
+
+      // Check for title input - new list is "List 2" (existing is "My Todos")
+      await waitFor(() => {
+        const titleInput = screen.getByDisplayValue('List 2');
+        expect(titleInput).toBeInTheDocument();
+      });
     });
   });
 
@@ -477,17 +486,32 @@ describe('Error Handling', () => {
     it('does not log errors when debug is disabled', async () => {
       debugLogger.disable();
 
-      renderAppWithDefaults({
-        loadListsIndex: jest.fn().mockRejectedValue(new Error('Test error')),
-      });
+      // Suppress React's act warnings for this test since we're testing error handling
+      const originalError = console.error;
+      const mockError = jest.fn();
+      console.error = mockError;
 
-      await waitFor(() =>
-        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
-      );
+      try {
+        renderAppWithDefaults({
+          loadListsIndex: jest.fn().mockRejectedValue(new Error('Test error')),
+        });
 
-      // Error should not be logged when debug is disabled
-      // eslint-disable-next-line no-console
-      expect(console.error).not.toHaveBeenCalled();
+        await waitFor(() =>
+          expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+        );
+
+        // Advance timers to let all async operations complete
+        jest.advanceTimersByTime(300);
+
+        // Filter out React's act warnings and check debugLogger doesn't log
+        const nonActErrors = mockError.mock.calls.filter(
+          (call) =>
+            !call[0]?.includes?.('act(') && !call[0]?.includes?.('Warning:'),
+        );
+        expect(nonActErrors.length).toBe(0);
+      } finally {
+        console.error = originalError;
+      }
     });
   });
 });

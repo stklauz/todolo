@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderHook, fireEvent } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import useTodoKeyboardHandlers from '../useTodoKeyboardHandlers';
 import type { EditorTodo } from '../../types';
 

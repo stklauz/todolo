@@ -8,7 +8,6 @@ import {
   validateAndNormalizeTodo,
   validateAndNormalizeList,
 } from '../validation';
-import type { EditorTodo, TodoList } from '../../types';
 
 describe('validation utilities', () => {
   describe('normalizeTodo', () => {

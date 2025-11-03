@@ -4,40 +4,22 @@ import useListsIndex from './useListsIndex';
 import useListsManagement from './useListsManagement';
 import useTodosOperations from './useTodosOperations';
 import useTodosPersistence from './useTodosPersistence';
+import { useTodosStore } from '../store/useTodosStore';
 
+/**
+ * Phase 5 Refactor: Simplified state hook.
+ * Before: Managed all state locally with refs (14+ parameters passed to child hooks)
+ * After: Store manages state, hooks take zero parameters
+ */
 export default function useTodosState() {
-  const [lists, setLists] = React.useState<TodoList[]>([]);
-  const [selectedListId, setSelectedListId] = React.useState<string | null>(
-    null,
-  );
-  const idCounterRef = React.useRef(1);
-  const selectedListIdRef = React.useRef<string | null>(null);
-  const listsRef = React.useRef<TodoList[]>([]);
-  const loadedListsRef = React.useRef<Set<string>>(new Set());
+  // Read from store (no local state!)
+  const lists = useTodosStore((state) => state.lists);
+  const selectedListId = useTodosStore((state) => state.selectedListId);
+  const setLists = useTodosStore((state) => state.setLists);
+  const setSelectedListId = useTodosStore((state) => state.setSelectedListId);
+  const nextId = useTodosStore((state) => state.nextId);
 
-  selectedListIdRef.current = selectedListId;
-  React.useEffect(() => {
-    listsRef.current = lists;
-  }, [lists]);
-
-  // ID counter management
-  const nextId = () => {
-    const id = idCounterRef.current;
-    idCounterRef.current += 1;
-    return id;
-  };
-
-  /**
-   * Synchronizes the ID counter with the maximum ID found in loaded todos.
-   * Call this after loading todos from storage to ensure new todos get unique IDs.
-   * @param maxId - The highest ID currently in use
-   */
-  const syncIdCounter = (maxId: number) => {
-    if (maxId >= idCounterRef.current) {
-      idCounterRef.current = maxId + 1;
-    }
-  };
-
+  // Computed getters
   const getSelectedTodos = React.useCallback((): EditorTodo[] => {
     const list = lists.find((l) => l.id === selectedListId);
     return list ? list.todos : [];
@@ -46,7 +28,7 @@ export default function useTodosState() {
   const setSelectedTodos = React.useCallback(
     (updater: (prev: EditorTodo[]) => EditorTodo[] | null | undefined) => {
       setLists((prevLists) => {
-        const targetId = selectedListIdRef.current;
+        const targetId = useTodosStore.getState().selectedListId;
         const next = prevLists.map((l) => {
           if (l.id !== targetId) return l;
           const updated = updater(l.todos);
@@ -60,32 +42,14 @@ export default function useTodosState() {
         return hasChanges ? next : prevLists;
       });
     },
-    [],
+    [setLists],
   );
 
-  // Use the lists index hook
-  const { indexLoaded: _indexLoaded } = useListsIndex({
-    lists,
-    setLists,
-    selectedListId,
-    setSelectedListId,
-    listsRef,
-    selectedListIdRef,
-  });
+  // Initialize hooks (no parameters!)
+  useListsIndex();
+  const { saveWithStrategy, flushCurrentTodos } = useTodosPersistence();
 
-  // Use the todos persistence hook
-  const { saveWithStrategy, flushCurrentTodos } = useTodosPersistence({
-    lists,
-    selectedListId,
-    selectedListIdRef,
-    listsRef,
-    loadedListsRef,
-    nextId,
-    syncIdCounter,
-    setLists,
-  });
-
-  // Use the lists management hook
+  // Lists management still needs some props (will refactor next)
   const {
     addList,
     deleteSelectedList,
@@ -97,13 +61,13 @@ export default function useTodosState() {
     setLists,
     selectedListId,
     setSelectedListId,
-    listsRef,
-    loadedListsRef,
+    listsRef: { current: lists }, // Temp for compatibility
+    loadedListsRef: { current: useTodosStore.getState().loadedLists },
     saveWithStrategy,
     flushCurrentTodos,
   });
 
-  // Use the todos operations hook
+  // Todos operations still needs some props (will refactor next)
   const {
     updateTodo,
     toggleTodo,
@@ -127,16 +91,12 @@ export default function useTodosState() {
         ),
       );
     },
-    [],
+    [setLists],
   );
 
   /**
    * Central state management for todos and lists.
-   *
-   * ID Counter Management:
-   * - nextId(): Gets next available ID and increments counter
-   * - Counter auto-syncs when loading existing lists
-   * - Always generates unique IDs within the application lifetime
+   * Phase 5: Now powered by Zustand store (no local state/refs!)
    */
   return {
     lists,

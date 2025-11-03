@@ -3,28 +3,55 @@ import { loadListsIndex, saveListsIndex } from '../api/storage';
 import type { TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
 import { normalizeList } from '../utils/validation';
+import { SaveQueue } from '../utils/saveQueue';
+import { useTodosStore } from '../store/useTodosStore';
 
-type UseListsIndexProps = {
-  lists: TodoList[];
-  setLists: React.Dispatch<React.SetStateAction<TodoList[]>>;
-  selectedListId: string | null;
-  setSelectedListId: (id: string | null) => void;
-  listsRef: React.MutableRefObject<TodoList[]>;
-  selectedListIdRef: React.MutableRefObject<string | null>;
-};
+/**
+ * Phase 5 Refactor: Zero parameters! Store handles all state.
+ * Before: 6 parameters (lists, setLists, selectedListId, setSelectedListId, listsRef, selectedListIdRef)
+ * After: 0 parameters
+ */
+export default function useListsIndex() {
+  // Read from store (no props!)
+  const lists = useTodosStore((state) => state.lists);
+  const selectedListId = useTodosStore((state) => state.selectedListId);
+  const indexLoaded = useTodosStore((state) => state.indexLoaded);
 
-export default function useListsIndex({
-  lists,
-  setLists,
-  selectedListId,
-  setSelectedListId,
-  listsRef,
-  selectedListIdRef,
-}: UseListsIndexProps) {
-  const [indexLoaded, setIndexLoaded] = React.useState(false);
-  const saveTimerRef = React.useRef<number | null>(null);
+  // Write to store (no setState props!)
+  const setLists = useTodosStore((state) => state.setLists);
+  const setSelectedListId = useTodosStore((state) => state.setSelectedListId);
+  const setIndexLoaded = useTodosStore((state) => state.setIndexLoaded);
+
   const initialListCreatedRef = React.useRef(false);
   const listCreationInProgressRef = React.useRef(false);
+
+  // Centralized save queue for lists index (same pattern as todos persistence)
+  const queueRef = React.useRef<SaveQueue | null>(null);
+  if (!queueRef.current) {
+    queueRef.current = new SaveQueue(async () => {
+      try {
+        // Read directly from store (no refs needed!)
+        const snapshot = useTodosStore.getState().lists;
+        const sel = useTodosStore.getState().selectedListId;
+        if (!snapshot || snapshot.length === 0) return;
+        const indexDoc = {
+          version: 2 as const,
+          lists: snapshot.map((l) => ({
+            id: l.id,
+            name: l.name,
+            createdAt: l.createdAt!,
+            updatedAt: l.updatedAt,
+          })),
+          selectedListId: sel ?? undefined,
+        };
+        await saveListsIndex(indexDoc);
+      } catch (error) {
+        debugLogger.log('error', 'Queue-triggered save of lists index failed', {
+          error,
+        });
+      }
+    });
+  }
 
   // Load lists (index) on mount
   React.useEffect(() => {
@@ -42,13 +69,14 @@ export default function useListsIndex({
             ? index.selectedListId!
             : (normalizedLists[0]?.id ?? null),
         );
-      } catch {
+      } catch (error) {
+        debugLogger.log('error', 'Failed to load lists index', { error });
       } finally {
         setIndexLoaded(true);
       }
     };
     load();
-  }, [setLists, setSelectedListId]);
+  }, [setLists, setSelectedListId, setIndexLoaded]);
 
   // Ensure at least one list exists (guard against StrictMode double-invoke)
   React.useEffect(() => {
@@ -96,91 +124,43 @@ export default function useListsIndex({
       setSelectedListId(lists[0].id);
     } else {
     }
+    // Intentionally omit queueRef, setLists, setSelectedListId - stable refs/callbacks
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indexLoaded, lists.length]);
 
   // Debounced save of lists index (names/order/selection, not todos)
+  // All saves now go through centralized SaveQueue
   React.useEffect(() => {
-    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => {
-      try {
-        const indexDoc = {
-          version: 2,
-          lists: lists.map((l) => ({
-            id: l.id,
-            name: l.name,
-            createdAt: l.createdAt!,
-            updatedAt: l.updatedAt,
-          })),
-          selectedListId: selectedListId ?? undefined,
-        } as const;
-
-        saveListsIndex(indexDoc).catch((error) => {
-          debugLogger.log('error', 'Failed to save lists index', error);
-        });
-      } catch {}
-    }, 800);
-    return () => {
-      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    };
+    queueRef.current?.enqueue('debounced', 800);
+    // Intentionally omit queueRef - stable ref, queue reads fresh state via getState()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lists, selectedListId]);
 
   // Ensure initial selection is persisted immediately after it is determined
   // so the same list opens after restart.
   React.useEffect(() => {
     if (!selectedListId || lists.length === 0) return;
-    try {
-      const indexDoc = {
-        version: 2 as const,
-        lists: lists.map((l) => ({
-          id: l.id,
-          name: l.name,
-          createdAt: l.createdAt!,
-          updatedAt: l.updatedAt,
-        })),
-        selectedListId,
-      };
-
-      saveListsIndex(indexDoc).catch(() => {});
-    } catch {}
+    queueRef.current?.enqueue('immediate');
+    // Intentionally omit queueRef - stable ref, queue reads fresh state via getState()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedListId, lists]);
 
   // Flush lists index immediately on window close/blur/hidden, to avoid losing debounced changes
+  // Unified lifecycle handling through SaveQueue (same pattern as todos persistence)
   React.useEffect(() => {
-    const flushIndex = () => {
-      try {
-        const snapshot = listsRef.current;
-        const sel = selectedListIdRef.current;
-        if (!snapshot || snapshot.length === 0) return;
-        const indexDoc = {
-          version: 2 as const,
-          lists: snapshot.map((l) => ({
-            id: l.id,
-            name: l.name,
-            createdAt: l.createdAt!,
-            updatedAt: l.updatedAt,
-          })),
-          selectedListId: sel ?? undefined,
-        };
-        saveListsIndex(indexDoc).catch((error) => {
-          debugLogger.log('error', 'Failed to save lists index', error);
-        });
-      } catch {}
+    const flushSaves = () => {
+      queueRef.current?.flush();
     };
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') flushIndex();
+      if (document.visibilityState === 'hidden') flushSaves();
     };
-    window.addEventListener('beforeunload', flushIndex);
+    window.addEventListener('beforeunload', flushSaves);
     window.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', flushIndex);
+    window.addEventListener('blur', flushSaves);
     return () => {
-      window.removeEventListener('beforeunload', flushIndex);
+      window.removeEventListener('beforeunload', flushSaves);
       window.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', flushIndex);
+      window.removeEventListener('blur', flushSaves);
     };
-  }, [listsRef, selectedListIdRef]);
-
-  return {
-    indexLoaded,
-  } as const;
+  }, []); // No deps - queueRef is stable, handlers use store internally
 }

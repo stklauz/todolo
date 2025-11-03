@@ -718,7 +718,7 @@ describe('useDragReorder', () => {
 
       mockGetTodos.mockReturnValue(todosWithUndefinedIndent);
       // Override the section mock for this specific test
-      const customSectionOf = jest.fn((id: number): Section => {
+      const customSectionOf = jest.fn((_id: number): Section => {
         return 'active'; // Both todos should be in active section
       });
 

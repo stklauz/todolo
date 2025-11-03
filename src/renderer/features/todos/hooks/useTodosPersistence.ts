@@ -1,39 +1,34 @@
 import React from 'react';
 import { saveListTodos, loadListTodos } from '../api/storage';
-import type { TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
 import { SaveQueue } from '../utils/saveQueue';
+import { useTodosStore } from '../store/useTodosStore';
 
-type UseTodosPersistenceProps = {
-  lists: TodoList[];
-  selectedListId: string | null;
-  selectedListIdRef: React.MutableRefObject<string | null>;
-  listsRef: React.MutableRefObject<TodoList[]>;
-  loadedListsRef: React.MutableRefObject<Set<string>>;
-  nextId: () => number;
-  syncIdCounter: (maxId: number) => void;
-  setLists: React.Dispatch<React.SetStateAction<TodoList[]>>;
-};
+/**
+ * Phase 5 Refactor: Zero parameters! Store handles all state.
+ * Before: 8 parameters (lists, selectedListId, selectedListIdRef, listsRef, loadedListsRef, nextId, syncIdCounter, setLists)
+ * After: 0 parameters
+ */
+export default function useTodosPersistence() {
+  // Read from store (no props!)
+  const lists = useTodosStore((state) => state.lists);
+  const selectedListId = useTodosStore((state) => state.selectedListId);
+  const setLists = useTodosStore((state) => state.setLists);
+  const isListLoaded = useTodosStore((state) => state.isListLoaded);
+  const markListAsLoaded = useTodosStore((state) => state.markListAsLoaded);
+  const nextId = useTodosStore((state) => state.nextId);
+  const syncIdCounter = useTodosStore((state) => state.syncIdCounter);
 
-export default function useTodosPersistence({
-  lists,
-  selectedListId,
-  selectedListIdRef,
-  listsRef,
-  loadedListsRef,
-  nextId,
-  syncIdCounter,
-  setLists,
-}: UseTodosPersistenceProps) {
   // No local timers; all save timing is centralized in SaveQueue
-  // Queue uses closures over refs to always read latest state on save
+  // Queue uses store getState() to always read latest state on save (no refs!)
   const queueRef = React.useRef<SaveQueue | null>(null);
   if (!queueRef.current) {
     queueRef.current = new SaveQueue(async () => {
-      const listId = selectedListIdRef.current;
+      const state = useTodosStore.getState();
+      const listId = state.selectedListId;
       if (!listId) return;
-      if (!loadedListsRef.current.has(listId)) return;
-      const snapshot = listsRef.current.find((l) => l.id === listId);
+      if (!state.isListLoaded(listId)) return;
+      const snapshot = state.lists.find((l) => l.id === listId);
       if (!snapshot) return;
       try {
         await saveListTodos(listId, { version: 2, todos: snapshot.todos });
@@ -51,7 +46,7 @@ export default function useTodosPersistence({
     (type: 'immediate' | 'debounced', delay = 200) => {
       if (!selectedListId) return;
       // Gate: don't save until this list's todos have been loaded at least once
-      if (!loadedListsRef.current.has(selectedListId)) return;
+      if (!isListLoaded(selectedListId)) return;
 
       const selected = lists.find((l) => l.id === selectedListId);
       if (!selected) return;
@@ -63,18 +58,19 @@ export default function useTodosPersistence({
       });
 
       // All saves go through centralized queue (immediate or debounced)
-      // Queue's onSave closure uses refs to always read current state
+      // Queue's onSave closure uses store.getState() to always read current state
       queueRef.current?.enqueue(type, delay);
     },
-    [lists, selectedListId, loadedListsRef],
+    [lists, selectedListId, isListLoaded],
   );
 
   // Deterministic flush of current list todos: cancels debounce and awaits save
   const flushCurrentTodos = React.useCallback(async (): Promise<boolean> => {
-    const listId = selectedListIdRef.current;
+    const state = useTodosStore.getState();
+    const listId = state.selectedListId;
     if (!listId) return false;
-    if (!loadedListsRef.current.has(listId)) return false;
-    const snapshot = listsRef.current.find((l) => l.id === listId);
+    if (!state.isListLoaded(listId)) return false;
+    const snapshot = state.lists.find((l) => l.id === listId);
     if (!snapshot) return false;
 
     // Cancel any pending debounced save
@@ -94,7 +90,7 @@ export default function useTodosPersistence({
       debugLogger.log('error', 'Failed to flush todos', { listId, error });
       return false;
     }
-  }, [selectedListIdRef, loadedListsRef, listsRef]);
+  }, []);
 
   // Lazy-load selected list todos when selection changes (with caching)
   React.useEffect(() => {
@@ -108,14 +104,14 @@ export default function useTodosPersistence({
         'List selection changed - checking if todos need loading',
         {
           selectedListId,
-          isCached: loadedListsRef.current.has(selectedListId),
+          isCached: isListLoaded(selectedListId),
           hasTodos: current.todos && current.todos.length > 0,
         },
       );
 
       // Skip loading if list is already cached and has todos
       if (
-        loadedListsRef.current.has(selectedListId) &&
+        isListLoaded(selectedListId) &&
         current.todos &&
         current.todos.length > 0
       ) {
@@ -125,7 +121,7 @@ export default function useTodosPersistence({
 
       // Skip loading if list already has todos (from previous load)
       if (current.todos && current.todos.length > 0) {
-        loadedListsRef.current.add(selectedListId);
+        markListAsLoaded(selectedListId);
         debugLogger.log('info', 'List already has todos, marking as cached');
         return;
       }
@@ -133,7 +129,19 @@ export default function useTodosPersistence({
       debugLogger.log('info', 'Loading todos for selected list', {
         selectedListId,
       });
-      const fetched = await loadListTodos(selectedListId);
+
+      let fetched;
+      try {
+        fetched = await loadListTodos(selectedListId);
+      } catch (error) {
+        debugLogger.log('error', 'Failed to load todos from storage', {
+          selectedListId,
+          error,
+        });
+        // Seed with empty todo on load failure
+        fetched = { version: 2, todos: [] };
+      }
+
       const todosNorm = (fetched.todos || []).map((t: any, i: number) => {
         const todo: any = {
           id: typeof t.id === 'number' ? t.id : i + 1,
@@ -166,7 +174,7 @@ export default function useTodosPersistence({
             l.id === selectedListId ? { ...l, todos: seed } : l,
           ),
         );
-        loadedListsRef.current.add(selectedListId);
+        markListAsLoaded(selectedListId);
         saveListTodos(selectedListId, { version: 2, todos: seed }).catch(
           (error) => {
             debugLogger.log('error', 'Failed to save seed todos', error);
@@ -181,7 +189,7 @@ export default function useTodosPersistence({
             l.id === selectedListId ? { ...l, todos: todosNorm } : l,
           ),
         );
-        loadedListsRef.current.add(selectedListId);
+        markListAsLoaded(selectedListId);
         const maxId = todosNorm.reduce((m, t) => (t.id > m ? t.id : m), 0);
         syncIdCounter(maxId);
         debugLogger.log('info', 'Loaded existing todos for list', {
@@ -193,8 +201,15 @@ export default function useTodosPersistence({
       }
     };
     void run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedListId]);
+  }, [
+    selectedListId,
+    lists,
+    isListLoaded,
+    markListAsLoaded,
+    setLists,
+    nextId,
+    syncIdCounter,
+  ]);
 
   // Cleanup on unmount
   React.useEffect(() => {

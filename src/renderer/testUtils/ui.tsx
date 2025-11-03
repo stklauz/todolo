@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { TodoApp } from '../features/todos/components/TodoApp';
 import TodosProvider from '../features/todos/contexts/TodosProvider';
 import * as storage from '../features/todos/api/storage';
+import { useTodosStore } from '../features/todos/store/useTodosStore';
 
 export const mockStorage = storage as jest.Mocked<typeof storage>;
 
@@ -10,6 +11,15 @@ type MockOverrides = Partial<Record<keyof typeof mockStorage, any>>;
 
 export function setupDefaultMocks(partial?: MockOverrides) {
   jest.clearAllMocks();
+
+  // Reset Zustand store to initial state for each test
+  useTodosStore.setState({
+    lists: [],
+    selectedListId: null,
+    indexLoaded: false,
+    loadedLists: new Set(),
+    idCounter: 1,
+  });
   mockStorage.loadAppSettings.mockResolvedValue({ hideCompletedItems: true });
   mockStorage.loadListsIndex.mockResolvedValue({
     version: 2,

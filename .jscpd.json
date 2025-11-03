@@ -1,0 +1,17 @@
+{
+  "threshold": 10,
+  "reporters": ["console", "json"],
+  "ignore": [
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "node_modules/**",
+    "coverage/**",
+    "release/**",
+    ".erb/**"
+  ],
+  "format": ["typescript", "javascript", "tsx"],
+  "minLines": 5,
+  "minTokens": 50,
+  "output": "./reports/duplication"
+}

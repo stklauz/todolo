@@ -6,8 +6,16 @@ module.exports = {
       files: ['src/tests/**/*.{ts,tsx}', 'src/**/__tests__/**/*.{ts,tsx}'],
       env: { jest: true },
       rules: {
-        // Work around plugin crash on complex mapped types in tests
-        '@typescript-eslint/no-unused-vars': 'off',
+        // Keep unused vars as warnings for tests (allows test setup flexibility)
+        // Use _ prefix for intentionally unused: const _user = setupUser()
+        '@typescript-eslint/no-unused-vars': [
+          'warn', // Warn instead of error for test files
+          {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            ignoreRestSiblings: true,
+          },
+        ],
         'class-methods-use-this': 'off',
         'promise/param-names': 'off',
       },
