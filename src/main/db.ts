@@ -165,6 +165,9 @@ function applyMigrations(database: DB) {
     if (!hasSection) {
       console.log('[DB] Adding section column to todos table');
       database.exec('ALTER TABLE todos ADD COLUMN section TEXT');
+    } else {
+      // Section column is deprecated and no longer used by the application
+      console.log('[DB] Section column deprecated and no longer used');
     }
   } catch (e: any) {
     console.error('[DB] Error applying v4 migration:', e);
@@ -306,7 +309,7 @@ export function loadListTodos(listId: string): {
   const database = openDatabase();
   const rows = database
     .prepare(
-      'SELECT id, text, completed, indent, parent_id, section FROM todos WHERE list_id = ? ORDER BY order_index ASC',
+      'SELECT id, text, completed, indent, parent_id FROM todos WHERE list_id = ? ORDER BY order_index ASC',
     )
     .all(listId);
   // rows loaded from todos
@@ -337,7 +340,7 @@ export function saveListTodos(
     // replace list todos atomically
     const del = database.prepare('DELETE FROM todos WHERE list_id = ?');
     const ins = database.prepare(
-      'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id, section) VALUES (@list_id, @id, @text, @completed, @indent, @order_index, @parent_id, NULL)',
+      'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id) VALUES (@list_id, @id, @text, @completed, @indent, @order_index, @parent_id)',
     );
     const ensureList = database.prepare('SELECT id FROM lists WHERE id = ?');
     const createList = database.prepare(
@@ -491,13 +494,13 @@ export function duplicateList(
       // Copy todos but assign NEW ids within the new list to ensure
       // global uniqueness across lists and avoid any coupling via ids.
       const selectTodos = database.prepare(
-        `SELECT id, text, completed, indent, order_index, parent_id, section
+        `SELECT id, text, completed, indent, order_index, parent_id
          FROM todos
          WHERE list_id = ?
          ORDER BY order_index`,
       );
       const insertTodo = database.prepare(
-        'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id, section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO todos (list_id, id, text, completed, indent, order_index, parent_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
       );
 
       const rows = selectTodos.all(sourceListId) as Array<{
@@ -507,7 +510,6 @@ export function duplicateList(
         indent: number;
         order_index: number;
         parent_id: number | null;
-        section: string | null;
       }>;
 
       // Assign sequential ids in the duplicated list, preserving order.
@@ -533,7 +535,6 @@ export function duplicateList(
           Number(r.indent ?? 0),
           r.order_index,
           newParentId,
-          r.section,
         );
       }
     });
