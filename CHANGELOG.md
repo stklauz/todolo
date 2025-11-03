@@ -1,3 +1,9 @@
+# [1.6.0](https://github.com/stklauz/todolo/compare/v1.5.9...v1.6.0) (2025-11-03)
+
+### Features
+
+- dark mode + style vars ([38f324b](https://github.com/stklauz/todolo/commit/38f324b5b8aab596ea8cd4d57b58ccf4ea5fa93c))
+
 ## [1.5.9](https://github.com/stklauz/todolo/compare/v1.5.8...v1.5.9) (2025-11-03)
 
 ### Bug Fixes
