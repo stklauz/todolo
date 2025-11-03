@@ -1,3 +1,9 @@
+## [1.5.9](https://github.com/stklauz/todolo/compare/v1.5.8...v1.5.9) (2025-11-03)
+
+### Bug Fixes
+
+- ensure old lists always have at least one active todo ([64e1c61](https://github.com/stklauz/todolo/commit/64e1c6134f102f9fa92dde29ac1d6fb1b8f9f883))
+
 ## [1.5.8](https://github.com/stklauz/todolo/compare/v1.5.7...v1.5.8) (2025-11-03)
 
 ### Bug Fixes
