@@ -1,3 +1,9 @@
+## [1.5.8](https://github.com/stklauz/todolo/compare/v1.5.7...v1.5.8) (2025-11-03)
+
+### Bug Fixes
+
+- style tweaks on todo row + docs for new ideas ([4d0efff](https://github.com/stklauz/todolo/commit/4d0efff67977ce047fd54cd1c0e36ae831765d3f))
+
 ## [1.5.7](https://github.com/stklauz/todolo/compare/v1.5.6...v1.5.7) (2025-11-02)
 
 ### Bug Fixes
