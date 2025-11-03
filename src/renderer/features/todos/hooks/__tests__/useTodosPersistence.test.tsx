@@ -231,19 +231,23 @@ describe('useTodosPersistence', () => {
       expect(mockStorage.saveListTodos).not.toHaveBeenCalled();
 
       // Now with a selected list
+      const testList = {
+        id: 'list-1',
+        name: 'Test List',
+        todos: [{ id: 1, text: 'Test', completed: false, indent: 0 }],
+      };
+      const selectedListIdRef = { current: 'list-1' };
+      const listsRef = { current: [testList] };
+
       const { result: result2 } = renderHook(
         (props) => useTodosPersistence(props),
         {
           initialProps: {
             ...defaultProps,
             selectedListId: 'list-1',
-            lists: [
-              {
-                id: 'list-1',
-                name: 'Test List',
-                todos: [{ id: 1, text: 'Test', completed: false, indent: 0 }],
-              },
-            ],
+            selectedListIdRef,
+            lists: [testList],
+            listsRef,
             loadedListsRef: { current: new Set(['list-1']) },
           },
         },
@@ -259,17 +263,21 @@ describe('useTodosPersistence', () => {
     it('should debounce saves when type is debounced', async () => {
       mockStorage.saveListTodos.mockResolvedValue(true);
 
+      const testList = {
+        id: 'list-1',
+        name: 'Test List',
+        todos: [{ id: 1, text: 'Test', completed: false, indent: 0 }],
+      };
+      const selectedListIdRef = { current: 'list-1' };
+      const listsRef = { current: [testList] };
+
       const { result } = renderHook((props) => useTodosPersistence(props), {
         initialProps: {
           ...defaultProps,
           selectedListId: 'list-1',
-          lists: [
-            {
-              id: 'list-1',
-              name: 'Test List',
-              todos: [{ id: 1, text: 'Test', completed: false, indent: 0 }],
-            },
-          ],
+          selectedListIdRef,
+          lists: [testList],
+          listsRef,
           loadedListsRef: { current: new Set(['list-1']) },
         },
       });

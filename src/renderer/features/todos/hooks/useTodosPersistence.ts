@@ -2,6 +2,7 @@ import React from 'react';
 import { saveListTodos, loadListTodos } from '../api/storage';
 import type { TodoList } from '../types';
 import { debugLogger } from '../../../utils/debug';
+import { SaveQueue } from '../utils/saveQueue';
 
 type UseTodosPersistenceProps = {
   lists: TodoList[];
@@ -24,7 +25,26 @@ export default function useTodosPersistence({
   syncIdCounter,
   setLists,
 }: UseTodosPersistenceProps) {
-  const todosSaveTimerRef = React.useRef<number | null>(null);
+  // No local timers; all save timing is centralized in SaveQueue
+  // Queue uses closures over refs to always read latest state on save
+  const queueRef = React.useRef<SaveQueue | null>(null);
+  if (!queueRef.current) {
+    queueRef.current = new SaveQueue(async () => {
+      const listId = selectedListIdRef.current;
+      if (!listId) return;
+      if (!loadedListsRef.current.has(listId)) return;
+      const snapshot = listsRef.current.find((l) => l.id === listId);
+      if (!snapshot) return;
+      try {
+        await saveListTodos(listId, { version: 2, todos: snapshot.todos });
+      } catch (error) {
+        debugLogger.log('error', 'Queue-triggered save failed', {
+          listId,
+          error,
+        });
+      }
+    });
+  }
 
   // Smart save function with different strategies
   const saveWithStrategy = React.useCallback(
@@ -36,40 +56,15 @@ export default function useTodosPersistence({
       const selected = lists.find((l) => l.id === selectedListId);
       if (!selected) return;
 
-      const doc = { version: 2, todos: selected.todos } as const;
-
       debugLogger.log('info', `Saving todos with ${type} strategy`, {
         listId: selectedListId,
         todoCount: selected.todos.length,
         delay: type === 'debounced' ? delay : 0,
       });
 
-      if (type === 'immediate') {
-        // Clear any pending debounced saves
-        if (todosSaveTimerRef.current) {
-          window.clearTimeout(todosSaveTimerRef.current);
-          todosSaveTimerRef.current = null;
-        }
-        // Save immediately for critical operations
-        saveListTodos(selectedListId, doc).catch((error) => {
-          debugLogger.log('error', 'Failed to save todos immediately', error);
-        });
-      } else {
-        // Debounced save
-        if (todosSaveTimerRef.current) {
-          window.clearTimeout(todosSaveTimerRef.current);
-        }
-        todosSaveTimerRef.current = window.setTimeout(() => {
-          saveListTodos(selectedListId, doc).catch((error) => {
-            debugLogger.log(
-              'error',
-              'Failed to save todos with debounce',
-              error,
-            );
-          });
-          todosSaveTimerRef.current = null;
-        }, delay);
-      }
+      // All saves go through centralized queue (immediate or debounced)
+      // Queue's onSave closure uses refs to always read current state
+      queueRef.current?.enqueue(type, delay);
     },
     [lists, selectedListId, loadedListsRef],
   );
@@ -83,10 +78,7 @@ export default function useTodosPersistence({
     if (!snapshot) return false;
 
     // Cancel any pending debounced save
-    if (todosSaveTimerRef.current) {
-      window.clearTimeout(todosSaveTimerRef.current);
-      todosSaveTimerRef.current = null;
-    }
+    queueRef.current?.cancel();
 
     try {
       debugLogger.log('info', 'Flushing todos (awaiting save)', {
@@ -151,12 +143,9 @@ export default function useTodosPersistence({
           ),
           indent: Math.max(0, Math.min(1, Number((t as any).indent ?? 0))),
         };
-        // Preserve parentId and section from database
+        // Preserve parentId from database (section is computed, not persisted)
         if (t.parentId !== undefined) {
           todo.parentId = t.parentId;
-        }
-        if (t.section !== undefined) {
-          todo.section = t.section;
         }
         return todo;
       });
@@ -207,12 +196,10 @@ export default function useTodosPersistence({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedListId]);
 
-  // Cleanup timer on unmount
+  // Cleanup on unmount
   React.useEffect(() => {
     return () => {
-      if (todosSaveTimerRef.current) {
-        window.clearTimeout(todosSaveTimerRef.current);
-      }
+      queueRef.current?.cancel();
     };
   }, []);
 
@@ -220,7 +207,7 @@ export default function useTodosPersistence({
   React.useEffect(() => {
     const flushSaves = () => {
       // Force an immediate save of current list's todos
-      saveWithStrategy('immediate');
+      queueRef.current?.flush();
     };
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flushSaves();
@@ -233,7 +220,7 @@ export default function useTodosPersistence({
       window.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('blur', flushSaves);
     };
-  }, [saveWithStrategy]);
+  }, []); // No deps needed - queueRef is stable, handlers don't depend on external state
 
   return {
     saveWithStrategy,
