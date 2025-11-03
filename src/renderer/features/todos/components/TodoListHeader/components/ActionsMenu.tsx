@@ -2,8 +2,7 @@ import React from 'react';
 import { IoEllipsisHorizontal } from 'react-icons/io5';
 import Spinner from '../../../../../components/Spinner';
 import type { AppSettings } from '../../../types';
-import { useTodosContext } from '../../../contexts';
-import { useTodosActions } from '../../../contexts/TodosProvider';
+import { useTodosStore } from '../../../store/useTodosStore';
 import useListDuplication from '../../../hooks/useListDuplication';
 import { loadListsIndex } from '../../../api/storage';
 import { debugLogger } from '../../../../../utils/debug';
@@ -19,8 +18,10 @@ export default function ActionsMenu({
   appSettings,
   onUpdateAppSettings,
 }: ActionsMenuProps): React.ReactElement {
-  const { lists, selectedListId } = useTodosContext();
-  const { deleteList, duplicateList } = useTodosActions();
+  const lists = useTodosStore((s) => s.lists);
+  const selectedListId = useTodosStore((s) => s.selectedListId);
+  const deleteList = useTodosStore((s) => s.deleteList);
+  const duplicateList = useTodosStore((s) => s.duplicateList);
   const { isDuplicating, handleDuplicate: handleDuplicateBase } =
     useListDuplication();
 

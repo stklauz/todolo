@@ -3,19 +3,21 @@ import ListSidebar from '../ListSidebar/ListSidebar';
 import TodoList from '../TodoList/TodoList';
 import TodoListHeader from '../TodoListHeader/TodoListHeader';
 import type { AppSettings } from '../../types';
-import { useTodosContext, useTodosActions } from '../../contexts/TodosProvider';
+import { useSelectedTodos } from '../../store/useTodosStore';
 import useTodoFocus, { useTodoFocusEffect } from '../../hooks/useTodoFocus';
 import useListEditing from '../../hooks/useListEditing';
 import useListDuplication from '../../hooks/useListDuplication';
+import useListsIndex from '../../hooks/useListsIndex';
+import useTodosPersistence from '../../hooks/useTodosPersistence';
 import { loadAppSettings, saveAppSettings } from '../../api/storage';
 import { debugLogger } from '../../../../utils/debug';
 
 const styles = require('./TodoApp.module.css');
 
 export default function TodoApp(): React.ReactElement {
-  const { lists: _lists, selectedListId: _selectedListId } = useTodosContext();
-  const { getSelectedTodos } = useTodosActions();
-
+  // Initialize lists from storage and persistence
+  useListsIndex();
+  useTodosPersistence();
   const [appSettings, setAppSettings] = React.useState<AppSettings>({
     hideCompletedItems: true,
   });
@@ -41,7 +43,7 @@ export default function TodoApp(): React.ReactElement {
     [],
   );
 
-  const allTodos = getSelectedTodos();
+  const allTodos = useSelectedTodos();
 
   const { inputByIdRef, focusNextIdRef, setInputRef, focusTodo } =
     useTodoFocus();

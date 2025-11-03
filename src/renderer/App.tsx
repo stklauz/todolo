@@ -4,7 +4,6 @@ import './styles/base.css';
 import { TodoApp } from './features/todos/components/TodoApp';
 import DebugPanel from './components/DebugPanel';
 import { debugLogger } from './utils/debug';
-import { TodosProvider } from './features/todos/contexts';
 
 function Content() {
   const [isDebugVisible, setIsDebugVisible] = useState(false);
@@ -31,7 +30,7 @@ function Content() {
   }, [isDebugVisible]);
 
   return (
-    <TodosProvider>
+    <>
       <div className="drag-region" />
       <TodoApp />
       <DebugPanel
@@ -41,7 +40,7 @@ function Content() {
           debugLogger.disable();
         }}
       />
-    </TodosProvider>
+    </>
   );
 }
 

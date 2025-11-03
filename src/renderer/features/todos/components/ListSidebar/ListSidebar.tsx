@@ -1,15 +1,17 @@
 import React from 'react';
 import { IoAddOutline } from 'react-icons/io5';
 import { ReactComponent as TodoloLogo } from '../../../../../../assets/logo/todolo.svg';
-import { useTodosContext, useTodosActions } from '../../contexts';
+import { useTodosStore } from '../../store/useTodosStore';
 import useListDuplication from '../../hooks/useListDuplication';
 import useListEditing from '../../hooks/useListEditing';
 
 const styles = require('./Sidebar.module.css');
 
 export default function ListSidebar() {
-  const { lists, selectedListId } = useTodosContext();
-  const { setSelectedListId, addList } = useTodosActions();
+  const lists = useTodosStore((s) => s.lists);
+  const selectedListId = useTodosStore((s) => s.selectedListId);
+  const setSelectedListId = useTodosStore((s) => s.setSelectedListId);
+  const addList = useTodosStore((s) => s.addList);
   const { focusListId } = useListDuplication();
   const { startRename } = useListEditing();
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { TodoRow } from '../TodoRow/TodoRow';
 import type { Section, AppSettings } from '../../types';
-import { useTodosActions } from '../../contexts';
+import { useTodosStore, useSelectedTodos } from '../../store/useTodosStore';
 import useDragReorder from '../../hooks/useDragReorder';
 import useFilteredTodos from '../../hooks/useFilteredTodos';
 import useTodoKeyboardHandlers from '../../hooks/useTodoKeyboardHandlers';
@@ -33,17 +33,37 @@ const TodoList = React.memo(function TodoList({
   setInputRef,
   focusTodo,
 }: Props) {
-  const {
-    updateTodo,
-    toggleTodo,
-    getSelectedTodos,
-    setSelectedTodos,
-    insertTodoBelow,
-    removeTodoAt,
-    changeIndent,
-  } = useTodosActions();
+  const updateTodo = useTodosStore((s) => s.updateTodo);
+  const toggleTodo = useTodosStore((s) => s.toggleTodo);
+  const insertTodoBelow = useTodosStore((s) => s.insertTodoBelow);
+  const removeTodoAt = useTodosStore((s) => s.removeTodoAt);
+  const changeIndent = useTodosStore((s) => s.changeIndent);
 
-  const allTodos = getSelectedTodos();
+  const allTodos = useSelectedTodos();
+
+  // Adapter to allow hooks expecting setSelectedTodos(updater)
+  const setSelectedTodos = React.useCallback(
+    (
+      updater: (
+        prev: ReturnType<typeof useSelectedTodos>,
+      ) => ReturnType<typeof useSelectedTodos> | null | undefined,
+    ) => {
+      const { selectedListId, setLists, lists } = useTodosStore.getState();
+      if (!selectedListId) return;
+      const current = lists.find((l) => l.id === selectedListId);
+      if (!current) return;
+      const nextTodos = updater(current.todos);
+      if (!nextTodos || nextTodos === current.todos) return;
+      setLists((prev) =>
+        prev.map((l) =>
+          l.id === selectedListId
+            ? { ...l, todos: nextTodos, updatedAt: new Date().toISOString() }
+            : l,
+        ),
+      );
+    },
+    [],
+  );
 
   const handleTodoKeyDown = useTodoKeyboardHandlers({
     allTodos,

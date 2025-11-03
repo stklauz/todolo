@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TodoApp } from '../features/todos/components/TodoApp';
-import TodosProvider from '../features/todos/contexts/TodosProvider';
 import * as storage from '../features/todos/api/storage';
 import { useTodosStore } from '../features/todos/store/useTodosStore';
 
@@ -44,11 +43,7 @@ export function setupDefaultMocks(partial?: MockOverrides) {
 
 export function renderAppWithDefaults(overrides?: MockOverrides) {
   setupDefaultMocks(overrides);
-  return render(
-    <TodosProvider>
-      <TodoApp />
-    </TodosProvider>,
-  );
+  return render(<TodoApp />);
 }
 
 export function setupUser() {

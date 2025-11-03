@@ -18,6 +18,7 @@ Use this as a simple, implementation‑doc checklist. Keep changes small, increm
 - Handle timeouts, retries, and idempotency where needed.
 - Update docs/usage when necessary.
 - Run tests; Run lint; Run tsc; Clean up as you go: remove dead code and noisy logs.
+- All tests + lint + tsc must pass before one can commit.
 
 ## Testing (Do It As You Build)
 

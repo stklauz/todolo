@@ -127,7 +127,6 @@ npm test           # Run test suite with coverage enforcement
 
 ## Definition of Done
 
-- Feature is behind a flag or fully user‑ready.
 - Tests exist and pass; key paths are observable.
 - **Coverage requirements met**: All coverage thresholds maintained or improved.
 - Docs updated; rollout/rollback verified.
@@ -138,7 +137,6 @@ npm test           # Run test suite with coverage enforcement
 
 ### Good: Incremental Feature Addition
 
-- Start with basic functionality behind a feature flag
 - Add comprehensive tests for core paths
 - Gradually expose to users with monitoring
 

@@ -2,7 +2,7 @@ import React from 'react';
 import type { AppSettings } from '../../types';
 import { useTimeout } from '../../hooks/useTimeout';
 import ActionsMenu from './components/ActionsMenu';
-import { useTodosContext } from '../../contexts';
+import { useTodosStore } from '../../store/useTodosStore';
 import useListEditing from '../../hooks/useListEditing';
 
 const styles = require('./TodoListHeader.module.css');
@@ -16,7 +16,8 @@ export default function TodoListHeader({
   appSettings,
   onUpdateAppSettings,
 }: TodoListHeaderProps): React.ReactElement {
-  const { lists, selectedListId } = useTodosContext();
+  const lists = useTodosStore((s) => s.lists);
+  const selectedListId = useTodosStore((s) => s.selectedListId);
   const {
     editingListId,
     editingName,

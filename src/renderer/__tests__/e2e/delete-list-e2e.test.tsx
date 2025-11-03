@@ -3,7 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { TodoApp } from '../../features/todos/components/TodoApp';
-import TodosProvider from '../../features/todos/contexts/TodosProvider';
 import * as storage from '../../features/todos/api/storage';
 
 // Mock the storage module to observe calls from UI to storage and assert IPC wiring
@@ -29,11 +28,7 @@ describe('Delete List - UI to DB wiring', () => {
   });
 
   it('deletes the selected list via the menu and persists index without it', async () => {
-    render(
-      <TodosProvider>
-        <TodoApp />
-      </TodosProvider>,
-    );
+    render(<TodoApp />);
 
     // Initial data load
     await waitFor(() => {
