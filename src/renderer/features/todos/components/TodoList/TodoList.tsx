@@ -115,7 +115,13 @@ const TodoList = React.memo(function TodoList({
     return groupTodosBySection(todos);
   }, [todos]);
 
-  const isSingleActive = derived.active.length === 1;
+  // Compute section grouping from ALL todos (not filtered) to correctly determine
+  // if we need to create a new active todo when toggling the last one
+  const allDerived = React.useMemo(() => {
+    return groupTodosBySection(allTodos);
+  }, [allTodos]);
+
+  const isSingleActive = allDerived.active.length === 1;
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   React.useEffect(() => {
     try {

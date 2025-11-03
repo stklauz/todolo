@@ -416,7 +416,7 @@ describe('Todo Filtering', () => {
   });
 
   describe('Filtering Edge Cases', () => {
-    it('handles all completed todos correctly', async () => {
+    it('handles all completed todos correctly - ensures at least one active todo', async () => {
       const initialTodos = [
         { id: 1, text: 'Completed 1', completed: true, indent: 0 },
         { id: 2, text: 'Completed 2', completed: true, indent: 0 },
@@ -439,10 +439,14 @@ describe('Todo Filtering', () => {
       );
       await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
 
-      // When all todos are completed and hidden, the app should show no todo inputs
-      // The app might not render any inputs when all are hidden
-      const inputs = screen.queryAllByLabelText('Todo text');
-      expect(inputs).toHaveLength(0);
+      // INVARIANT: There should ALWAYS be at least one active todo
+      // When hideCompletedItems is true, we show completed ones, but we still
+      // need at least one active todo input in the UI
+      const inputs = screen.getAllByLabelText('Todo text');
+      expect(inputs.length).toBeGreaterThanOrEqual(1);
+
+      // The first input should be empty and available for typing
+      expect((inputs[0] as HTMLTextAreaElement).value).toBe('');
     });
 
     it('handles empty todo list correctly', async () => {

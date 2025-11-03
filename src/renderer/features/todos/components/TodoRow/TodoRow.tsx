@@ -69,7 +69,6 @@ export const TodoRow = React.memo(
           }}
         >
           <span
-            title="Drag to reorder"
             data-testid="todo-indent"
             aria-label="Drag to reorder"
             className={`${styles.draggable} ${indentClass}`}

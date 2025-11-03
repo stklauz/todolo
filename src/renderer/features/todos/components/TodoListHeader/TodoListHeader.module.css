@@ -1,3 +1,7 @@
+.todoListHeader {
+  padding: 0 8px;
+}
+
 .titleRow {
   display: flex;
   align-items: center;

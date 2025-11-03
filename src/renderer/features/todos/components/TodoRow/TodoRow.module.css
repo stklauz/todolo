@@ -34,6 +34,7 @@
 
 .checkbox:hover {
   border-color: #94a3b8;
+  cursor: pointer;
   /* slate-400 */
 }
 
@@ -111,6 +112,10 @@
 .row:hover {
   background: #f8fafc;
   /* slate-50 */
+}
+
+.row:hover .checkbox {
+  border-color: #94a3b8;
 }
 
 .draggable {

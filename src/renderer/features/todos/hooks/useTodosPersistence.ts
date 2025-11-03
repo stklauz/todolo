@@ -3,6 +3,7 @@ import { saveListTodos, loadListTodos } from '../api/storage';
 import { debugLogger } from '../../../utils/debug';
 import { SaveQueue } from '../utils/saveQueue';
 import { useTodosStore } from '../store/useTodosStore';
+import { groupTodosBySection } from '../utils/todoUtils';
 
 /**
  * Phase 5 Refactor: Zero parameters! Store handles all state.
@@ -197,31 +198,47 @@ export default function useTodosPersistence() {
         return todo;
       });
 
-      if (todosNorm.length === 0) {
-        const firstId = nextId();
-        const seed = [
-          {
-            id: firstId,
-            text: '',
-            completed: false,
-            indent: 0,
-            parentId: null,
-          },
-        ];
+      // Check if we need to seed: either no todos at all, or no active todos
+      const sectionGroup = groupTodosBySection(todosNorm);
+      const hasActiveTodos = sectionGroup.active.length > 0;
+
+      if (todosNorm.length === 0 || !hasActiveTodos) {
+        // Add a seed todo to existing todos if needed, or create list if empty
+        const todosWithSeed = hasActiveTodos
+          ? todosNorm
+          : [
+              ...todosNorm,
+              {
+                id: nextId(),
+                text: '',
+                completed: false,
+                indent: 0,
+                parentId: null,
+              },
+            ];
         setLists((prev) =>
           prev.map((l) =>
-            l.id === selectedListId ? { ...l, todos: seed } : l,
+            l.id === selectedListId ? { ...l, todos: todosWithSeed } : l,
           ),
         );
         markListAsLoaded(selectedListId);
-        saveListTodos(selectedListId, { version: 2, todos: seed }).catch(
-          (error) => {
-            debugLogger.log('error', 'Failed to save seed todos', error);
+        saveListTodos(selectedListId, {
+          version: 2,
+          todos: todosWithSeed,
+        }).catch((error) => {
+          debugLogger.log('error', 'Failed to save seed todos', error);
+        });
+        debugLogger.log(
+          'info',
+          hasActiveTodos
+            ? 'Created new empty list with seed todo'
+            : 'Added seed todo due to no active todos',
+          {
+            selectedListId,
+            hadNoTodos: todosNorm.length === 0,
+            hadNoActive: !hasActiveTodos,
           },
         );
-        debugLogger.log('info', 'Created new empty list with seed todo', {
-          selectedListId,
-        });
       } else {
         setLists((prev) =>
           prev.map((l) =>

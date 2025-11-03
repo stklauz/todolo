@@ -86,7 +86,7 @@ export default function TodoListHeader({
   };
 
   return (
-    <>
+    <div className={styles.todoListHeader}>
       <div className={styles.titleRow}>
         <input
           ref={titleInputRef}
@@ -125,6 +125,6 @@ export default function TodoListHeader({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
