@@ -1,7 +1,11 @@
 #!/usr/bin/env sh
 
-# Pull latest changes before committing
-git pull || exit 1
+# Check if there are newer commits on remote without pulling
+git fetch --quiet || exit 1
+if [ -n "$(git rev-list HEAD..@{u} 2>/dev/null)" ]; then
+  echo "⚠️  Your branch is behind remote. Please run 'git pull' first."
+  exit 1
+fi
 
 # Lint and format staged files, then re-stage them
 npx lint-staged || exit 1
