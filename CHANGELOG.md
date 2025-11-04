@@ -1,3 +1,9 @@
+## [1.6.1](https://github.com/stklauz/todolo/compare/v1.6.0...v1.6.1) (2025-11-04)
+
+### Bug Fixes
+
+- rename list fix ([ee25e7a](https://github.com/stklauz/todolo/commit/ee25e7a38b400bba28d7bafc3c1463e453f9d5aa))
+
 # [1.6.0](https://github.com/stklauz/todolo/compare/v1.5.9...v1.6.0) (2025-11-03)
 
 ### Features
