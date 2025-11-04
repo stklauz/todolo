@@ -18,6 +18,7 @@ export default function TodoListHeader({
 }: TodoListHeaderProps): React.ReactElement {
   const lists = useTodosStore((s) => s.lists);
   const selectedListId = useTodosStore((s) => s.selectedListId);
+  const renameList = useTodosStore((s) => s.renameList);
   const {
     editingListId,
     editingName,
@@ -58,13 +59,24 @@ export default function TodoListHeader({
     }, 150);
   };
 
+  const handleCommitRename = () => {
+    if (!editingListId || !isEditing) return;
+    const trimmedName = editingName.trim();
+    if (!trimmedName) {
+      cancelRename();
+      return;
+    }
+    renameList(editingListId, trimmedName);
+    commitRename();
+  };
+
   const handleBlur = () => {
     // Don't commit if this is an immediate blur after focus
     if (inputJustFocusedRef.current) {
       return;
     }
     if (isEditing) {
-      commitRename();
+      handleCommitRename();
     }
   };
 
@@ -73,7 +85,7 @@ export default function TodoListHeader({
       e.preventDefault();
       e.stopPropagation();
       if (isEditing) {
-        commitRename();
+        handleCommitRename();
       }
     }
     if (e.key === 'Escape') {

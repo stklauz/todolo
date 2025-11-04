@@ -64,6 +64,7 @@ type TodosState = {
   addList: () => string;
   deleteSelectedList: () => void;
   deleteList: (id: string) => Promise<void>;
+  renameList: (id: string, name: string) => void;
   duplicateList: (
     sourceListId: string,
     newListName?: string,
@@ -440,6 +441,23 @@ export const useTodosStore = create<TodosState>((set, get) => ({
         ...state,
         lists: remaining,
         selectedListId: nextSelected,
+      } as TodosState;
+    });
+  },
+
+  renameList: (id, name) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    set((state) => {
+      const list = state.lists.find((l) => l.id === id);
+      if (!list || list.name === trimmedName) return state;
+      return {
+        ...state,
+        lists: state.lists.map((l) =>
+          l.id === id
+            ? { ...l, name: trimmedName, updatedAt: new Date().toISOString() }
+            : l,
+        ),
       } as TodosState;
     });
   },
