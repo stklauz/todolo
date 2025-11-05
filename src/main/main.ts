@@ -9,9 +9,10 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 
-import path from 'path';
+import path from 'node:path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import MenuBuilder from './menu';
+import { initAutoUpdater } from './updater';
 import { resolveHtmlPath } from './util';
 
 // Import DB module only after userData path is finalized to avoid any
@@ -35,7 +36,9 @@ import {
 // Separate Dev and Prod databases by using different userData paths.
 // Development uses a dedicated Dev directory; production uses Electron defaults.
 // Must run before any userData path is consumed.
-if (!app.isPackaged) {
+if (app.isPackaged) {
+  console.log(`[STORAGE] userData path (prod) -> ${app.getPath('userData')}`);
+} else {
   try {
     const devUserData = path.join(
       app.getPath('appData'),
@@ -46,8 +49,6 @@ if (!app.isPackaged) {
   } catch (e) {
     console.warn('[STORAGE] Unable to set dev userData path', e);
   }
-} else {
-  console.log(`[STORAGE] userData path (prod) -> ${app.getPath('userData')}`);
 }
 
 // Auto-update logic removed per user request.
@@ -356,14 +357,24 @@ app.on('will-quit', () => {
   closeDatabase();
 });
 
-app
-  .whenReady()
-  .then(() => {
-    void createWindow();
+// Initialize app (IIFE required - this module is compiled to CommonJS by webpack)
+// Top-level await is not available in CommonJS modules, so IIFE is necessary
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
+(async () => {
+  try {
+    await app.whenReady();
+    await createWindow();
+    // Initialize auto-updater (guarded by flag and only in production)
+    // Initialize after window is created so dialogs have proper parent window
+    if (app.isPackaged && process.env.AUTO_UPDATER !== 'false') {
+      initAutoUpdater(mainWindow);
+    }
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) void createWindow();
     });
-  })
-  .catch(console.log);
+  } catch (error) {
+    console.log(error);
+  }
+})();

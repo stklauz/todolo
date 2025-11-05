@@ -21,8 +21,10 @@ export default class MenuBuilder {
   }
 
   private async checkForUpdatesManually() {
+    let originalAutoDownload: boolean | undefined;
     try {
-      // Ensure no background downloads
+      // Ensure no background downloads during manual check
+      originalAutoDownload = autoUpdater.autoDownload;
       autoUpdater.autoDownload = false;
       // Perform a one-time check
       const result = await autoUpdater.checkForUpdates();
@@ -61,6 +63,11 @@ export default class MenuBuilder {
       });
       if (resp.response === 0) {
         shell.openExternal('https://github.com/stklauz/todolo/releases');
+      }
+    } finally {
+      // Restore original autoDownload setting for auto-updater
+      if (typeof originalAutoDownload === 'boolean') {
+        autoUpdater.autoDownload = originalAutoDownload;
       }
     }
   }
@@ -239,8 +246,8 @@ export default class MenuBuilder {
         },
         {
           label: 'Check for Updates…',
-          click: async () => {
-            await this.checkForUpdatesManually();
+          click: () => {
+            void this.checkForUpdatesManually();
           },
         },
         {

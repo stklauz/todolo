@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-latest
 
     # Skip if commit message contains [skip ci] (from semantic-release)
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
+    if: ${{ !contains(github.event.head_commit.message, 'skip ci') }}
 
     # trunk-ignore(checkov/CKV2_GHA_1)
     permissions:
@@ -79,9 +79,18 @@ jobs:
 
       - name: Package Electron app (no publish)
         if: steps.release_plan.outputs.should_release == 'true'
+        timeout-minutes: 45
         run: npm run package
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
+          # Code signing: Enable auto-discovery or provide certificate via CSC_LINK
+          CSC_IDENTITY_AUTO_DISCOVERY: true
+          # Notarization credentials (requires GitHub Secrets to be set)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          # Prefer APPLE_APP_SPECIFIC_PASSWORD; keep APPLE_ID_PASS for backward-compat
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_ID_PASS: ${{ secrets.APPLE_ID_PASS }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Internal notarization timeout removed; CI step timeout applies
 
       # Semantic Release creates the release and uploads prepared assets
       - name: Semantic Release
