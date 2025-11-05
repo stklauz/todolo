@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/stklauz/todolo/compare/v1.7.0...v1.7.1) (2025-11-05)
+
+### Bug Fixes
+
+- versions in ci assets ([e0a580f](https://github.com/stklauz/todolo/commit/e0a580f907f603d2a262dfce12647a7aa8199a08))
+
 # [1.7.0](https://github.com/stklauz/todolo/compare/v1.6.1...v1.7.0) (2025-11-05)
 
 ### Bug Fixes
