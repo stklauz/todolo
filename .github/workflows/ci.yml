@@ -84,6 +84,8 @@ jobs:
         env:
           # Code signing: Enable auto-discovery or provide certificate via CSC_LINK
           CSC_IDENTITY_AUTO_DISCOVERY: true
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           # Notarization credentials (requires GitHub Secrets to be set)
           APPLE_ID: ${{ secrets.APPLE_ID }}
           # Prefer APPLE_APP_SPECIFIC_PASSWORD; keep APPLE_ID_PASS for backward-compat
