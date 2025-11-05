@@ -1,3 +1,13 @@
+# [1.7.0](https://github.com/stklauz/todolo/compare/v1.6.1...v1.7.0) (2025-11-05)
+
+### Bug Fixes
+
+- ci build signing ([77b6860](https://github.com/stklauz/todolo/commit/77b68603c8e27f324171a37d7d633331bddc54e9))
+
+### Features
+
+- auto update ([4a09b98](https://github.com/stklauz/todolo/commit/4a09b984a558af7c0cd4706ca2f17f936f640d8e))
+
 ## [1.6.1](https://github.com/stklauz/todolo/compare/v1.6.0...v1.6.1) (2025-11-04)
 
 ### Bug Fixes
