@@ -68,6 +68,10 @@ jobs:
           if npx semantic-release --dry-run --no-ci | tee "$DRYRUN_LOG"; then
             if grep -q "The next release version is" "$DRYRUN_LOG"; then
               echo "should_release=true" >> "$GITHUB_OUTPUT"
+              NEXT_VERSION=$(sed -n 's/.*The next release version is \([^ ]*\).*/\1/p' "$DRYRUN_LOG" | head -n1)
+              if [ -n "$NEXT_VERSION" ]; then
+                echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+              fi
             else
               echo "should_release=false" >> "$GITHUB_OUTPUT"
             fi
@@ -76,6 +80,12 @@ jobs:
             echo "should_release=false" >> "$GITHUB_OUTPUT"
           fi
           rm -f "$DRYRUN_LOG"
+
+      - name: Sync app version for packaging
+        if: steps.release_plan.outputs.should_release == 'true' && steps.release_plan.outputs.next_version != ''
+        run: node ./.erb/scripts/sync-app-version.js
+        env:
+          VERSION: ${{ steps.release_plan.outputs.next_version }}
 
       - name: Package Electron app (no publish)
         if: steps.release_plan.outputs.should_release == 'true'
