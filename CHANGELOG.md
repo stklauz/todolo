@@ -1,3 +1,9 @@
+## [1.8.1](https://github.com/stklauz/todolo/compare/v1.8.0...v1.8.1) (2025-11-06)
+
+### Bug Fixes
+
+- merge / split not filtering completed items ([b363864](https://github.com/stklauz/todolo/commit/b3638645d499d77e419e5ce883848d20a447f3ca))
+
 # [1.8.0](https://github.com/stklauz/todolo/compare/v1.7.3...v1.8.0) (2025-11-06)
 
 ### Features
