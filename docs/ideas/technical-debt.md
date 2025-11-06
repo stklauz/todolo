@@ -82,6 +82,7 @@ This document tracks known areas for improvement after the successful Phase 5 ar
    ```
 
 2. **Simplify toggleTodo Action**
+
    ```typescript
    toggleTodo: (id: number) => {
      set((state) => {
