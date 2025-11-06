@@ -7,6 +7,7 @@ import {
   dialog,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import { shouldEnableDebugUI } from './util';
 
 interface DarwinMenuItemConstructorOptions extends MenuItemConstructorOptions {
   selector?: string;
@@ -20,30 +21,48 @@ export default class MenuBuilder {
     this.mainWindow = mainWindow;
   }
 
+  private async promptDownloadAndInstall() {
+    // Download the update and prompt to restart
+    await autoUpdater.downloadUpdate();
+    const restart = await dialog.showMessageBox(this.mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message:
+        'The update has been downloaded. Restart now to apply the update?',
+      buttons: ['Restart', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (restart.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  }
+
+  private async shouldDownloadAndInstall(latest: string, current: string) {
+    const resp = await dialog.showMessageBox(this.mainWindow, {
+      type: 'info',
+      title: 'Update Available',
+      message: `A new version (${latest}) is available. You are on ${current}.\n\nWould you like to download and install it now?`,
+      buttons: ['Download and Install', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    return resp.response === 0;
+  }
+
   private async checkForUpdatesManually() {
     let originalAutoDownload: boolean | undefined;
     try {
-      // Ensure no background downloads during manual check
+      // For manual checks, allow user-triggered download & install flow
       originalAutoDownload = autoUpdater.autoDownload;
       autoUpdater.autoDownload = false;
+
       // Perform a one-time check
       const result = await autoUpdater.checkForUpdates();
       const latest = result?.updateInfo?.version;
       const current = app.getVersion();
 
-      if (latest && latest !== current) {
-        const resp = await dialog.showMessageBox(this.mainWindow, {
-          type: 'info',
-          title: 'Update Available',
-          message: `A new version (${latest}) is available. You are on ${current}.`,
-          buttons: ['Open Releases Page', 'Cancel'],
-          defaultId: 0,
-          cancelId: 1,
-        });
-        if (resp.response === 0) {
-          shell.openExternal('https://github.com/stklauz/todolo/releases');
-        }
-      } else {
+      if (!latest || latest === current) {
         await dialog.showMessageBox(this.mainWindow, {
           type: 'info',
           title: 'Up to Date',
@@ -51,6 +70,28 @@ export default class MenuBuilder {
           buttons: ['OK'],
           defaultId: 0,
         });
+        return;
+      }
+
+      const confirm = await this.shouldDownloadAndInstall(latest, current);
+      if (confirm) {
+        try {
+          await this.promptDownloadAndInstall();
+        } catch (error_: any) {
+          const retry = await dialog.showMessageBox(this.mainWindow, {
+            type: 'warning',
+            title: 'Download Failed',
+            message: `Could not download the update. ${
+              error_?.message ?? ''
+            }`.trim(),
+            buttons: ['Open Releases Page', 'Cancel'],
+            defaultId: 0,
+            cancelId: 1,
+          });
+          if (retry.response === 0) {
+            shell.openExternal('https://github.com/stklauz/todolo/releases');
+          }
+        }
       }
     } catch (err: any) {
       const resp = await dialog.showMessageBox(this.mainWindow, {
@@ -73,10 +114,8 @@ export default class MenuBuilder {
   }
 
   buildMenu(): Menu {
-    if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.DEBUG_PROD === 'true'
-    ) {
+    const enableDebugUI = shouldEnableDebugUI(process.env);
+    if (enableDebugUI) {
       this.setupDevelopmentEnvironment();
     }
 
@@ -192,24 +231,10 @@ export default class MenuBuilder {
       label: 'View',
       submenu: [
         {
-          label: 'Toggle Developer Tools',
-          click: () => {
-            this.mainWindow.webContents.toggleDevTools();
-          },
-        },
-        {
           label: 'Toggle Full Screen',
           accelerator: 'Ctrl+Command+F',
           click: () => {
             this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
-          },
-        },
-        { type: 'separator' },
-        {
-          label: 'Toggle Debug Mode',
-          accelerator: 'Command+D',
-          click: () => {
-            this.mainWindow.webContents.send('toggle-debug-mode');
           },
         },
       ],
@@ -259,11 +284,8 @@ export default class MenuBuilder {
       ],
     };
 
-    const subMenuView =
-      process.env.NODE_ENV === 'development' ||
-      process.env.DEBUG_PROD === 'true'
-        ? subMenuViewDev
-        : subMenuViewProd;
+    const enableDebugUI = shouldEnableDebugUI(process.env);
+    const subMenuView = enableDebugUI ? subMenuViewDev : subMenuViewProd;
 
     return [
       subMenuAbout,
@@ -294,67 +316,53 @@ export default class MenuBuilder {
       },
       {
         label: '&View',
-        submenu:
-          process.env.NODE_ENV === 'development' ||
-          process.env.DEBUG_PROD === 'true'
-            ? [
-                {
-                  label: '&Reload',
-                  accelerator: 'Ctrl+R',
-                  click: () => {
-                    this.mainWindow.webContents.reload();
-                  },
+        submenu: ((): MenuItemConstructorOptions[] => {
+          const enableDebugUI = shouldEnableDebugUI(process.env);
+          if (enableDebugUI) {
+            return [
+              {
+                label: '&Reload',
+                accelerator: 'Ctrl+R',
+                click: () => {
+                  this.mainWindow.webContents.reload();
                 },
-                {
-                  label: 'Toggle &Full Screen',
-                  accelerator: 'F11',
-                  click: () => {
-                    this.mainWindow.setFullScreen(
-                      !this.mainWindow.isFullScreen(),
-                    );
-                  },
+              },
+              {
+                label: 'Toggle &Full Screen',
+                accelerator: 'F11',
+                click: () => {
+                  this.mainWindow.setFullScreen(
+                    !this.mainWindow.isFullScreen(),
+                  );
                 },
-                {
-                  label: 'Toggle &Developer Tools',
-                  accelerator: 'Alt+Ctrl+I',
-                  click: () => {
-                    this.mainWindow.webContents.toggleDevTools();
-                  },
+              },
+              {
+                label: 'Toggle &Developer Tools',
+                accelerator: 'Alt+Ctrl+I',
+                click: () => {
+                  this.mainWindow.webContents.toggleDevTools();
                 },
-                { type: 'separator' },
-                {
-                  label: 'Toggle &Debug Mode',
-                  accelerator: 'Ctrl+D',
-                  click: () => {
-                    this.mainWindow.webContents.send('toggle-debug-mode');
-                  },
+              },
+              { type: 'separator' },
+              {
+                label: 'Toggle &Debug Mode',
+                accelerator: 'Ctrl+D',
+                click: () => {
+                  this.mainWindow.webContents.send('toggle-debug-mode');
                 },
-              ]
-            : [
-                {
-                  label: 'Toggle &Developer Tools',
-                  click: () => {
-                    this.mainWindow.webContents.toggleDevTools();
-                  },
-                },
-                {
-                  label: 'Toggle &Full Screen',
-                  accelerator: 'F11',
-                  click: () => {
-                    this.mainWindow.setFullScreen(
-                      !this.mainWindow.isFullScreen(),
-                    );
-                  },
-                },
-                { type: 'separator' },
-                {
-                  label: 'Toggle &Debug Mode',
-                  accelerator: 'Ctrl+D',
-                  click: () => {
-                    this.mainWindow.webContents.send('toggle-debug-mode');
-                  },
-                },
-              ],
+              },
+            ];
+          }
+          return [
+            {
+              label: 'Toggle &Full Screen',
+              accelerator: 'F11',
+              click: () => {
+                this.mainWindow.setFullScreen(!this.mainWindow.isFullScreen());
+              },
+            },
+          ];
+        })(),
       },
       {
         label: 'Help',

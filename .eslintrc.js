@@ -1,6 +1,9 @@
 module.exports = {
   extends: 'erb',
   plugins: ['@typescript-eslint'],
+  globals: {
+    NodeJS: 'readonly',
+  },
   overrides: [
     {
       files: ['src/tests/**/*.{ts,tsx}', 'src/**/__tests__/**/*.{ts,tsx}'],

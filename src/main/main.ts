@@ -13,7 +13,7 @@ import path from 'node:path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import MenuBuilder from './menu';
 import { initAutoUpdater } from './updater';
-import { resolveHtmlPath } from './util';
+import { resolveHtmlPath, shouldEnableDebugUI } from './util';
 
 // Import DB module only after userData path is finalized to avoid any
 // accidental early reads of the default path inside the module.
@@ -255,8 +255,7 @@ if (process.env.NODE_ENV === 'production') {
   sourceMapSupport.install();
 }
 
-const isDebug =
-  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
+const isDebug = shouldEnableDebugUI(process.env);
 
 if (isDebug) {
   require('electron-debug').default();
