@@ -1,5 +1,5 @@
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import * as storage from '../../features/todos/api/storage';
@@ -72,6 +72,89 @@ describe('Todo Keyboard Interactions', () => {
       expect(inputs).toHaveLength(1);
       expect(mockStorage.saveListTodos).not.toHaveBeenCalled();
       await waitFor(() => expect(inputs[0]).toHaveFocus());
+    });
+
+    it('splits content when Enter is pressed in middle of text', async () => {
+      const user = setupUser();
+      renderAppWithDefaults();
+
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
+
+      const input = screen.getByLabelText('Todo text');
+      await user.click(input);
+      await user.type(input, 'a big box of chocolates');
+
+      // Move cursor to middle (after "a big box ") using arrow keys
+      // Position cursor after "a big box " (10 characters)
+      const textarea = input as HTMLTextAreaElement;
+      textarea.focus();
+      textarea.setSelectionRange(10, 10);
+
+      // Use fireEvent to ensure cursor position is preserved
+      fireEvent.keyDown(textarea, {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        which: 13,
+      });
+
+      // Should have 2 todos now
+      await waitFor(() => {
+        const allInputs = screen.getAllByLabelText('Todo text');
+        expect(allInputs).toHaveLength(2);
+      });
+
+      const allInputs = screen.getAllByLabelText('Todo text');
+      expect((allInputs[0] as HTMLTextAreaElement).value).toBe('a big box ');
+      expect((allInputs[1] as HTMLTextAreaElement).value).toBe('of chocolates');
+
+      // Focus should move to new input (second one)
+      await waitFor(() => expect(allInputs[1]).toHaveFocus());
+    });
+
+    it('moves content to new todo when Enter is pressed at start of text', async () => {
+      const user = setupUser();
+      renderAppWithDefaults();
+
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
+
+      const input = screen.getByLabelText('Todo text');
+      await user.click(input);
+      await user.type(input, 'a big box of chocolates');
+
+      // Move cursor to start
+      const textarea = input as HTMLTextAreaElement;
+      textarea.focus();
+      textarea.setSelectionRange(0, 0);
+
+      // Use fireEvent to ensure cursor position is preserved
+      fireEvent.keyDown(textarea, {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        which: 13,
+      });
+
+      // Should have 2 todos now
+      await waitFor(() => {
+        const allInputs = screen.getAllByLabelText('Todo text');
+        expect(allInputs).toHaveLength(2);
+      });
+
+      const allInputs = screen.getAllByLabelText('Todo text');
+      expect((allInputs[0] as HTMLTextAreaElement).value).toBe('');
+      expect((allInputs[1] as HTMLTextAreaElement).value).toBe(
+        'a big box of chocolates',
+      );
+
+      // Focus should move to new input (second one with content)
+      await waitFor(() => expect(allInputs[1]).toHaveFocus());
     });
 
     it('creates new todo when Enter is pressed with completed items hidden', async () => {
@@ -259,6 +342,170 @@ describe('Todo Keyboard Interactions', () => {
         name: /todo text/i,
       });
       expect(afterDelete.length).toBe(1);
+    });
+
+    it('merges todo with previous when Backspace is pressed at start of non-empty todo', async () => {
+      const initialTodos = [
+        { id: 1, text: 'Hello', completed: false, indent: 0 },
+        { id: 2, text: 'world', completed: false, indent: 0 },
+      ];
+
+      const user = setupUser();
+      renderAppWithDefaults({
+        loadListTodos: jest.fn().mockResolvedValue({
+          version: 2,
+          todos: initialTodos,
+        }),
+      });
+
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
+
+      const inputs = screen.getAllByLabelText('Todo text');
+      expect(inputs).toHaveLength(2);
+
+      // Click on second todo and set cursor at start
+      const secondInput = inputs[1] as HTMLTextAreaElement;
+      await user.click(secondInput);
+      secondInput.setSelectionRange(0, 0); // Cursor at start
+
+      // Press Backspace to merge
+      fireEvent.keyDown(secondInput, { key: 'Backspace' });
+
+      // Should merge and remove second todo
+      await waitFor(() => {
+        const updatedInputs = screen.getAllByLabelText('Todo text');
+        // After merge, we have the merged todo, system may add empty todo
+        expect(updatedInputs.length).toBeGreaterThanOrEqual(1);
+        expect((updatedInputs[0] as HTMLTextAreaElement).value).toBe(
+          'Helloworld',
+        );
+      });
+    });
+
+    it('does not merge when Backspace is pressed at start of first todo', async () => {
+      const initialTodos = [
+        { id: 1, text: 'Only todo', completed: false, indent: 0 },
+      ];
+
+      const user = setupUser();
+      renderAppWithDefaults({
+        loadListTodos: jest.fn().mockResolvedValue({
+          version: 2,
+          todos: initialTodos,
+        }),
+      });
+
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
+
+      const input = screen.getByLabelText('Todo text') as HTMLTextAreaElement;
+      await user.click(input);
+      input.setSelectionRange(0, 0); // Cursor at start
+
+      // Press Backspace - should not merge (no previous todo)
+      fireEvent.keyDown(input, { key: 'Backspace' });
+
+      // Should still have one todo (no merge occurred)
+      await waitFor(() => {
+        const inputs = screen.getAllByLabelText('Todo text');
+        expect(inputs).toHaveLength(1);
+        expect((inputs[0] as HTMLTextAreaElement).value).toBe('Only todo');
+      });
+    });
+
+    it('performs split and merge roundtrip correctly', async () => {
+      const initialTodos = [
+        { id: 1, text: 'Hello world', completed: false, indent: 0 },
+      ];
+
+      const user = setupUser();
+      renderAppWithDefaults({
+        loadListTodos: jest.fn().mockResolvedValue({
+          version: 2,
+          todos: initialTodos,
+        }),
+      });
+
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
+
+      const input = screen.getByLabelText('Todo text') as HTMLTextAreaElement;
+      await user.click(input);
+      await user.clear(input);
+      await user.type(input, 'Hello world');
+
+      // Split: move cursor to middle and press Enter
+      input.setSelectionRange(6, 6); // After "Hello "
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      // Should split into two todos
+      await waitFor(() => {
+        const inputs = screen.getAllByLabelText('Todo text');
+        expect(inputs).toHaveLength(2);
+      });
+
+      const inputs = screen.getAllByLabelText('Todo text');
+      expect((inputs[0] as HTMLTextAreaElement).value).toBe('Hello ');
+      expect((inputs[1] as HTMLTextAreaElement).value).toBe('world');
+
+      // Merge: click on second todo and press Backspace at start
+      const secondInput = inputs[1] as HTMLTextAreaElement;
+      await user.click(secondInput);
+      secondInput.setSelectionRange(0, 0); // Cursor at start
+      fireEvent.keyDown(secondInput, { key: 'Backspace' });
+
+      // Should merge back to original content
+      await waitFor(() => {
+        const mergedInputs = screen.getAllByLabelText('Todo text');
+        expect(mergedInputs.length).toBeGreaterThanOrEqual(1);
+        expect((mergedInputs[0] as HTMLTextAreaElement).value).toBe(
+          'Hello world',
+        );
+      });
+    });
+
+    it('preserves whitespace when merging', async () => {
+      const initialTodos = [
+        { id: 1, text: 'Hello ', completed: false, indent: 0 },
+        { id: 2, text: ' world', completed: false, indent: 0 },
+      ];
+
+      const user = setupUser();
+      renderAppWithDefaults({
+        loadListTodos: jest.fn().mockResolvedValue({
+          version: 2,
+          todos: initialTodos,
+        }),
+      });
+
+      await waitFor(() =>
+        expect(mockStorage.loadListsIndex).toHaveBeenCalled(),
+      );
+      await waitFor(() => expect(mockStorage.loadListTodos).toHaveBeenCalled());
+
+      const inputs = screen.getAllByLabelText('Todo text');
+      const secondInput = inputs[1] as HTMLTextAreaElement;
+      await user.click(secondInput);
+      secondInput.setSelectionRange(0, 0); // Cursor at start
+
+      // Press Backspace to merge
+      fireEvent.keyDown(secondInput, { key: 'Backspace' });
+
+      // Should merge preserving whitespace
+      await waitFor(() => {
+        const mergedInputs = screen.getAllByLabelText('Todo text');
+        expect(mergedInputs.length).toBeGreaterThanOrEqual(1);
+        expect((mergedInputs[0] as HTMLTextAreaElement).value).toBe(
+          'Hello  world',
+        );
+      });
     });
   });
 

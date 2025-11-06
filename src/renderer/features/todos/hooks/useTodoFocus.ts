@@ -2,17 +2,33 @@ import React from 'react';
 import type { EditorTodo } from '../types';
 
 /**
+ * Focus position for cursor placement
+ * - 'start': Cursor at position 0
+ * - 'end': Cursor at end of text
+ * - number: Cursor at specific character position
+ */
+export type FocusPosition = 'start' | 'end' | number;
+
+/**
+ * Focus request with position information
+ */
+export interface FocusRequest {
+  id: number;
+  position: FocusPosition;
+}
+
+/**
  * Return type for the useTodoFocus hook
  */
 export interface UseTodoFocusReturn {
   /** Map of todo IDs to their corresponding input elements */
   inputByIdRef: React.MutableRefObject<Map<number, HTMLTextAreaElement>>;
   /** Ref to track which todo should be focused next */
-  focusNextIdRef: React.MutableRefObject<number | null>;
+  focusNextIdRef: React.MutableRefObject<FocusRequest | null>;
   /** Function to register/unregister input elements */
   setInputRef: (id: number, el: HTMLTextAreaElement | null) => void;
   /** Function to schedule a todo for focus */
-  focusTodo: (id: number) => void;
+  focusTodo: (id: number, position?: FocusPosition) => void;
   /** Function to clear any pending focus */
   clearFocus: () => void;
 }
@@ -41,7 +57,7 @@ export interface UseTodoFocusReturn {
 export default function useTodoFocus(): UseTodoFocusReturn {
   // Track inputs by todo id so we can focus newly inserted rows
   const inputByIdRef = React.useRef(new Map<number, HTMLTextAreaElement>());
-  const focusNextIdRef = React.useRef<number | null>(null);
+  const focusNextIdRef = React.useRef<FocusRequest | null>(null);
 
   // Keep the map in sync as inputs mount/unmount
   const setInputRef = React.useCallback(
@@ -55,9 +71,12 @@ export default function useTodoFocus(): UseTodoFocusReturn {
     [],
   );
 
-  const focusTodo = React.useCallback((id: number) => {
-    focusNextIdRef.current = id;
-  }, []);
+  const focusTodo = React.useCallback(
+    (id: number, position: FocusPosition = 'end') => {
+      focusNextIdRef.current = { id, position };
+    },
+    [],
+  );
 
   const clearFocus = React.useCallback(() => {
     focusNextIdRef.current = null;
@@ -93,7 +112,7 @@ export default function useTodoFocus(): UseTodoFocusReturn {
  */
 export function useTodoFocusEffect(
   todos: EditorTodo[],
-  focusNextIdRef: React.MutableRefObject<number | null>,
+  focusNextIdRef: React.MutableRefObject<FocusRequest | null>,
   inputByIdRef: React.MutableRefObject<Map<number, HTMLTextAreaElement>>,
   isEditingRef?: React.MutableRefObject<boolean>,
 ) {
@@ -101,12 +120,24 @@ export function useTodoFocusEffect(
     // Don't interfere with title editing
     if (isEditingRef?.current) return;
 
-    const id = focusNextIdRef.current;
-    if (id != null) {
-      const el = inputByIdRef.current.get(id);
+    const focusRequest = focusNextIdRef.current;
+    if (focusRequest != null) {
+      const el = inputByIdRef.current.get(focusRequest.id);
       if (el) {
         el.focus();
-        el.setSelectionRange(el.value.length, el.value.length);
+        let cursorPos: number;
+        if (focusRequest.position === 'start') {
+          cursorPos = 0;
+        } else if (focusRequest.position === 'end') {
+          cursorPos = el.value.length;
+        } else {
+          // Number position - clamp to valid range
+          cursorPos = Math.max(
+            0,
+            Math.min(focusRequest.position, el.value.length),
+          );
+        }
+        el.setSelectionRange(cursorPos, cursorPos);
         focusNextIdRef.current = null;
       }
     } else if (todos.length === 1) {

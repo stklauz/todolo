@@ -70,6 +70,7 @@ const TodoList = React.memo(function TodoList({
     changeIndent,
     insertTodoBelow,
     removeTodoAt,
+    updateTodo,
     focusTodo,
   });
 
