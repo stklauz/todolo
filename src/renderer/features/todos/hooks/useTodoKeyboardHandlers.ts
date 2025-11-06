@@ -3,6 +3,7 @@ import type { EditorTodo } from '../types';
 import { getCursorPosition, isCursorAtStart } from '../utils/cursorUtils';
 import type { FocusPosition } from './useTodoFocus';
 import { debugLogger } from '../../../utils/debug';
+import { computeTodoSection } from '../utils/todoUtils';
 
 export interface UseTodoKeyboardHandlersProps {
   allTodos: EditorTodo[];
@@ -11,6 +12,7 @@ export interface UseTodoKeyboardHandlersProps {
   removeTodoAt: (index: number) => void;
   updateTodo: (id: number, text: string) => void;
   focusTodo: (id: number, position?: FocusPosition) => void;
+  hideCompletedItems?: boolean;
 }
 
 /**
@@ -113,6 +115,7 @@ function handleBackspaceKey(
   removeTodoAt: (index: number) => void,
   updateTodo: (id: number, text: string) => void,
   focusTodo: (id: number, position?: FocusPosition) => void,
+  hideCompletedItems: boolean = false,
 ): void {
   const el = event.currentTarget;
   const cur = allTodos[index];
@@ -135,28 +138,96 @@ function handleBackspaceKey(
       return;
     }
 
-    const prevTodo = allTodos[index - 1];
-    if (!prevTodo) {
-      // No previous todo - shouldn't happen if index > 0, but guard anyway
+    // Find the previous visible todo (from user's perspective)
+    // Use the same filtering logic as useFilteredTodos for consistency
+    // If hideCompletedItems is true, skip completed items (same as filteredTodos.filter)
+    // If hideCompletedItems is false, only merge with completed items if they're in the active section
+    let mergeTarget: EditorTodo | null = null;
+    const currentSection = computeTodoSection(cur, allTodos, index);
+
+    for (let i = index - 1; i >= 0; i--) {
+      const candidate = allTodos[i];
+      if (!candidate) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
+      // If completed items are hidden, skip all completed todos
+      if (hideCompletedItems === true) {
+        if (candidate.completed) {
+          debugLogger.log(
+            'info',
+            'Backspace merge: skipping completed todo (hidden)',
+            {
+              candidateId: candidate.id,
+              candidateText: candidate.text.slice(0, 30),
+              candidateCompleted: candidate.completed,
+              hideCompletedItems,
+            },
+          );
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+        // Found visible (non-completed) todo
+        mergeTarget = candidate;
+        break;
+      }
+
+      // Completed items are visible - check section compatibility
+      // If current todo is active, only merge with completed items in active section
+      // If current todo is completed, can merge with any completed item
+      if (candidate.completed) {
+        const candidateSection = computeTodoSection(candidate, allTodos, i);
+        // Only merge with completed items if they're in the same section as current todo
+        if (currentSection === 'active' && candidateSection === 'completed') {
+          // Current is active, candidate is in completed section - skip it
+          debugLogger.log(
+            'info',
+            'Backspace merge: skipping completed todo (wrong section)',
+            {
+              candidateId: candidate.id,
+              candidateText: candidate.text.slice(0, 30),
+              candidateSection,
+              currentSection,
+              hideCompletedItems,
+            },
+          );
+          // eslint-disable-next-line no-continue
+          continue;
+        }
+        // Candidate is completed but in active section (or current is completed) - can merge
+      }
+
+      // Found valid merge target
+      mergeTarget = candidate;
+      break;
+    }
+
+    if (!mergeTarget) {
+      // No valid merge target found - let browser handle normal text editing
       return;
     }
 
     event.preventDefault();
 
-    // Merge current todo content with previous todo
-    const mergedText = prevTodo.text + cur.text;
-    updateTodo(prevTodo.id, mergedText);
+    // Merge current todo content with merge target
+    const mergedText = mergeTarget.text + cur.text;
+    updateTodo(mergeTarget.id, mergedText);
     removeTodoAt(index);
 
-    // Focus previous todo at the junction point (where merge happened)
-    // Position cursor at the end of the previous todo's original content
-    const junctionPosition = prevTodo.text.length;
-    focusTodo(prevTodo.id, junctionPosition);
+    // Focus merge target at the junction point (where merge happened)
+    // Position cursor at the end of the merge target's original content
+    const junctionPosition = mergeTarget.text.length;
+    focusTodo(mergeTarget.id, junctionPosition);
 
     // Debug logging for observability
     debugLogger.log('info', 'Backspace key: merge todo', {
       currentTodoId: cur.id,
-      previousTodoId: prevTodo.id,
+      currentTodoText: cur.text.slice(0, 30),
+      mergeTargetId: mergeTarget.id,
+      mergeTargetText: mergeTarget.text.slice(0, 30),
+      mergeTargetCompleted: mergeTarget.completed,
+      hideCompletedItems,
       mergedContent: mergedText.slice(0, 50), // Truncate for logs
       cursorPos: 0,
     });
@@ -242,6 +313,7 @@ export default function useTodoKeyboardHandlers({
   removeTodoAt,
   updateTodo,
   focusTodo,
+  hideCompletedItems = false,
 }: UseTodoKeyboardHandlersProps) {
   return React.useCallback(
     (id: number) => {
@@ -273,6 +345,7 @@ export default function useTodoKeyboardHandlers({
               removeTodoAt,
               updateTodo,
               focusTodo,
+              hideCompletedItems,
             );
             break;
           default:
@@ -288,6 +361,7 @@ export default function useTodoKeyboardHandlers({
       removeTodoAt,
       updateTodo,
       focusTodo,
+      hideCompletedItems,
     ],
   );
 }

@@ -65,6 +65,11 @@ const TodoList = React.memo(function TodoList({
     [],
   );
 
+  // Note: Keyboard handlers are in TodoList (child) rather than parent (TodoApp)
+  // per dev rules. However, correctness is preserved because:
+  // 1. We pass `allTodos` (unfiltered) to ensure operations work on full list
+  // 2. The handler uses `allTodos.findIndex()` to locate todos, avoiding filtered/full-list drift
+  // 3. `hideCompletedItems` is passed to respect visibility settings for merge logic
   const handleTodoKeyDown = useTodoKeyboardHandlers({
     allTodos,
     changeIndent,
@@ -72,6 +77,7 @@ const TodoList = React.memo(function TodoList({
     removeTodoAt,
     updateTodo,
     focusTodo,
+    hideCompletedItems: appSettings.hideCompletedItems,
   });
 
   const { filteredTodos: todos, insertBelowAndFocus } = useFilteredTodos(
