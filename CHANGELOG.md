@@ -1,3 +1,9 @@
+## [1.7.2](https://github.com/stklauz/todolo/compare/v1.7.1...v1.7.2) (2025-11-06)
+
+### Bug Fixes
+
+- debug in prod [#51](https://github.com/stklauz/todolo/issues/51) ([26fed39](https://github.com/stklauz/todolo/commit/26fed398a97d11e7f5b0f12878813654d77eee7e))
+
 ## [1.7.1](https://github.com/stklauz/todolo/compare/v1.7.0...v1.7.1) (2025-11-05)
 
 ### Bug Fixes
