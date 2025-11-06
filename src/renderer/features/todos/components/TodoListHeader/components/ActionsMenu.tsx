@@ -99,7 +99,7 @@ export default function ActionsMenu({
           <div className={styles.menuDivider} />
           <button
             type="button"
-            className={`${styles.menuItem} ${styles.menuItemDuplicate}`}
+            className={styles.menuItem}
             role="menuitem"
             data-testid="menu-duplicate-list"
             onClick={() => {
@@ -113,7 +113,7 @@ export default function ActionsMenu({
           </button>
           <button
             type="button"
-            className={styles.menuItemDanger}
+            className={`${styles.menuItem} ${styles.menuItemDanger}`}
             role="menuitem"
             data-testid="menu-delete-list"
             onClick={() => {
