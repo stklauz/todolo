@@ -1,3 +1,9 @@
+# [1.8.0](https://github.com/stklauz/todolo/compare/v1.7.3...v1.8.0) (2025-11-06)
+
+### Features
+
+- add enter key content split and backspace merge ([892d2b0](https://github.com/stklauz/todolo/commit/892d2b0160f12ff7161feb44e0e92d0052c01351))
+
 ## [1.7.3](https://github.com/stklauz/todolo/compare/v1.7.2...v1.7.3) (2025-11-06)
 
 ### Bug Fixes
