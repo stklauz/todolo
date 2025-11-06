@@ -1,3 +1,9 @@
+## [1.7.3](https://github.com/stklauz/todolo/compare/v1.7.2...v1.7.3) (2025-11-06)
+
+### Bug Fixes
+
+- update font-family and menu items ([e0d4c88](https://github.com/stklauz/todolo/commit/e0d4c8828c223147b75a5f7f7ef8e4e8531bfe08))
+
 ## [1.7.2](https://github.com/stklauz/todolo/compare/v1.7.1...v1.7.2) (2025-11-06)
 
 ### Bug Fixes
