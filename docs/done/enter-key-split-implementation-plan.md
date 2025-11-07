@@ -602,7 +602,6 @@ debugLogger.log('info', 'Backspace key: merge todo', {
 
 - Behavior is intuitive (matches text editor expectations)
 - Clear acceptance criteria and testing
-- Can add feature flag if needed for gradual rollout
 
 ### Risk 7: Backspace Merge Complexity
 
@@ -646,9 +645,6 @@ debugLogger.log('info', 'Backspace key: merge todo', {
 
 6. **Accessibility**: How should screen readers announce the split/merge?
    - **Status**: Should test with screen readers. Focus movement should be sufficient, but may need ARIA announcements.
-
-7. **Feature Flag**: Should this be behind a feature flag for gradual rollout?
-   - **Recommendation**: Not necessary for initial implementation, but can be added if concerns arise.
 
 ---
 

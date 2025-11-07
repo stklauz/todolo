@@ -59,7 +59,6 @@ You are an AI assistant helping with the Todolo project. Follow these developmen
 
 ## Examples of Good Practices
 - Use existing utilities like `validateEmail()` instead of reimplementing regex
-- Start features behind feature flags when possible
 - Add comprehensive error handling with user-friendly messages
 - Write tests that cover both happy path and edge cases
 

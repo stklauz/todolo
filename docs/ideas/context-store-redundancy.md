@@ -831,8 +831,6 @@ If issues arise during migration:
 ### Mitigation
 
 - Incremental commits with full test suite runs and clear rollback.
-- For future multi-phase refactors, introduce feature flags per
-  `docs/dev-practices/development-rules.md`.
 - Gradual rollout: internal testing → beta users → all users
 
 ---
@@ -993,7 +991,6 @@ If issues arise during migration:
 
 - [x] Skipped convenience hooks layer; used direct store selectors
 - [x] Kept persistence in hook (side effects); actions in store (business logic)
-- [x] No feature flag needed; migration completed in cohesive slice with rollback plan
 - [x] Observability: debug logs on store actions (list selection, todo mutations, ID counter)
 - [x] Zero regressions; all tests passing
 - [x] Persistence triggers via Zustand `subscribe` with manual prev/next state tracking (store-driven saves)

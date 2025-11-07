@@ -214,8 +214,6 @@ if (newIndent === 0) {
 - [ ] Add integration tests for save behavior
 - [ ] Verify existing save behavior preserved
 
-**Rollback:** Keep old save logic behind feature flag initially
-
 ---
 
 ### Phase 5: Reduce Ref Plumbing (3-4 hours)

@@ -621,7 +621,6 @@ If issues arise during migration:
 
 ### Mitigation
 
-- Feature flag (if time permits): `USE_ZUSTAND_ONLY`
 - Can toggle between architectures during rollout
 - Gradual rollout: internal testing → beta users → all users
 
