@@ -1,6 +1,7 @@
 import type { EditorTodo, AppSettings } from '../types';
 import { debugLogger } from '../../../utils/debug';
 import { runTodosMigration } from '../utils/migration';
+import { sortListsByRecency } from '../utils/listOrdering';
 
 // v2 index file format
 export type ListsIndexV2 = {
@@ -9,7 +10,7 @@ export type ListsIndexV2 = {
     id: string;
     name: string;
     createdAt: string;
-    updatedAt?: string;
+    updatedAt: string;
   }>;
   selectedListId?: string;
 };
@@ -26,6 +27,7 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
       )) as ListsIndexV2;
       if (
         result &&
+        // TODO: Validate the shape of the result. This is a typescript sin.
         typeof result === 'object' &&
         (result as unknown as { version?: unknown }).version === 2 &&
         Array.isArray((result as unknown as { lists?: unknown }).lists)
@@ -33,35 +35,43 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
         // Minimal item-shape validation: require id/name/createdAt
         const rawLists = (result as unknown as { lists: unknown[] }).lists;
         const validLists = rawLists.filter(
-          (
-            l,
-          ): l is {
-            id: string;
-            name: string;
-            createdAt: string;
-            updatedAt?: string;
-          } => {
-            return Boolean(
-              l &&
+          (l): l is ListsIndexV2['lists'][number] => {
+            if (
+              !(
+                l &&
                 typeof l === 'object' &&
                 typeof (l as { id?: unknown }).id === 'string' &&
                 typeof (l as { name?: unknown }).name === 'string' &&
-                typeof (l as { createdAt?: unknown }).createdAt === 'string',
-            );
+                typeof (l as { createdAt?: unknown }).createdAt === 'string' &&
+                typeof (l as { updatedAt?: unknown }).updatedAt === 'string'
+              )
+            ) {
+              return false;
+            }
+            const { updatedAt } = l as { updatedAt: string };
+            const parsed = Date.parse(updatedAt);
+            return Number.isFinite(parsed);
           },
         );
-        if (validLists.length !== rawLists.length) {
+        const sanitizedLists = validLists.map((l) => ({
+          id: l.id,
+          name: l.name,
+          createdAt: new Date(Date.parse(l.createdAt)).toISOString(),
+          updatedAt: new Date(Date.parse(l.updatedAt)).toISOString(),
+        }));
+        if (sanitizedLists.length !== rawLists.length) {
           debugLogger.log(
             'warn',
             'Lists index contained invalid items; filtered',
             {
               original: rawLists.length,
-              kept: validLists.length,
+              kept: sanitizedLists.length,
             },
           );
         }
+        const sortedLists = sortListsByRecency(sanitizedLists);
         // Ensure selectedListId points to a valid list
-        const validIds = new Set(validLists.map((l) => l.id));
+        const validIds = new Set(sortedLists.map((l) => l.id));
         const selected = (result as unknown as { selectedListId?: unknown })
           .selectedListId;
         const selectedListId =
@@ -71,7 +81,7 @@ export async function loadListsIndex(): Promise<ListsIndexV2> {
 
         const sanitized: ListsIndexV2 = {
           version: 2 as const,
-          lists: validLists,
+          lists: sortedLists,
           selectedListId,
         };
         debugLogger.log('info', 'Lists index loaded successfully', {

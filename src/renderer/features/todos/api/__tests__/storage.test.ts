@@ -29,7 +29,14 @@ describe('Storage API (minimal)', () => {
       const mockInvoke = getInvokeMock();
       mockInvoke.mockResolvedValue({
         version: 2,
-        lists: [{ id: 'a', name: 'A', createdAt: '2024-01-01T00:00:00.000Z' }],
+        lists: [
+          {
+            id: 'a',
+            name: 'A',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-02T00:00:00.000Z',
+          },
+        ],
         selectedListId: 'a',
       });
 
@@ -39,9 +46,70 @@ describe('Storage API (minimal)', () => {
       expect(mockInvoke).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         version: 2,
-        lists: [{ id: 'a', name: 'A', createdAt: '2024-01-01T00:00:00.000Z' }],
+        lists: [
+          {
+            id: 'a',
+            name: 'A',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-02T00:00:00.000Z',
+          },
+        ],
         selectedListId: 'a',
       });
+    });
+
+    test('returns lists in the expected order', async () => {
+      const mockInvoke = getInvokeMock();
+      const listOldest = {
+        id: '1',
+        name: 'B',
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      };
+      const listLatest = {
+        id: '2',
+        name: 'A',
+        createdAt: '2025-01-02T00:00:00.000Z',
+        updatedAt: '2025-12-01T00:00:00.000Z',
+      };
+      const listMiddle = {
+        id: '3',
+        name: 'C',
+        createdAt: '2025-01-03T00:00:00.000Z',
+        updatedAt: '2025-06-01T00:00:00.000Z',
+      };
+      mockInvoke.mockResolvedValue({
+        version: 2,
+        lists: [listOldest, listLatest, listMiddle],
+        selectedListId: listOldest.id,
+      });
+
+      const result = await loadListsIndex();
+
+      expect(mockInvoke).toHaveBeenCalledWith('load-lists');
+      expect(result.lists).toEqual([listLatest, listMiddle, listOldest]);
+    });
+
+    test('filters out lists missing updatedAt', async () => {
+      const mockInvoke = getInvokeMock();
+      const valid = {
+        id: 'ok',
+        name: 'Valid',
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-02T00:00:00.000Z',
+      };
+      mockInvoke.mockResolvedValue({
+        version: 2,
+        lists: [
+          valid,
+          { id: 'bad', name: 'Missing', createdAt: '2025-01-03T00:00:00.000Z' },
+        ],
+        selectedListId: 'ok',
+      });
+
+      const result = await loadListsIndex();
+
+      expect(result.lists).toEqual([valid]);
     });
 
     test('ipc rejection: returns safe default and logs error', async () => {
@@ -78,7 +146,14 @@ describe('Storage API (minimal)', () => {
       const mockInvoke = getInvokeMock();
       mockInvoke.mockResolvedValue({
         version: 3,
-        lists: [{ id: 'x', name: 'X', createdAt: '2024-01-01T00:00:00.000Z' }],
+        lists: [
+          {
+            id: 'x',
+            name: 'X',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
         selectedListId: 'x',
       } as any);
 

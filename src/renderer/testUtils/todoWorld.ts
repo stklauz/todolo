@@ -14,7 +14,12 @@ export function setupStorage(
   mockStorage.loadListsIndex.mockResolvedValue({
     version: 2,
     lists: [
-      { id: 'list-1', name: 'My Todos', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: 'list-1',
+        name: 'My Todos',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ],
     selectedListId: 'list-1',
   });

@@ -84,21 +84,17 @@ describe('validation utilities', () => {
       });
     });
 
-    it('should handle missing properties with defaults', () => {
+    it('throws when updatedAt is missing', () => {
       const input = { id: 'list-1', name: 'My List' };
-      const result = normalizeList(input);
-
-      expect(result).toEqual({
-        id: 'list-1',
-        name: 'My List',
-        todos: [],
-        createdAt: expect.any(String),
-        updatedAt: undefined,
-      });
+      expect(() => normalizeList(input)).toThrow('Invalid updatedAt');
     });
 
     it('should use fallback index for name when name is invalid', () => {
-      const input = { id: 'list-1' };
+      const input = {
+        id: 'list-1',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      };
       const result = normalizeList(input, 2);
 
       expect(result.name).toBe('List 3');
@@ -195,7 +191,13 @@ describe('validation utilities', () => {
 
   describe('validateAndNormalizeList', () => {
     it('should return valid result for good input', () => {
-      const input = { id: 'list-1', name: 'My List', todos: [] };
+      const input = {
+        id: 'list-1',
+        name: 'My List',
+        todos: [],
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      };
       const result = validateAndNormalizeList(input);
 
       expect(result.valid).toBe(true);
@@ -212,7 +214,12 @@ describe('validation utilities', () => {
     });
 
     it('should return error for invalid ID', () => {
-      const input = { id: '', name: 'My List' };
+      const input = {
+        id: '',
+        name: 'My List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      };
       const result = validateAndNormalizeList(input);
 
       expect(result.valid).toBe(false);
@@ -220,11 +227,28 @@ describe('validation utilities', () => {
     });
 
     it('should return error for invalid name', () => {
-      const input = { id: 'list-1', name: '' };
+      const input = {
+        id: 'list-1',
+        name: '',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      };
       const result = validateAndNormalizeList(input);
 
       expect(result.valid).toBe(false);
       expect((result as any).error).toBe('Invalid list name');
+    });
+
+    it('should return error when updatedAt is missing', () => {
+      const input = {
+        id: 'list-1',
+        name: 'My List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      };
+      const result = validateAndNormalizeList(input);
+
+      expect(result.valid).toBe(false);
+      expect((result as any).error).toMatch(/Failed to normalize list/);
     });
   });
 });

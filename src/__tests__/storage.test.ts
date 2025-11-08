@@ -46,7 +46,12 @@ describe('Storage API', () => {
       const mockData = {
         version: 2,
         lists: [
-          { id: '1', name: 'Test List', createdAt: '2024-01-01T00:00:00.000Z' },
+          {
+            id: '1',
+            name: 'Test List',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
         ],
         selectedListId: '1',
       };
@@ -55,6 +60,52 @@ describe('Storage API', () => {
       const result = await loadListsIndex();
 
       expect(result).toEqual(mockData);
+    });
+
+    it('should return lists ordered by lastest updated', async () => {
+      const oldestUpdatedList = {
+        id: '1',
+        name: 'Test List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+      const latestUpdatedList = {
+        id: '2',
+        name: 'Test List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      };
+      const mockData = {
+        version: 2,
+        lists: [oldestUpdatedList, latestUpdatedList],
+        selectedListId: oldestUpdatedList.id,
+      };
+      mockInvoke.mockResolvedValue(mockData);
+
+      const result = await loadListsIndex();
+
+      expect(result.lists).toEqual([latestUpdatedList, oldestUpdatedList]);
+    });
+
+    it('should drop lists missing updatedAt', async () => {
+      const valid = {
+        id: 'ok',
+        name: 'With timestamp',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      };
+      mockInvoke.mockResolvedValue({
+        version: 2,
+        lists: [
+          valid,
+          { id: 'bad', name: 'Missing', createdAt: '2024-01-03T00:00:00.000Z' },
+        ],
+        selectedListId: 'ok',
+      });
+
+      const result = await loadListsIndex();
+
+      expect(result.lists).toEqual([valid]);
     });
 
     it('should return default data when invalid response', async () => {
@@ -87,7 +138,12 @@ describe('Storage API', () => {
       const mockData = {
         version: 2 as const,
         lists: [
-          { id: '1', name: 'Test List', createdAt: '2024-01-01T00:00:00.000Z' },
+          {
+            id: '1',
+            name: 'Test List',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
         ],
         selectedListId: '1',
       };

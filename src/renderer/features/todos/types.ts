@@ -13,8 +13,8 @@ export type TodoList = {
   id: string;
   name: string;
   todos: EditorTodo[];
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AppData = {
@@ -70,7 +70,7 @@ export type ListsIndexDoc = {
     id: string;
     name: string;
     createdAt: string;
-    updatedAt?: string;
+    updatedAt: string;
   }>;
   selectedListId?: string;
 };

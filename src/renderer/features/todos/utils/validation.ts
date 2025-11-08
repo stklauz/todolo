@@ -21,6 +21,30 @@ export const normalizeTodo = (todo: any, fallbackId?: number): EditorTodo => {
 /**
  * Validates and normalizes a list object from storage
  */
+const normalizeTimestamp = (
+  value: unknown,
+  options: {
+    fallback?: () => string;
+    field: 'createdAt' | 'updatedAt';
+    id: string;
+  },
+): string => {
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) {
+      return new Date(parsed).toISOString();
+    }
+  }
+  if (options.fallback) {
+    const fallbackValue = options.fallback();
+    const parsed = Date.parse(fallbackValue);
+    if (Number.isFinite(parsed)) {
+      return new Date(parsed).toISOString();
+    }
+  }
+  throw new Error(`Invalid ${options.field} for list ${options.id}`);
+};
+
 export const normalizeList = (list: any, fallbackIndex?: number): TodoList => {
   const id =
     typeof list.id === 'string' ? list.id : String(Date.now() + Math.random());
@@ -29,12 +53,15 @@ export const normalizeList = (list: any, fallbackIndex?: number): TodoList => {
       ? list.name
       : `List ${(fallbackIndex ?? 0) + 1}`;
   const todos = Array.isArray(list.todos) ? list.todos.map(normalizeTodo) : [];
-  const createdAt =
-    typeof list.createdAt === 'string'
-      ? list.createdAt
-      : new Date().toISOString();
-  const updatedAt =
-    typeof list.updatedAt === 'string' ? list.updatedAt : undefined;
+  const createdAt = normalizeTimestamp(list.createdAt, {
+    fallback: () => new Date().toISOString(),
+    field: 'createdAt',
+    id,
+  });
+  const updatedAt = normalizeTimestamp(list.updatedAt, {
+    field: 'updatedAt',
+    id,
+  });
 
   return {
     id,

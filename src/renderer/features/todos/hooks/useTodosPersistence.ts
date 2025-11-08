@@ -217,7 +217,13 @@ export default function useTodosPersistence() {
         ];
         setLists((prev) =>
           prev.map((l) =>
-            l.id === selectedListId ? { ...l, todos: todosWithSeed } : l,
+            l.id === selectedListId
+              ? {
+                  ...l,
+                  todos: todosWithSeed,
+                  updatedAt: new Date().toISOString(),
+                }
+              : l,
           ),
         );
         markListAsLoaded(selectedListId);
@@ -241,7 +247,12 @@ export default function useTodosPersistence() {
       } else {
         setLists((prev) =>
           prev.map((l) =>
-            l.id === selectedListId ? { ...l, todos: todosNorm } : l,
+            l.id === selectedListId
+              ? {
+                  ...l,
+                  todos: todosNorm,
+                }
+              : l,
           ),
         );
         markListAsLoaded(selectedListId);

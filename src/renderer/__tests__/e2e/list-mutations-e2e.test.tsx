@@ -16,8 +16,18 @@ describe('List Mutations - UI to DB wiring', () => {
     mockStorage.loadListsIndex.mockResolvedValue({
       version: 2,
       lists: [
-        { id: 'list-a', name: 'Alpha', createdAt: '2024-01-01T00:00:00.000Z' },
-        { id: 'list-b', name: 'Beta', createdAt: '2024-01-02T00:00:00.000Z' },
+        {
+          id: 'list-a',
+          name: 'Alpha',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'list-b',
+          name: 'Beta',
+          createdAt: '2024-01-02T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+        },
       ],
       selectedListId: 'list-a',
     });
@@ -109,6 +119,12 @@ describe('List Mutations - UI to DB wiring', () => {
           doc.lists.some((l: any) => l.id === 'list-a' && l.name === 'Gamma'),
       );
       expect(renameCall).toBeTruthy();
+      const renameDoc = renameCall![0] as {
+        lists: Array<{ id: string; updatedAt: string }>;
+      };
+      const timestamps = renameDoc.lists.map((l) => Date.parse(l.updatedAt));
+      expect(renameDoc.lists[0].id).toBe('list-a');
+      expect([...timestamps].sort((a, b) => b - a)).toEqual(timestamps);
 
       // UI reflects new value
       await waitFor(() => {
@@ -152,6 +168,22 @@ describe('List Mutations - UI to DB wiring', () => {
       await waitFor(() => {
         expect(screen.getByDisplayValue('Alpha (Copy)')).toBeInTheDocument();
       });
+
+      const docWithCopy = mockStorage.saveListsIndex.mock.calls
+        .map(([doc]) => doc)
+        .find(
+          (doc) =>
+            Array.isArray(doc?.lists) &&
+            doc.lists.length === 3 &&
+            doc.lists.some((l: any) => l.id === 'list-c'),
+        );
+      expect(docWithCopy).toBeTruthy();
+      const copyDoc = docWithCopy as {
+        lists: Array<{ id: string; updatedAt: string }>;
+      };
+      expect(copyDoc.lists[0].id).toBe('list-c');
+      const copyTimestamps = copyDoc.lists.map((l) => Date.parse(l.updatedAt));
+      expect([...copyTimestamps].sort((a, b) => b - a)).toEqual(copyTimestamps);
     });
   });
 });

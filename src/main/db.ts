@@ -38,7 +38,7 @@ export type ListsIndexV2 = {
     id: string;
     name: string;
     createdAt: string;
-    updatedAt?: string;
+    updatedAt: string;
   }>;
   selectedListId?: string;
 };
@@ -148,6 +148,17 @@ function applyMigrations(database: DB) {
     `${createMeta}${createLists}${createTodos}${createTodosListOrderIdx}${createAppSettings}`,
   );
 
+  try {
+    database.exec(`
+      UPDATE lists
+      SET updated_at = created_at
+      WHERE updated_at IS NULL
+         OR TRIM(updated_at) = '';
+    `);
+  } catch (e: any) {
+    console.error('[DB] Failed to backfill updated_at column:', e);
+  }
+
   // Migration to v4: Add parent_id and section columns for explicit hierarchy
   try {
     // Check if parent_id column exists
@@ -175,12 +186,47 @@ function applyMigrations(database: DB) {
 }
 
 export function loadListsIndex(): ListsIndexV2 {
+  const LISTS_BY_RECENCY_QUERY = `
+    SELECT id, name, created_at as createdAt, updated_at as updatedAt
+    FROM lists
+    ORDER BY updated_at DESC,
+             created_at DESC
+  `;
   const database = openDatabase();
-  const lists = database
-    .prepare(
-      'SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM lists ORDER BY created_at ASC',
-    )
-    .all();
+  const rawLists = database.prepare(LISTS_BY_RECENCY_QUERY).all();
+  const lists = rawLists.filter((row: any) => {
+    if (typeof row?.updatedAt !== 'string') {
+      console.warn('[DB] Dropping list without updatedAt', { id: row?.id });
+      return false;
+    }
+    if (typeof row?.createdAt !== 'string') {
+      console.warn('[DB] Dropping list without createdAt', { id: row?.id });
+      return false;
+    }
+    const parsedUpdated = Date.parse(row.updatedAt);
+    const parsedCreated = Date.parse(row.createdAt);
+    if (!Number.isFinite(parsedUpdated)) {
+      console.warn('[DB] Dropping list with invalid updatedAt', {
+        id: row?.id,
+        updatedAt: row?.updatedAt,
+      });
+      return false;
+    }
+    if (!Number.isFinite(parsedCreated)) {
+      console.warn('[DB] Dropping list with invalid createdAt', {
+        id: row?.id,
+        createdAt: row?.createdAt,
+      });
+      return false;
+    }
+    row.updatedAt = new Date(parsedUpdated).toISOString();
+    row.createdAt = new Date(parsedCreated).toISOString();
+    return true;
+  });
+  console.log('[DB] Lists ordered by recency', {
+    firstListId: lists[0]?.id,
+    count: lists.length,
+  });
   let selectedRow = database
     .prepare('SELECT value FROM meta WHERE key = ?')
     .get('selectedListId');
@@ -204,11 +250,7 @@ export function loadListsIndex(): ListsIndexV2 {
     tx();
     // no per-save checkpoint
     // default list seeded for empty DB
-    const seeded = database
-      .prepare(
-        'SELECT id, name, created_at as createdAt, updated_at as updatedAt FROM lists ORDER BY created_at ASC',
-      )
-      .all();
+    const seeded = database.prepare(LISTS_BY_RECENCY_QUERY).all();
     selectedRow = { value: id };
     // seeded list loaded
     return { version: 2, lists: seeded, selectedListId: id };
@@ -256,11 +298,11 @@ export function saveListsIndex(index: ListsIndexV2): {
     // accidental data loss during startup/HMR when partial
     // state may be sent from the renderer.
     const upsertList = database.prepare(
-      'INSERT INTO lists (id, name, created_at, updated_at) VALUES (@id, @name, @created_at, @updated_at) \
-       ON CONFLICT(id) DO UPDATE SET \
-         name=excluded.name, \
-         created_at=excluded.created_at, \
-         updated_at=excluded.updated_at',
+      `INSERT INTO lists (id, name, created_at, updated_at) VALUES (@id, @name, @created_at, @updated_at)
+       ON CONFLICT(id) DO UPDATE SET
+         name=excluded.name,
+         created_at=excluded.created_at,
+         updated_at=excluded.updated_at`,
     );
     // const delTodos = database.prepare('DELETE FROM todos WHERE list_id = ?');
     // const delList = database.prepare('DELETE FROM lists WHERE id = ?');
@@ -270,11 +312,21 @@ export function saveListsIndex(index: ListsIndexV2): {
     const tx = database.transaction(() => {
       // Deletions intentionally disabled here; handle explicit deletions elsewhere.
       for (const l of index.lists) {
+        if (!l.updatedAt || !Number.isFinite(Date.parse(l.updatedAt))) {
+          throw new Error(
+            `saveListsIndex received list without valid updatedAt: ${l.id}`,
+          );
+        }
+        if (!l.createdAt || !Number.isFinite(Date.parse(l.createdAt))) {
+          throw new Error(
+            `saveListsIndex received list without valid createdAt: ${l.id}`,
+          );
+        }
         upsertList.run({
           id: l.id,
           name: l.name,
-          created_at: l.createdAt,
-          updated_at: l.updatedAt ?? null,
+          created_at: new Date(l.createdAt).toISOString(),
+          updated_at: new Date(l.updatedAt).toISOString(),
         });
       }
       // Only update selectedListId if provided to avoid clobbering

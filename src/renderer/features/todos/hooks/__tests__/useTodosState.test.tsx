@@ -74,6 +74,7 @@ describe('useTodosState', () => {
         id: 'list-1',
         name: 'Test List',
         createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
       },
     ];
     mockStorage.loadListsIndex.mockResolvedValue({
@@ -93,29 +94,185 @@ describe('useTodosState', () => {
     expect(result.current.selectedListId).toBe('list-1');
   });
 
-  it('should add new list', async () => {
+  it('rejects lists lacking updatedAt when loading index', async () => {
+    const valid = {
+      id: 'valid',
+      name: 'Valid',
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-01-02T00:00:00.000Z',
+    };
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: [
+        valid,
+        {
+          id: 'invalid',
+          name: 'Missing timestamp',
+          createdAt: '2024-01-03T00:00:00.000Z',
+        } as any,
+      ],
+      selectedListId: 'valid',
+    });
+
     const { result } = renderHook(() => useTodosState());
 
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    const initialLength = result.current.lists.length;
+    expect(
+      result.current.lists.find((l) => l.id === 'invalid'),
+    ).toBeUndefined();
+    const kept = result.current.lists.find((l) => l.id === 'valid');
+    expect(kept).toBeDefined();
+    expect(typeof kept?.updatedAt).toBe('string');
+    expect(
+      result.current.lists.every((l) => typeof l.updatedAt === 'string'),
+    ).toBe(true);
+  });
 
-    act(() => {
-      result.current.addList();
+  it('should add new list at the top based on recency', async () => {
+    const baseTime = '2024-01-01T00:00:00.000Z';
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: [
+        {
+          id: 'existing-list',
+          name: 'Existing List',
+          createdAt: baseTime,
+          updatedAt: baseTime,
+        },
+      ],
+      selectedListId: 'existing-list',
     });
 
-    expect(result.current.lists).toHaveLength(initialLength + 1);
-    expect(result.current.lists[initialLength].name).toBe(
-      `List ${initialLength + 1}`,
-    );
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const previousFirstId = result.current.lists[0]?.id;
+    let newListId: string | undefined;
+
+    act(() => {
+      newListId = result.current.addList();
+    });
+
+    expect(result.current.lists[0]?.id).toBe(newListId);
+    expect(result.current.selectedListId).toBe(newListId);
+    expect(result.current.lists[1]?.id).toBe(previousFirstId);
+  });
+
+  it('should move renamed list to the top based on recency', async () => {
+    const mockLists = [
+      {
+        id: 'list-oldest',
+        name: 'Oldest',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      },
+      {
+        id: 'list-middle',
+        name: 'Middle',
+        createdAt: '2024-01-10T00:00:00.000Z',
+        updatedAt: '2024-01-11T00:00:00.000Z',
+      },
+      {
+        id: 'list-newest',
+        name: 'Newest',
+        createdAt: '2024-02-01T00:00:00.000Z',
+        updatedAt: '2024-02-02T00:00:00.000Z',
+      },
+    ];
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2024-03-01T00:00:00.000Z').getTime());
+    try {
+      mockStorage.loadListsIndex.mockResolvedValue({
+        version: 2,
+        lists: mockLists,
+        selectedListId: 'list-newest',
+      });
+
+      const { result } = renderHook(() => useTodosState());
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      const beforeRename = result.current.lists.find(
+        (l) => l.id === 'list-oldest',
+      )?.updatedAt;
+
+      act(() => {
+        result.current.updateList('list-oldest', { name: 'Renamed Oldest' });
+      });
+
+      expect(result.current.lists[0].id).toBe('list-oldest');
+      expect(result.current.lists[0].name).toBe('Renamed Oldest');
+      const actual = result.current.lists[0].updatedAt;
+      expect(Date.parse(actual) >= Date.parse('2024-03-01T00:00:00.000Z')).toBe(
+        true,
+      );
+      expect(actual).not.toBe(beforeRename);
+      expect(result.current.lists.slice(1).map((l) => l.id)).toEqual([
+        'list-newest',
+        'list-middle',
+      ]);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('should move a list to the top when it is updated without renaming', async () => {
+    const mockLists = [
+      {
+        id: 'list-older',
+        name: 'Older',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
+      },
+      {
+        id: 'list-newer',
+        name: 'Newer',
+        createdAt: '2024-02-01T00:00:00.000Z',
+        updatedAt: '2024-02-02T00:00:00.000Z',
+      },
+    ];
+    mockStorage.loadListsIndex.mockResolvedValue({
+      version: 2,
+      lists: mockLists,
+      selectedListId: 'list-newer',
+    });
+
+    const { result } = renderHook(() => useTodosState());
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    act(() => {
+      result.current.updateList('list-older', {});
+    });
+
+    expect(result.current.lists[0].id).toBe('list-older');
   });
 
   it('should delete list', async () => {
     const mockLists = [
-      { id: 'list-1', name: 'List 1', createdAt: '2024-01-01T00:00:00.000Z' },
-      { id: 'list-2', name: 'List 2', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: 'list-1',
+        name: 'List 1',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'list-2',
+        name: 'List 2',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
     mockStorage.loadListsIndex.mockResolvedValue({
       version: 2,
@@ -281,49 +438,81 @@ describe('useTodosState', () => {
 
   it('should duplicate list successfully', async () => {
     const mockLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
     const mockUpdatedLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
       {
         id: 'new-list-id',
         name: 'Original List (Copy)',
         createdAt: '2024-01-02T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
       },
     ];
 
-    mockStorage.loadListsIndex
-      .mockResolvedValueOnce({
-        version: 2,
-        lists: mockLists,
-        selectedListId: '1',
-      })
-      .mockResolvedValueOnce({
-        version: 2,
-        lists: mockUpdatedLists,
-        selectedListId: 'new-list-id',
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2024-03-05T12:00:00.000Z').getTime());
+    try {
+      mockStorage.loadListsIndex
+        .mockResolvedValueOnce({
+          version: 2,
+          lists: mockLists,
+          selectedListId: '1',
+        })
+        .mockResolvedValueOnce({
+          version: 2,
+          lists: mockUpdatedLists,
+          selectedListId: 'new-list-id',
+        });
+
+      const { result } = renderHook(() => useTodosState());
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
       });
 
-    const { result } = renderHook(() => useTodosState());
+      let newListId: string | null = null;
+      await act(async () => {
+        newListId = await result.current.duplicateList('1');
+      });
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-
-    let newListId: string | null = null;
-    await act(async () => {
-      newListId = await result.current.duplicateList('1');
-    });
-
-    expect(newListId).toBe('new-list-id');
-    expect(mockStorage.duplicateList).toHaveBeenCalledWith('1', undefined);
-    expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(1); // Only once on init, not after duplicate
-    expect(mockStorage.setSelectedListMeta).toHaveBeenCalledWith('new-list-id');
+      expect(newListId).toBe('new-list-id');
+      expect(mockStorage.duplicateList).toHaveBeenCalledWith('1', undefined);
+      expect(mockStorage.loadListsIndex).toHaveBeenCalledTimes(1); // Only once on init, not after duplicate
+      expect(mockStorage.setSelectedListMeta).toHaveBeenCalledWith(
+        'new-list-id',
+      );
+      const duplicated = result.current.lists.find(
+        (l) => l.id === 'new-list-id',
+      );
+      expect(
+        Date.parse(duplicated?.updatedAt ?? '') >=
+          Date.parse('2024-03-05T12:00:00.000Z'),
+      ).toBe(true);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it('should duplicate list with completed todos properly mirrored', async () => {
     const mockLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
 
     // Mock the duplicated list todos (should mirror the source)
@@ -374,7 +563,12 @@ describe('useTodosState', () => {
 
   it('should synchronize ID counter when switching to duplicated list', async () => {
     const mockLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
 
     const sourceTodos = [
@@ -418,7 +612,7 @@ describe('useTodosState', () => {
 
     // Create a new todo
     let newTodoId: number;
-    await act(() => {
+    act(() => {
       const todos = result.current.getSelectedTodos();
       const lastIndex = todos.length - 1;
       newTodoId = result.current.insertTodoBelow(lastIndex);
@@ -437,7 +631,12 @@ describe('useTodosState', () => {
   it('should mirror completion when toggled then immediately duplicated', async () => {
     // Start with one list selected
     const mockLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
     mockStorage.loadListsIndex.mockResolvedValue({
       version: 2,
@@ -500,7 +699,12 @@ describe('useTodosState', () => {
 
   it('should force save before duplicating current list to prevent race conditions', async () => {
     const mockLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
 
     mockStorage.loadListsIndex.mockResolvedValue({
@@ -567,14 +771,25 @@ describe('useTodosState', () => {
 
   it('should duplicate list with custom name', async () => {
     const mockLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
     ];
     const mockUpdatedLists = [
-      { id: '1', name: 'Original List', createdAt: '2024-01-01T00:00:00.000Z' },
+      {
+        id: '1',
+        name: 'Original List',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
       {
         id: 'new-list-id',
         name: 'My Custom Name',
         createdAt: '2024-01-02T00:00:00.000Z',
+        updatedAt: '2024-01-02T00:00:00.000Z',
       },
     ];
 

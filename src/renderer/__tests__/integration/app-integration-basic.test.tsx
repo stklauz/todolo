@@ -43,6 +43,7 @@ describe('E2E Basic Flow Tests', () => {
           id: 'list-1',
           name: 'Work Tasks',
           createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
         },
       ];
 
@@ -206,6 +207,7 @@ describe('E2E Basic Flow Tests', () => {
           id: 'list-1',
           name: 'Work Tasks',
           createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
         },
       ];
 
@@ -223,6 +225,7 @@ describe('E2E Basic Flow Tests', () => {
               id: 'duplicated-list-id',
               name: 'Work Tasks (Copy)',
               createdAt: '2024-01-02T00:00:00.000Z',
+              updatedAt: '2024-01-02T00:00:00.000Z',
             },
           ],
           selectedListId: 'duplicated-list-id',
@@ -274,6 +277,7 @@ describe('E2E Basic Flow Tests', () => {
           id: 'list-1',
           name: 'Work Tasks',
           createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
         },
       ];
 
@@ -324,6 +328,7 @@ describe('E2E Basic Flow Tests', () => {
           id: 'list-1',
           name: 'Work Tasks',
           createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
         },
       ];
 

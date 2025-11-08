@@ -16,7 +16,13 @@ describe('useTodosStore', () => {
   describe('lists management', () => {
     it('should set and get lists', () => {
       const testLists: TodoList[] = [
-        { id: 'list-1', name: 'Test List', todos: [] },
+        {
+          id: 'list-1',
+          name: 'Test List',
+          todos: [],
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
       ];
 
       useTodosStore.getState().setLists(testLists);
@@ -30,8 +36,20 @@ describe('useTodosStore', () => {
 
     it('should get selected list', () => {
       const testLists: TodoList[] = [
-        { id: 'list-1', name: 'Test List 1', todos: [] },
-        { id: 'list-2', name: 'Test List 2', todos: [] },
+        {
+          id: 'list-1',
+          name: 'Test List 1',
+          todos: [],
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'list-2',
+          name: 'Test List 2',
+          todos: [],
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+        },
       ];
 
       useTodosStore.getState().setLists(testLists);

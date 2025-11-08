@@ -40,6 +40,22 @@ describe('List Management', () => {
       await waitFor(() => {
         expect(mockStorage.saveListsIndex).toHaveBeenCalled();
       });
+
+      const docWithTwoLists = mockStorage.saveListsIndex.mock.calls
+        .map(([doc]) => doc)
+        .find((doc) => Array.isArray(doc?.lists) && doc.lists.length === 2);
+      expect(docWithTwoLists).toBeDefined();
+      const twoListDoc = docWithTwoLists as
+        | {
+            lists: Array<{ id: string; updatedAt: string }>;
+            selectedListId?: string;
+          }
+        | undefined;
+      const [first, second] = twoListDoc!.lists;
+      expect(first.id).toBe(twoListDoc!.selectedListId);
+      expect(second.id).toBe('list-1');
+      const timestamps = twoListDoc!.lists.map((l) => Date.parse(l.updatedAt));
+      expect([...timestamps].sort((a, b) => b - a)).toEqual(timestamps);
     });
 
     it('shows spinner during list creation', async () => {

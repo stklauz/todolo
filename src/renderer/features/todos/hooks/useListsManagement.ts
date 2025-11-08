@@ -29,6 +29,41 @@ export default function useListsManagement({
   saveWithStrategy,
   flushCurrentTodos,
 }: UseListsManagementProps) {
+  const serializeLists = React.useCallback((listsToSerialize: TodoList[]) => {
+    const serialized: Array<{
+      id: string;
+      name: string;
+      createdAt: string;
+      updatedAt: string;
+    }> = [];
+
+    for (const list of listsToSerialize) {
+      const parsedCreated = Date.parse(list.createdAt);
+      const parsedUpdated = Date.parse(list.updatedAt);
+
+      if (Number.isFinite(parsedCreated) && Number.isFinite(parsedUpdated)) {
+        serialized.push({
+          id: list.id,
+          name: list.name,
+          createdAt: new Date(parsedCreated).toISOString(),
+          updatedAt: new Date(parsedUpdated).toISOString(),
+        });
+      } else {
+        debugLogger.log(
+          'warn',
+          'Skipping list with invalid timestamps when serializing',
+          {
+            id: list.id,
+            createdAt: list.createdAt,
+            updatedAt: list.updatedAt,
+          },
+        );
+      }
+    }
+
+    return serialized;
+  }, []);
+
   function addList(): string {
     const id = crypto?.randomUUID?.() || `list-${Date.now()}`;
     const idx = lists.length + 1;
@@ -42,12 +77,7 @@ export default function useListsManagement({
       const snapshot = [...listsRef.current, newList];
       const indexDoc = {
         version: 2 as const,
-        lists: snapshot.map((l) => ({
-          id: l.id,
-          name: l.name,
-          createdAt: l.createdAt || new Date().toISOString(),
-          updatedAt: l.updatedAt,
-        })),
+        lists: serializeLists(snapshot),
         selectedListId: id,
       };
       saveListsIndex(indexDoc).catch(() => {});
@@ -76,12 +106,7 @@ export default function useListsManagement({
       try {
         const indexDoc = {
           version: 2 as const,
-          lists: remaining.map((l) => ({
-            id: l.id,
-            name: l.name,
-            createdAt: l.createdAt || new Date().toISOString(),
-            updatedAt: l.updatedAt,
-          })),
+          lists: serializeLists(remaining),
           selectedListId: nextSelected ?? undefined,
         };
         saveListsIndex(indexDoc)
@@ -138,12 +163,7 @@ export default function useListsManagement({
       try {
         const indexDoc = {
           version: 2 as const,
-          lists: remaining.map((l) => ({
-            id: l.id,
-            name: l.name,
-            createdAt: l.createdAt || new Date().toISOString(),
-            updatedAt: l.updatedAt,
-          })),
+          lists: serializeLists(remaining),
           selectedListId: nextSelected ?? undefined,
         };
         saveListsIndex(indexDoc)
@@ -185,19 +205,14 @@ export default function useListsManagement({
         if (snapshot && snapshot.length > 0) {
           const indexDoc = {
             version: 2 as const,
-            lists: snapshot.map((l) => ({
-              id: l.id,
-              name: l.name,
-              createdAt: l.createdAt || new Date().toISOString(),
-              updatedAt: l.updatedAt,
-            })),
+            lists: serializeLists(snapshot),
             selectedListId: id ?? undefined,
           };
           saveListsIndex(indexDoc).catch(() => {});
         }
       } catch {}
     },
-    [saveWithStrategy, setSelectedListId, listsRef],
+    [saveWithStrategy, setSelectedListId, listsRef, serializeLists],
   );
 
   function duplicateList(

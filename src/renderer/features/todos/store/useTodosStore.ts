@@ -11,6 +11,7 @@ import {
   deleteList as deleteListApi,
 } from '../api/storage';
 import { debugLogger } from '../../../utils/debug';
+import { sortListsByRecency } from '../utils/listOrdering';
 
 /**
  * Centralized Todos Store (Phase 5: Eliminate Ref Plumbing)
@@ -88,10 +89,64 @@ export const useTodosStore = create<TodosState>((set, get) => ({
     set((state) => {
       const newLists =
         typeof listsOrFn === 'function' ? listsOrFn(state.lists) : listsOrFn;
+      const sanitized = newLists.reduce<TodoList[]>((acc, list) => {
+        if (typeof list.updatedAt !== 'string') {
+          debugLogger.log(
+            'warn',
+            'Dropping list without updatedAt in setLists',
+            {
+              id: list.id,
+            },
+          );
+          return acc;
+        }
+        if (typeof list.createdAt !== 'string') {
+          debugLogger.log(
+            'warn',
+            'Dropping list without createdAt in setLists',
+            {
+              id: list.id,
+            },
+          );
+          return acc;
+        }
+        const parsedUpdated = Date.parse(list.updatedAt);
+        const parsedCreated = Date.parse(list.createdAt);
+        if (
+          !Number.isFinite(parsedUpdated) ||
+          !Number.isFinite(parsedCreated)
+        ) {
+          debugLogger.log(
+            'warn',
+            'Dropping list with invalid updatedAt in setLists',
+            {
+              id: list.id,
+              updatedAt: list.updatedAt,
+            },
+          );
+          return acc;
+        }
+        acc.push({
+          ...list,
+          createdAt: new Date(parsedCreated).toISOString(),
+          updatedAt: new Date(parsedUpdated).toISOString(),
+        });
+        return acc;
+      }, []);
+      if (sanitized.length !== newLists.length) {
+        debugLogger.log(
+          'warn',
+          'Some lists were discarded due to invalid timestamps',
+          {
+            requested: newLists.length,
+            kept: sanitized.length,
+          },
+        );
+      }
       debugLogger.log('info', 'Store: setLists', {
-        count: newLists.length,
+        count: sanitized.length,
       });
-      return { lists: newLists };
+      return { lists: sortListsByRecency(sanitized) };
     });
   },
 
@@ -161,7 +216,10 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           : l,
       );
       // Note: persistence is handled by hooks queue; store does pure state
-      return { ...state, lists: updatedLists } as TodosState;
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
     });
   },
 
@@ -217,7 +275,10 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           ? { ...l, todos: next, updatedAt: new Date().toISOString() }
           : l,
       );
-      return { ...state, lists: updatedLists } as TodosState;
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
     });
   },
 
@@ -245,7 +306,10 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           ? { ...l, todos: updated, updatedAt: new Date().toISOString() }
           : l,
       );
-      return { ...state, lists: updatedLists } as TodosState;
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
     });
   },
 
@@ -276,7 +340,10 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           ? { ...l, todos: updated, updatedAt: new Date().toISOString() }
           : l,
       );
-      return { ...state, lists: updatedLists } as TodosState;
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
     });
   },
 
@@ -312,7 +379,10 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           ? { ...l, todos: next, updatedAt: new Date().toISOString() }
           : l,
       );
-      return { ...state, lists: updatedLists } as TodosState;
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
     });
     return id;
   },
@@ -374,14 +444,20 @@ export const useTodosStore = create<TodosState>((set, get) => ({
             ? { ...l, todos: updatedTodos, updatedAt: new Date().toISOString() }
             : l,
         );
-        return { ...state, lists: updatedLists } as TodosState;
+        return {
+          ...state,
+          lists: sortListsByRecency(updatedLists),
+        } as TodosState;
       }
       const updatedLists = state.lists.map((l) =>
         l.id === list.id
           ? { ...l, todos: next, updatedAt: new Date().toISOString() }
           : l,
       );
-      return { ...state, lists: updatedLists } as TodosState;
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
     });
   },
 
@@ -402,9 +478,10 @@ export const useTodosStore = create<TodosState>((set, get) => ({
         createdAt: now,
         updatedAt: now,
       } as any;
+      const updatedLists = sortListsByRecency([...state.lists, newList]);
       return {
         ...state,
-        lists: [...state.lists, newList],
+        lists: updatedLists,
         selectedListId: id,
       } as TodosState;
     });
@@ -415,7 +492,9 @@ export const useTodosStore = create<TodosState>((set, get) => ({
     set((state) => {
       const id = state.selectedListId;
       if (!id) return state;
-      const remaining = state.lists.filter((l) => l.id !== id);
+      const remaining = sortListsByRecency(
+        state.lists.filter((l) => l.id !== id),
+      );
       const nextSelected = remaining[0]?.id ?? null;
       return {
         ...state,
@@ -432,7 +511,9 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       // ignore errors; UI flows handle error messaging
     }
     set((state) => {
-      const remaining = state.lists.filter((l) => l.id !== id);
+      const remaining = sortListsByRecency(
+        state.lists.filter((l) => l.id !== id),
+      );
       const nextSelected =
         state.selectedListId === id
           ? (remaining[0]?.id ?? null)
@@ -451,13 +532,14 @@ export const useTodosStore = create<TodosState>((set, get) => ({
     set((state) => {
       const list = state.lists.find((l) => l.id === id);
       if (!list || list.name === trimmedName) return state;
+      const updatedLists = state.lists.map((l) =>
+        l.id === id
+          ? { ...l, name: trimmedName, updatedAt: new Date().toISOString() }
+          : l,
+      );
       return {
         ...state,
-        lists: state.lists.map((l) =>
-          l.id === id
-            ? { ...l, name: trimmedName, updatedAt: new Date().toISOString() }
-            : l,
-        ),
+        lists: sortListsByRecency(updatedLists),
       } as TodosState;
     });
   },
@@ -479,14 +561,14 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           createdAt: now,
           updatedAt: now,
         };
-        set(
-          (prev) =>
-            ({
-              ...prev,
-              lists: [...prev.lists, newList],
-              selectedListId: result.newListId,
-            }) as TodosState,
-        );
+        set((prev) => {
+          const updatedLists = sortListsByRecency([...prev.lists, newList]);
+          return {
+            ...prev,
+            lists: updatedLists,
+            selectedListId: result.newListId,
+          } as TodosState;
+        });
         return result.newListId;
       }
       return null;

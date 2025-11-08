@@ -5,12 +5,8 @@ import { debugLogger } from '../../../utils/debug';
 import { normalizeList } from '../utils/validation';
 import { SaveQueue } from '../utils/saveQueue';
 import { useTodosStore } from '../store/useTodosStore';
+import { sortListsByRecency } from '../utils/listOrdering';
 
-/**
- * Phase 5 Refactor: Zero parameters! Store handles all state.
- * Before: 6 parameters (lists, setLists, selectedListId, setSelectedListId, listsRef, selectedListIdRef)
- * After: 0 parameters
- */
 export default function useListsIndex() {
   // Read from store (no props!)
   const lists = useTodosStore((state) => state.lists);
@@ -39,7 +35,7 @@ export default function useListsIndex() {
           lists: snapshot.map((l) => ({
             id: l.id,
             name: l.name,
-            createdAt: l.createdAt!,
+            createdAt: l.createdAt,
             updatedAt: l.updatedAt,
           })),
           selectedListId: sel ?? undefined,
@@ -58,16 +54,29 @@ export default function useListsIndex() {
     const load = async () => {
       try {
         const index = await loadListsIndex();
-
-        const normalizedLists: TodoList[] = (index.lists || []).map(
-          (list, li) => normalizeList(list, li),
+        const normalizedLists = (index.lists || []).reduce<TodoList[]>(
+          (acc, list, li) => {
+            try {
+              const normalized = normalizeList(list, li);
+              acc.push(normalized);
+            } catch (error) {
+              debugLogger.log('warn', 'Dropped list with invalid timestamps', {
+                error,
+                listId: (list as { id?: string })?.id,
+              });
+            }
+            return acc;
+          },
+          [],
         );
-        setLists(normalizedLists);
+        const sortedLists = sortListsByRecency(normalizedLists);
+
+        setLists(sortedLists);
         setSelectedListId(
           index.selectedListId &&
-            normalizedLists.some((l) => l.id === index.selectedListId)
-            ? index.selectedListId!
-            : (normalizedLists[0]?.id ?? null),
+            sortedLists.some((l) => l.id === index.selectedListId)
+            ? index.selectedListId
+            : (sortedLists[0]?.id ?? null),
         );
       } catch (error) {
         debugLogger.log('error', 'Failed to load lists index', { error });
@@ -96,6 +105,7 @@ export default function useListsIndex() {
         name: 'My Todos',
         todos: [],
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       } as TodoList;
       setLists([newList]);
       setSelectedListId(id);
@@ -106,7 +116,7 @@ export default function useListsIndex() {
           {
             id: newList.id,
             name: newList.name,
-            createdAt: newList.createdAt!,
+            createdAt: newList.createdAt,
             updatedAt: newList.updatedAt,
           },
         ],
