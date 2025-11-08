@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import useTodosState from '../useTodosState';
 import * as storage from '../../api/storage';
 import { useTodosStore } from '../../store/useTodosStore';
@@ -159,9 +159,11 @@ describe('useTodosState', () => {
       newListId = result.current.addList();
     });
 
-    expect(result.current.lists[0]?.id).toBe(newListId);
-    expect(result.current.selectedListId).toBe(newListId);
-    expect(result.current.lists[1]?.id).toBe(previousFirstId);
+    await waitFor(() => {
+      expect(result.current.lists[0]?.id).toBe(newListId);
+      expect(result.current.selectedListId).toBe(newListId);
+      expect(result.current.lists[1]?.id).toBe(previousFirstId);
+    });
   });
 
   it('should move renamed list to the top based on recency', async () => {
