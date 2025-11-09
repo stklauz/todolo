@@ -87,31 +87,44 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   // Actions: Lists
   setLists: (listsOrFn) => {
     set((state) => {
+      const prevById = new Map(state.lists.map((l) => [l.id, l] as const));
       const newLists =
         typeof listsOrFn === 'function' ? listsOrFn(state.lists) : listsOrFn;
       const sanitized = newLists.reduce<TodoList[]>((acc, list) => {
-        if (typeof list.updatedAt !== 'string') {
-          debugLogger.log(
-            'warn',
-            'Dropping list without updatedAt in setLists',
-            {
-              id: list.id,
-            },
-          );
-          return acc;
+        const prev = list?.id ? prevById.get(list.id) : undefined;
+        let candidate = list as TodoList;
+        if (typeof candidate.updatedAt !== 'string') {
+          // Attempt to recover from missing timestamp using previous value
+          if (prev?.updatedAt) {
+            candidate = { ...candidate, updatedAt: prev.updatedAt } as TodoList;
+          } else {
+            debugLogger.log(
+              'warn',
+              'Dropping list without updatedAt in setLists',
+              {
+                id: candidate.id,
+              },
+            );
+            return acc;
+          }
         }
-        if (typeof list.createdAt !== 'string') {
-          debugLogger.log(
-            'warn',
-            'Dropping list without createdAt in setLists',
-            {
-              id: list.id,
-            },
-          );
-          return acc;
+        if (typeof candidate.createdAt !== 'string') {
+          // Attempt to recover from missing timestamp using previous value
+          if (prev?.createdAt) {
+            candidate = { ...candidate, createdAt: prev.createdAt } as TodoList;
+          } else {
+            debugLogger.log(
+              'warn',
+              'Dropping list without createdAt in setLists',
+              {
+                id: candidate.id,
+              },
+            );
+            return acc;
+          }
         }
-        const parsedUpdated = Date.parse(list.updatedAt);
-        const parsedCreated = Date.parse(list.createdAt);
+        const parsedUpdated = Date.parse(candidate.updatedAt);
+        const parsedCreated = Date.parse(candidate.createdAt);
         if (
           !Number.isFinite(parsedUpdated) ||
           !Number.isFinite(parsedCreated)
@@ -120,14 +133,14 @@ export const useTodosStore = create<TodosState>((set, get) => ({
             'warn',
             'Dropping list with invalid updatedAt in setLists',
             {
-              id: list.id,
-              updatedAt: list.updatedAt,
+              id: candidate.id,
+              updatedAt: candidate.updatedAt,
             },
           );
           return acc;
         }
         acc.push({
-          ...list,
+          ...candidate,
           createdAt: new Date(parsedCreated).toISOString(),
           updatedAt: new Date(parsedUpdated).toISOString(),
         });

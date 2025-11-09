@@ -211,9 +211,12 @@ describe('useTodosState', () => {
         result.current.updateList('list-oldest', { name: 'Renamed Oldest' });
       });
 
-      expect(result.current.lists[0].id).toBe('list-oldest');
-      expect(result.current.lists[0].name).toBe('Renamed Oldest');
-      const actual = result.current.lists[0].updatedAt;
+      await waitFor(() => {
+        expect(result.current.lists[0].id).toBe('list-oldest');
+      });
+      const renamed = result.current.lists[0];
+      expect(renamed.name).toBe('Renamed Oldest');
+      const actual = renamed.updatedAt;
       expect(Date.parse(actual) >= Date.parse('2024-03-01T00:00:00.000Z')).toBe(
         true,
       );
@@ -228,6 +231,9 @@ describe('useTodosState', () => {
   });
 
   it('should move a list to the top when it is updated without renaming', async () => {
+    const nowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2024-03-02T00:00:00.000Z').getTime());
     const mockLists = [
       {
         id: 'list-older',
@@ -258,7 +264,23 @@ describe('useTodosState', () => {
       result.current.updateList('list-older', {});
     });
 
-    expect(result.current.lists[0].id).toBe('list-older');
+    try {
+      await waitFor(() => {
+        expect(result.current.lists.map((l) => l.id)).toEqual([
+          'list-older',
+          'list-newer',
+        ]);
+      });
+      const [first, second] = result.current.lists;
+      expect(Date.parse(first.updatedAt)).toBeGreaterThanOrEqual(
+        Date.parse('2024-03-02T00:00:00.000Z'),
+      );
+      expect(Date.parse(first.updatedAt)).toBeGreaterThan(
+        Date.parse(second.updatedAt),
+      );
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 
   it('should delete list', async () => {
