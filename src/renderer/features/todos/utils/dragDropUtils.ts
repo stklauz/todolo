@@ -82,14 +82,16 @@ export const extractTodoBlock = (
   const block = [todos[startIndex]];
   let endIndex = startIndex;
 
-  const srcIsParent = Number(todos[startIndex].indent ?? 0) === 0;
+  const sourceIndent = Number(todos[startIndex].indent ?? 0);
 
-  if (srcIsParent) {
-    // Include all consecutive children
-    for (let i = startIndex + 1; i < todos.length; i++) {
-      if (Number(todos[i].indent ?? 0) === 0) break;
+  // Include all consecutive descendants (rows with strictly deeper indent)
+  for (let i = startIndex + 1; i < todos.length; i++) {
+    const indent = Number(todos[i].indent ?? 0);
+    if (indent > sourceIndent) {
       block.push(todos[i]);
       endIndex = i;
+    } else {
+      break;
     }
   }
 

@@ -1,6 +1,12 @@
 import React from 'react';
 import type { EditorTodo, Section } from '../types';
-import { computeSectionById, isChildOf } from '../utils/todoUtils';
+import { computeSectionById } from '../utils/todoUtils';
+import {
+  extractTodoBlock,
+  insertTodoBlock,
+  isChildOf,
+  validateDragOperation,
+} from '../utils/dragDropUtils';
 import { debugLogger } from '../../../utils/debug';
 
 type GetTodos = () => EditorTodo[];
@@ -28,15 +34,6 @@ export default function useDragReorder(
   React.useEffect(() => {
     dragInfoRef.current = dragInfo;
   }, [dragInfo]);
-
-  // Helper function to check if targetId is a child of sourceId
-  const checkIsChildOf = React.useCallback(
-    (sourceId: number, targetId: number): boolean => {
-      const todos = getTodos();
-      return isChildOf(sourceId, targetId, todos);
-    },
-    [getTodos],
-  );
 
   const handleDragStart = React.useCallback(
     (id: number) => {
@@ -74,8 +71,9 @@ export default function useDragReorder(
         return;
       }
 
-      // Check if trying to drop parent under its child - prevent this
-      if (checkIsChildOf(currentDragInfo.id, targetId)) {
+      // Prevent hovering a parent over its own child
+      const todos = getTodos();
+      if (isChildOf(currentDragInfo.id, targetId, todos)) {
         setDropTargetId(null);
         return;
       }
@@ -83,7 +81,7 @@ export default function useDragReorder(
       setDropTargetId(targetId);
       setDropAtSectionEnd(null);
     },
-    [sectionOf, checkIsChildOf],
+    [getTodos, sectionOf],
   );
 
   const handleDragLeave = React.useCallback((targetId: number) => {
@@ -102,25 +100,18 @@ export default function useDragReorder(
         return;
       }
       const sourceId = currentDragInfo.id;
-      const targetSection = sectionOf(targetId);
-      if (targetSection !== currentDragInfo.section) {
-        debugLogger.log('info', 'Sections differ, aborting drop', {
-          sourceSection: currentDragInfo.section,
-          targetSection,
+      const todos = getTodos();
+      const { valid, reason } = validateDragOperation(
+        sourceId,
+        targetId,
+        todos,
+      );
+      if (!valid) {
+        debugLogger.log('info', 'Drop validation failed', {
+          sourceId,
+          targetId,
+          reason,
         });
-        return handleDragEnd();
-      }
-      if (sourceId === targetId) {
-        debugLogger.log('info', 'Source === target, aborting drop');
-        return handleDragEnd();
-      }
-
-      // Check if trying to drop parent under its child - prevent this
-      if (checkIsChildOf(sourceId, targetId)) {
-        debugLogger.log(
-          'info',
-          'Would create parent->child inversion, aborting drop',
-        );
         return handleDragEnd();
       }
 
@@ -134,24 +125,13 @@ export default function useDragReorder(
           computeSectionById(targetId, prev)
         )
           return prev;
-        const next = [...prev];
-        // Compute source block: move the dragged todo together with all of its
-        // descendants (rows with strictly deeper indent that follow it).
-        const sourceIndent = Number(next[srcIndex0].indent ?? 0);
-        const srcStart = srcIndex0;
-        let srcEnd = srcIndex0;
-        for (let i = srcIndex0 + 1; i < next.length; i++) {
-          const ind = Number(next[i].indent ?? 0);
-          if (ind > sourceIndent) {
-            srcEnd = i;
-          } else {
-            break;
-          }
-        }
+        const { block, endIndex: srcEnd } = extractTodoBlock(prev, srcIndex0);
         // If target is inside source block, ignore
-        if (tgtIndex0 >= srcStart && tgtIndex0 <= srcEnd) return prev;
-        // extract block
-        const block = next.splice(srcStart, srcEnd - srcStart + 1);
+        if (tgtIndex0 >= srcIndex0 && tgtIndex0 <= srcEnd) return prev;
+        // remove block
+        const withoutBlock = prev.filter(
+          (_todo, index) => index < srcIndex0 || index > srcEnd,
+        );
         // compute target block start
         // When dropping onto a child, insert at the child's row (do not snap to parent)
         // This preserves child-group ordering and allows inserting a parent between children.
@@ -162,7 +142,7 @@ export default function useDragReorder(
           tgtIndex -= block.length;
         }
         // insert at computed index
-        next.splice(tgtIndex, 0, ...block);
+        const next = insertTodoBlock(withoutBlock, block, tgtIndex);
 
         // Normalize overly deep indentation when dropping under a shallower target.
         const movedIndex = next.findIndex((t) => t.id === sourceId);
@@ -182,6 +162,7 @@ export default function useDragReorder(
         // Ensure no orphan children for single-row level-1 child moves and set parentId accordingly.
         // Only apply this when we moved a single row at indent 1; multi-row blocks
         // and deeper descendants preserve their existing parent/child relationships.
+        const srcStart = srcIndex0;
         const movedWasSingleLevel1Child =
           movedIndex !== -1 && srcStart === srcEnd && movedIndent === 1;
         if (movedWasSingleLevel1Child && movedIndex !== -1) {
@@ -241,7 +222,7 @@ export default function useDragReorder(
       });
       handleDragEnd();
     },
-    [handleDragEnd, sectionOf, setTodos, checkIsChildOf],
+    [getTodos, handleDragEnd, setTodos],
   );
 
   const handleDragOverEndZone = React.useCallback(
