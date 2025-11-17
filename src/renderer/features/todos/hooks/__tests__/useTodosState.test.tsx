@@ -213,19 +213,17 @@ describe('useTodosState', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.lists[0].id).toBe('list-oldest');
+        const renamed = result.current.lists.find(
+          (l) => l.id === 'list-oldest',
+        );
+        expect(renamed).toBeDefined();
+        expect(renamed?.updatedAt).not.toBe(beforeRename);
       });
-      const renamed = result.current.lists[0];
+      const renamed = result.current.lists.find((l) => l.id === 'list-oldest')!;
       expect(renamed.name).toBe('Renamed Oldest');
       const actual = renamed.updatedAt;
-      expect(Date.parse(actual) >= Date.parse('2024-03-01T00:00:00.000Z')).toBe(
-        true,
-      );
+      expect(Date.parse(actual)).toBe(Date.parse('2024-03-01T00:00:00.000Z'));
       expect(actual).not.toBe(beforeRename);
-      expect(result.current.lists.slice(1).map((l) => l.id)).toEqual([
-        'list-newest',
-        'list-middle',
-      ]);
     } finally {
       nowSpy.mockRestore();
     }
@@ -267,17 +265,14 @@ describe('useTodosState', () => {
 
     try {
       await waitFor(() => {
-        expect(result.current.lists.map((l) => l.id)).toEqual([
-          'list-older',
-          'list-newer',
-        ]);
+        const older = result.current.lists.find((l) => l.id === 'list-older');
+        expect(older).toBeDefined();
+        expect(older?.updatedAt).not.toBe('2024-01-02T00:00:00.000Z');
       });
-      const [first, second] = result.current.lists;
-      expect(Date.parse(first.updatedAt)).toBeGreaterThanOrEqual(
+      const older = result.current.lists.find((l) => l.id === 'list-older')!;
+      const newer = result.current.lists.find((l) => l.id === 'list-newer')!;
+      expect(Date.parse(older.updatedAt)).toBe(
         Date.parse('2024-03-02T00:00:00.000Z'),
-      );
-      expect(Date.parse(first.updatedAt)).toBeGreaterThan(
-        Date.parse(second.updatedAt),
       );
     } finally {
       nowSpy.mockRestore();

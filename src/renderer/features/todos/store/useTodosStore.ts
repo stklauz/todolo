@@ -574,13 +574,12 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   renameList: (id, name) => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
+    const nowIso = new Date(Date.now()).toISOString();
     set((state) => {
       const list = state.lists.find((l) => l.id === id);
       if (!list || list.name === trimmedName) return state;
       const updatedLists = state.lists.map((l) =>
-        l.id === id
-          ? { ...l, name: trimmedName, updatedAt: new Date().toISOString() }
-          : l,
+        l.id === id ? { ...l, name: trimmedName, updatedAt: nowIso } : l,
       );
       return {
         ...state,
@@ -594,12 +593,13 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       const list = state.lists.find((l) => l.id === id);
       if (!list) return state;
       const nextName = updates.name != null ? updates.name.trim() : list.name;
+      const nowIso = new Date(Date.now()).toISOString();
       const updatedLists = state.lists.map((l) =>
         l.id === id
           ? {
               ...l,
               name: nextName,
-              updatedAt: new Date().toISOString(),
+              updatedAt: nowIso,
             }
           : l,
       );
