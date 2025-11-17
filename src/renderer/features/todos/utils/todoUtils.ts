@@ -7,19 +7,78 @@ import { MIN_INDENT, MAX_INDENT } from './constants';
 export const clampIndent = (indent: number): number =>
   Math.max(MIN_INDENT, Math.min(MAX_INDENT, indent));
 
+type DeriveIndentOptions = {
+  lookup?: (id: number) => EditorTodo | undefined;
+};
+
+const buildLookup = (
+  todos?: EditorTodo[],
+): ((id: number) => EditorTodo | undefined) | undefined => {
+  if (!todos) return undefined;
+  const map = new Map<number, EditorTodo>();
+  todos.forEach((t) => {
+    if (typeof t.id === 'number') {
+      map.set(t.id, t);
+    }
+  });
+  return (id: number) => map.get(id);
+};
+
 /**
  * Derives display indent from parentId relationship.
  * This ensures indent is a display-only concern, not source of truth.
- * Current model: 0 = top-level (parentId === null || parentId === undefined), 1 = child (parentId !== null && parentId !== undefined)
+ * Current model: depth equals number of ancestor hops (0 = top-level).
  */
-export const deriveIndentFromParentId = (todo: EditorTodo): number => {
-  // If parentId is explicitly null, it's top-level (display indent 0)
-  if (todo.parentId === null) return 0;
-  // If parentId is a number, it's a child (display indent 1)
-  if (typeof todo.parentId === 'number') return 1;
-  // Legacy case: parentId is undefined, fall back to stored indent
-  const legacy = Number(todo.indent ?? 0);
-  return legacy > 0 ? 1 : 0;
+type DeriveIndentContext = DeriveIndentOptions & { todos?: EditorTodo[] };
+
+export const deriveIndentFromParentId = (
+  todo: EditorTodo,
+  options?: DeriveIndentContext,
+): number => {
+  const resolvedLookup =
+    options?.lookup ??
+    (options?.todos ? buildLookup(options.todos) : undefined);
+
+  // Without lookup (legacy data), fall back to stored indent as a visual hint
+  if (!resolvedLookup) {
+    if (todo.parentId === null) {
+      return MIN_INDENT;
+    }
+    if (typeof todo.parentId === 'number') {
+      const fallback =
+        typeof todo.indent === 'number' ? todo.indent : MIN_INDENT + 1;
+      return clampIndent(fallback);
+    }
+    const legacy = typeof todo.indent === 'number' ? todo.indent : MIN_INDENT;
+    return clampIndent(legacy);
+  }
+
+  if (todo.parentId == null) {
+    return MIN_INDENT;
+  }
+
+  const visited = new Set<number>([todo.id]);
+  let depth = 0;
+  let currentParentId: number | null | undefined = todo.parentId;
+
+  while (currentParentId != null) {
+    if (visited.has(currentParentId)) {
+      return MIN_INDENT;
+    }
+    visited.add(currentParentId);
+    depth += 1;
+    if (depth >= MAX_INDENT) {
+      return MAX_INDENT;
+    }
+    const parent = resolvedLookup(currentParentId);
+    if (!parent) {
+      const fallback = typeof todo.indent === 'number' ? todo.indent : depth;
+      return clampIndent(fallback);
+    }
+    currentParentId = parent.parentId;
+  }
+
+  return clampIndent(depth);
 };
 
 /**
@@ -268,23 +327,38 @@ export const computeParentForIndentChange = (
   targetId: number,
   targetIndent: number,
 ): number | null => {
-  if (targetIndent === 0) return null;
+  const clampedTarget = clampIndent(targetIndent);
+  if (clampedTarget <= MIN_INDENT) return null;
 
   const targetIndex = todos.findIndex((t) => t.id === targetId);
   if (targetIndex === -1) return null;
 
+  const lookup = buildLookup(todos);
+  const depthCache = new Map<number, number>();
+  const getDepth = (todo: EditorTodo): number => {
+    if (depthCache.has(todo.id)) {
+      return depthCache.get(todo.id)!;
+    }
+    const depth = deriveIndentFromParentId(todo, { lookup });
+    depthCache.set(todo.id, depth);
+    return depth;
+  };
+
   const targetSection = computeSectionById(targetId, todos);
 
-  // Search backward for nearest top-level (parentId === null) parent
-  for (let i = targetIndex - 1; i >= 0; i--) {
+  for (let i = targetIndex - 1; i >= 0; i -= 1) {
     const candidate = todos[i];
-    if (candidate.parentId == null) {
-      const candidateSection = computeSectionById(candidate.id, todos);
-      if (canAttachChild(candidateSection, targetSection)) {
-        return candidate.id;
+    if (candidate) {
+      const candidateDepth = getDepth(candidate);
+      if (candidateDepth === clampedTarget - 1) {
+        const candidateSection = computeSectionById(candidate.id, todos);
+        if (canAttachChild(candidateSection, targetSection)) {
+          return candidate.id;
+        }
       }
     }
   }
+
   return null;
 };
 
@@ -298,19 +372,26 @@ export const reparentChildren = (
   newParentId: number | null,
   todos: EditorTodo[],
 ): EditorTodo[] => {
-  const next = todos.map((t) =>
-    t.parentId === parentId
+  const reassigned = new Set<number>();
+  const next = todos.map((t) => {
+    if (t.parentId === parentId) {
+      reassigned.add(t.id);
+      return {
+        ...t,
+        parentId: newParentId,
+      };
+    }
+    return t;
+  });
+  const lookup = buildLookup(next);
+  return next.map((t) =>
+    reassigned.has(t.id)
       ? {
           ...t,
-          parentId: newParentId,
-          indent: deriveIndentFromParentId({
-            ...t,
-            parentId: newParentId,
-          }),
+          indent: deriveIndentFromParentId(t, { lookup }),
         }
       : t,
   );
-  return next;
 };
 
 /**
@@ -323,7 +404,7 @@ export const outdentChildren = (
   todos: EditorTodo[],
 ): EditorTodo[] => {
   const next = todos.map((t) =>
-    t.parentId === parentId ? { ...t, parentId: null, indent: 0 } : t,
+    t.parentId === parentId ? { ...t, parentId: null, indent: MIN_INDENT } : t,
   );
   return next;
 };

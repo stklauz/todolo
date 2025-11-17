@@ -1,6 +1,7 @@
 import { useTodosStore } from '../useTodosStore';
 import type { TodoList, EditorTodo } from '../../types';
 import * as storage from '../../api/storage';
+import { MAX_INDENT, MIN_INDENT } from '../../utils/constants';
 
 jest.mock('../../api/storage');
 
@@ -198,5 +199,61 @@ describe('useTodosStore actions', () => {
       | TodoList
       | undefined;
     expect(duplicated?.updatedAt).toEqual(expect.any(String));
+  });
+
+  test('changeIndent clamps to MAX_INDENT when increasing depth repeatedly', () => {
+    const todos: EditorTodo[] = [
+      { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+      { id: 2, text: 'Child A', completed: false, indent: 1, parentId: 1 },
+      {
+        id: 3,
+        text: 'Grandchild anchor',
+        completed: false,
+        indent: 2,
+        parentId: 2,
+      },
+      { id: 4, text: 'Child B', completed: false, indent: 1, parentId: 1 },
+    ];
+    useTodosStore.setState({
+      lists: [seedList('l', todos)],
+      selectedListId: 'l',
+    } as any);
+
+    const { changeIndent, getSelectedList } = useTodosStore.getState();
+    for (let i = 0; i < MAX_INDENT + 2; i += 1) {
+      changeIndent(4, 1);
+    }
+
+    const updated = getSelectedList();
+    const target = updated?.todos.find((t) => t.id === 4);
+    expect(target?.indent).toBe(MAX_INDENT);
+    expect(target?.parentId).toBe(3);
+  });
+
+  test('setIndent attaches to nearest valid ancestor at deeper levels', () => {
+    const todos: EditorTodo[] = [
+      { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+      { id: 2, text: 'First child', completed: false, indent: 1, parentId: 1 },
+      {
+        id: 3,
+        text: 'Grandchild anchor',
+        completed: false,
+        indent: 2,
+        parentId: 2,
+      },
+      { id: 4, text: 'Target', completed: false, indent: 1, parentId: 1 },
+    ];
+    useTodosStore.setState({
+      lists: [seedList('l', todos)],
+      selectedListId: 'l',
+    } as any);
+
+    const { setIndent, getSelectedList } = useTodosStore.getState();
+    setIndent(4, MIN_INDENT + 2); // request depth 2
+
+    const updated = getSelectedList();
+    const target = updated?.todos.find((t) => t.id === 4);
+    expect(target?.parentId).toBe(2);
+    expect(target?.indent).toBe(MIN_INDENT + 2);
   });
 });

@@ -8,6 +8,8 @@ import {
   validateAndNormalizeTodo,
   validateAndNormalizeList,
 } from '../validation';
+import { clampIndent } from '../todoUtils';
+import { MIN_INDENT, MAX_INDENT } from '../constants';
 
 describe('validation utilities', () => {
   describe('normalizeTodo', () => {
@@ -43,17 +45,17 @@ describe('validation utilities', () => {
     });
 
     it('should clamp indent to valid range', () => {
-      const input = { id: 1, text: 'Test', indent: 5 };
+      const input = { id: 1, text: 'Test', indent: 99 };
       const result = normalizeTodo(input);
 
-      expect(result.indent).toBe(1);
+      expect(result.indent).toBe(MAX_INDENT);
     });
 
     it('should handle negative indent', () => {
       const input = { id: 1, text: 'Test', indent: -2 };
       const result = normalizeTodo(input);
 
-      expect(result.indent).toBe(0);
+      expect(result.indent).toBe(MIN_INDENT);
     });
 
     it('should handle checked property as completed', () => {
@@ -61,6 +63,23 @@ describe('validation utilities', () => {
       const result = normalizeTodo(input);
 
       expect(result.completed).toBe(true);
+    });
+  });
+
+  describe('clampIndent helper', () => {
+    it('clamps below MIN_INDENT', () => {
+      expect(clampIndent(MIN_INDENT - 5)).toBe(MIN_INDENT);
+    });
+
+    it('clamps above MAX_INDENT', () => {
+      expect(clampIndent(MAX_INDENT + 10)).toBe(MAX_INDENT);
+    });
+
+    it('allows values inside inclusive range', () => {
+      const withinRange =
+        MIN_INDENT + Math.max(1, Math.floor((MAX_INDENT - MIN_INDENT) / 2));
+      expect(clampIndent(withinRange)).toBe(withinRange);
+      expect(clampIndent(MAX_INDENT)).toBe(MAX_INDENT);
     });
   });
 

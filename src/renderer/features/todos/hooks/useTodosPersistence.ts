@@ -3,7 +3,7 @@ import { saveListTodos, loadListTodos } from '../api/storage';
 import { debugLogger } from '../../../utils/debug';
 import { SaveQueue } from '../utils/saveQueue';
 import { useTodosStore } from '../store/useTodosStore';
-import { groupTodosBySection } from '../utils/todoUtils';
+import { groupTodosBySection, clampIndent } from '../utils/todoUtils';
 
 /**
  * Phase 5 Refactor: Zero parameters! Store handles all state.
@@ -189,7 +189,7 @@ export default function useTodosPersistence() {
           completed: Boolean(
             (t as any).completed ?? (t as any).checked ?? false,
           ),
-          indent: Math.max(0, Math.min(1, Number((t as any).indent ?? 0))),
+          indent: clampIndent(Number((t as any).indent ?? 0)),
         };
         // Preserve parentId from database (section is computed, not persisted)
         if (t.parentId !== undefined) {

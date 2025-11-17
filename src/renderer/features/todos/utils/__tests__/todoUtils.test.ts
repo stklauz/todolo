@@ -5,9 +5,22 @@ import {
   groupTodosBySection,
   computeIndeterminateState,
   deriveIndentFromParentId,
+  computeParentForIndentChange,
+  reparentChildren,
+  outdentChildren,
 } from '../todoUtils';
-
+import { MAX_INDENT, MIN_INDENT } from '../constants';
 import type { EditorTodo } from '../../types';
+
+const createLookup = (todos: EditorTodo[]) => {
+  const map = new Map<number, EditorTodo>();
+  todos.forEach((todo) => {
+    if (typeof todo.id === 'number') {
+      map.set(todo.id, todo);
+    }
+  });
+  return (id: number) => map.get(id);
+};
 
 describe('todoUtils.createNewTodo defaults', () => {
   test('sets parentId=null by default', () => {
@@ -18,13 +31,13 @@ describe('todoUtils.createNewTodo defaults', () => {
   test('indent remains a rendering concern and is clamped', () => {
     const low = createNewTodo('low', 2, -10);
     const high = createNewTodo('high', 3, 999);
-    expect(low.indent).toBeGreaterThanOrEqual(0);
-    expect(high.indent).toBeLessThanOrEqual(1);
+    expect(low.indent).toBeGreaterThanOrEqual(MIN_INDENT);
+    expect(high.indent).toBeLessThanOrEqual(MAX_INDENT);
   });
 });
 
 describe('deriveIndentFromParentId', () => {
-  it('should return 0 for top-level todo (parentId === null)', () => {
+  it('returns 0 for top-level todo (parentId === null)', () => {
     const todo: EditorTodo = {
       id: 1,
       text: 'Top-level',
@@ -34,33 +47,75 @@ describe('deriveIndentFromParentId', () => {
     expect(deriveIndentFromParentId(todo)).toBe(0);
   });
 
-  it('should return 1 for child todo (parentId !== null)', () => {
-    const todo: EditorTodo = {
+  it('returns depth from ancestor chain for nested todos', () => {
+    const grandParent: EditorTodo = {
+      id: 1,
+      text: 'Grand Parent',
+      completed: false,
+      parentId: null,
+    };
+    const parent: EditorTodo = {
       id: 2,
-      text: 'Child',
+      text: 'Parent',
       completed: false,
       parentId: 1,
     };
-    expect(deriveIndentFromParentId(todo)).toBe(1);
-  });
-
-  it('should return 0 when parentId is undefined (treats as null)', () => {
-    const todo: EditorTodo = {
+    const child: EditorTodo = {
       id: 3,
-      text: 'Undefined parent',
+      text: 'Child',
       completed: false,
-      parentId: undefined as any,
+      parentId: 2,
     };
-    expect(deriveIndentFromParentId(todo)).toBe(0);
+    const greatGrandChild: EditorTodo = {
+      id: 4,
+      text: 'Great grand child',
+      completed: false,
+      parentId: 3,
+    };
+
+    const lookup = createLookup([grandParent, parent, child, greatGrandChild]);
+    expect(deriveIndentFromParentId(grandParent, { lookup })).toBe(0);
+    expect(deriveIndentFromParentId(parent, { lookup })).toBe(1);
+    expect(deriveIndentFromParentId(child, { lookup })).toBe(2);
+    expect(deriveIndentFromParentId(greatGrandChild, { lookup })).toBe(3);
   });
 
-  it('should ignore existing indent field (parentId is source of truth)', () => {
+  it('clamps derived depth using MAX_INDENT', () => {
+    const chain: EditorTodo[] = [];
+    let prev: number | null = null;
+    for (let i = 1; i <= 10; i += 1) {
+      chain.push({
+        id: i,
+        text: `Node ${i}`,
+        completed: false,
+        parentId: prev,
+      });
+      prev = i;
+    }
+    const lookup = createLookup(chain);
+    expect(deriveIndentFromParentId(chain[chain.length - 1], { lookup })).toBe(
+      MAX_INDENT,
+    );
+  });
+
+  it('guards against cycles by clamping', () => {
+    const cyclic: EditorTodo = {
+      id: 1,
+      text: 'Loop',
+      completed: false,
+      parentId: 1,
+    };
+    const lookup = (id: number) => (id === 1 ? cyclic : undefined);
+    expect(deriveIndentFromParentId(cyclic, { lookup })).toBe(MIN_INDENT);
+  });
+
+  it('ignores legacy indent when parentId is defined', () => {
     const todoWithIndent1: EditorTodo = {
       id: 4,
       text: 'Mismatched indent',
       completed: false,
       parentId: null,
-      indent: 1, // This should be ignored
+      indent: 1,
     };
     expect(deriveIndentFromParentId(todoWithIndent1)).toBe(0);
 
@@ -69,9 +124,113 @@ describe('deriveIndentFromParentId', () => {
       text: 'Child with indent 0',
       completed: false,
       parentId: 1,
-      indent: 0, // This should be ignored
+      indent: 0,
     };
-    expect(deriveIndentFromParentId(todoWithIndent0)).toBe(1);
+    const lookup = createLookup([
+      { id: 1, text: 'Parent', completed: false, indent: 0, parentId: null },
+      todoWithIndent0,
+    ]);
+    expect(deriveIndentFromParentId(todoWithIndent0, { lookup })).toBe(1);
+  });
+
+  it('uses legacy indent as a hint when lookup is unavailable', () => {
+    const orphanChild: EditorTodo = {
+      id: 10,
+      text: 'Orphan child',
+      completed: false,
+      parentId: 999,
+      indent: 2,
+    };
+    // Without lookup (no todos array), fall back to stored indent hint
+    expect(deriveIndentFromParentId(orphanChild)).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('computeParentForIndentChange', () => {
+  const baseTodos: EditorTodo[] = [
+    { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+    { id: 2, text: 'Child A', completed: false, indent: 1, parentId: 1 },
+    {
+      id: 3,
+      text: 'Grandchild anchor',
+      completed: false,
+      indent: 1,
+      parentId: 2,
+    },
+    { id: 4, text: 'Child B', completed: false, indent: 1, parentId: 1 },
+  ];
+
+  it('returns null when target indent is MIN_INDENT', () => {
+    expect(computeParentForIndentChange(baseTodos, 3, MIN_INDENT)).toBeNull();
+  });
+
+  it('finds nearest ancestor whose depth matches targetIndent - 1', () => {
+    const parentId = computeParentForIndentChange(baseTodos, 4, MIN_INDENT + 2);
+    expect(parentId).toBe(2);
+  });
+
+  it('finds deeper ancestor when indenting beyond level 2', () => {
+    const parentId = computeParentForIndentChange(baseTodos, 4, MIN_INDENT + 3);
+    expect(parentId).toBe(3);
+  });
+
+  it('returns null when no valid ancestor exists', () => {
+    const orphan: EditorTodo[] = [
+      { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+      { id: 2, text: 'Sibling', completed: false, indent: 0, parentId: null },
+    ];
+    expect(computeParentForIndentChange(orphan, 1, MIN_INDENT + 1)).toBeNull();
+  });
+
+  it('skips cross-section parents (completed vs active)', () => {
+    const todos: EditorTodo[] = [
+      {
+        id: 1,
+        text: 'Completed Root',
+        completed: true,
+        indent: 0,
+        parentId: null,
+      },
+      { id: 2, text: 'Target', completed: false, indent: 0, parentId: null },
+    ];
+    const parentId = computeParentForIndentChange(todos, 2, MIN_INDENT + 1);
+    expect(parentId).toBeNull();
+  });
+
+  it('respects MAX_INDENT by clamping when choosing parent', () => {
+    const todos: EditorTodo[] = [
+      { id: 1, text: 'A', completed: false, indent: 0, parentId: null },
+      { id: 2, text: 'B', completed: false, indent: 1, parentId: 1 },
+      { id: 3, text: 'C', completed: false, indent: 2, parentId: 2 },
+      { id: 4, text: 'D', completed: false, indent: 0, parentId: null },
+    ];
+    const parentId = computeParentForIndentChange(todos, 4, 999);
+    expect(parentId).toBe(3);
+  });
+});
+
+describe('reparentChildren/outdentChildren', () => {
+  it('updates child parentId and derived indent when reparenting', () => {
+    const todos: EditorTodo[] = [
+      { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+      { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
+      { id: 3, text: 'New Root', completed: false, indent: 0, parentId: null },
+    ];
+    const updated = reparentChildren(1, 3, todos);
+    const child = updated.find((t) => t.id === 2);
+    expect(child?.parentId).toBe(3);
+    expect(child?.indent).toBeGreaterThanOrEqual(MIN_INDENT + 1);
+  });
+
+  it('outdents children to top-level', () => {
+    const todos: EditorTodo[] = [
+      { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+      { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
+    ];
+    const updated = outdentChildren(1, todos);
+    const child = updated.find((t) => t.id === 2);
+    expect(child?.parentId).toBeNull();
+    expect(child?.indent).toBe(MIN_INDENT);
   });
 });
 

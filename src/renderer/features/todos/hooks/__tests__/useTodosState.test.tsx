@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import useTodosState from '../useTodosState';
 import * as storage from '../../api/storage';
 import { useTodosStore } from '../../store/useTodosStore';
+import { MIN_INDENT, MAX_INDENT } from '../../utils/constants';
 
 // Mock the storage module
 jest.mock('../../api/storage');
@@ -450,14 +451,14 @@ describe('useTodosState', () => {
     });
 
     const todos = result.current.getSelectedTodos();
-    expect(todos[0].indent).toBe(0);
+    expect(todos[0].indent).toBe(MIN_INDENT);
 
     act(() => {
       result.current.changeIndent(1, 5); // Try to go above 1
     });
 
     const todosAfter = result.current.getSelectedTodos();
-    expect(todosAfter[0].indent).toBe(1);
+    expect(todosAfter[0].indent).toBe(MAX_INDENT);
   });
 
   it('should duplicate list successfully', async () => {

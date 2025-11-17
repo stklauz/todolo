@@ -3,7 +3,13 @@ import type { EditorTodo } from '../types';
 import { getCursorPosition, isCursorAtStart } from '../utils/cursorUtils';
 import type { FocusPosition } from './useTodoFocus';
 import { debugLogger } from '../../../utils/debug';
-import { computeTodoSection } from '../utils/todoUtils';
+import {
+  computeTodoSection,
+  computeParentForIndentChange,
+  deriveIndentFromParentId,
+  clampIndent,
+} from '../utils/todoUtils';
+import { MAX_INDENT } from '../utils/constants';
 
 export interface UseTodoKeyboardHandlersProps {
   allTodos: EditorTodo[];
@@ -13,16 +19,6 @@ export interface UseTodoKeyboardHandlersProps {
   updateTodo: (id: number, text: string) => void;
   focusTodo: (id: number, position?: FocusPosition) => void;
   hideCompletedItems?: boolean;
-}
-
-/**
- * Helper function to check if a todo has a parent above it
- */
-function hasParentAbove(allTodos: EditorTodo[], currentIndex: number): boolean {
-  for (let i = currentIndex - 1; i >= 0; i--) {
-    if (Number(allTodos[i].indent ?? 0) === 0) return true;
-  }
-  return false;
 }
 
 /**
@@ -38,9 +34,24 @@ function handleTabKey(
   event.preventDefault();
   if (event.shiftKey) {
     changeIndent(id, -1);
-  } else if (hasParentAbove(allTodos, index)) {
-    changeIndent(id, +1);
+    return;
   }
+
+  const current = allTodos[index];
+  if (!current) return;
+
+  const currentDepth = deriveIndentFromParentId(current);
+  const nextDepth = clampIndent(currentDepth + 1);
+  if (nextDepth <= currentDepth || nextDepth > MAX_INDENT) {
+    return;
+  }
+
+  const parentCandidate = computeParentForIndentChange(allTodos, id, nextDepth);
+  if (parentCandidate == null) {
+    return;
+  }
+
+  changeIndent(id, +1);
 }
 
 /**

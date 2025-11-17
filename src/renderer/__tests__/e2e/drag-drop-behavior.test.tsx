@@ -183,4 +183,27 @@ describe('Drag & Drop behavior', () => {
       'Second',
     ]);
   });
+
+  test('renders indentation classes for deep hierarchies', async () => {
+    renderAppWithDefaults({
+      loadListTodos: jest.fn().mockResolvedValue({
+        version: 2,
+        todos: [
+          { id: 1, text: 'Root', completed: false, indent: 0 },
+          { id: 2, text: 'Child', completed: false, indent: 1 },
+          { id: 3, text: 'Grandchild', completed: false, indent: 2 },
+          { id: 4, text: 'Great grandchild', completed: false, indent: 3 },
+        ],
+      }),
+    });
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId('todo-indent').length).toBe(4),
+    );
+
+    const handles = screen.getAllByTestId('todo-indent');
+    expect(handles[1].className).toContain('indent1');
+    expect(handles[2].className).toContain('indent2');
+    expect(handles[3].className).toContain('indent3');
+  });
 });

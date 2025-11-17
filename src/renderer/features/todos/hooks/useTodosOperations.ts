@@ -5,7 +5,9 @@ import {
   outdentChildren,
   deriveIndentFromParentId,
   computeParentForIndentChange,
+  clampIndent,
 } from '../utils/todoUtils';
+import { MIN_INDENT } from '../utils/constants';
 import { debugLogger } from '../../../utils/debug';
 
 type UseTodosOperationsProps = {
@@ -120,7 +122,7 @@ export default function useTodosOperations({
    * - indent === 1: indent (find nearest previous top-level active parent and attach)
    */
   function setIndent(id: number, indent: number) {
-    const clamped = Math.max(0, Math.min(1, indent | 0));
+    const clamped = clampIndent(indent | 0);
     setSelectedTodos((prev) => {
       const targetIndex = prev.findIndex((t) => t.id === id);
       if (targetIndex === -1) return prev;
@@ -139,8 +141,19 @@ export default function useTodosOperations({
       // If no valid parent found, still allow visual indent (display-only)
       updated[targetIndex] =
         newParentId == null
-          ? { ...target, parentId: null, indent: clamped }
+          ? {
+              ...target,
+              parentId: clamped === MIN_INDENT ? null : undefined,
+              indent: clamped,
+            }
           : { ...target, parentId: newParentId, indent: clamped };
+      debugLogger.log('info', 'Operations: setIndent', {
+        todoId: id,
+        previousIndent: currentIndent,
+        requestedIndent: clamped,
+        appliedIndent: updated[targetIndex].indent,
+        parentId: newParentId,
+      });
 
       // Only trigger save if something actually changed
       if (updated !== prev) {
@@ -159,7 +172,7 @@ export default function useTodosOperations({
       if (!target) return prev;
 
       const currentIndent = deriveIndentFromParentId(target);
-      const newIndent = Math.max(0, Math.min(1, currentIndent + delta));
+      const newIndent = clampIndent(currentIndent + delta);
 
       // Only update if indent would actually change
       if (currentIndent === newIndent) return prev;
@@ -173,8 +186,19 @@ export default function useTodosOperations({
       // If no valid parent found, still allow visual indent (display-only)
       updated[targetIndex] =
         newParentId == null
-          ? { ...target, parentId: null, indent: newIndent }
+          ? {
+              ...target,
+              parentId: newIndent === MIN_INDENT ? null : undefined,
+              indent: newIndent,
+            }
           : { ...target, parentId: newParentId, indent: newIndent };
+      debugLogger.log('info', 'Operations: changeIndent', {
+        todoId: id,
+        previousIndent: currentIndent,
+        requestedDelta: delta,
+        appliedIndent: updated[targetIndex].indent,
+        parentId: newParentId,
+      });
 
       saveWithStrategy('debounced', 200);
       return updated;
@@ -209,19 +233,21 @@ export default function useTodosOperations({
 
       const next = [...prev];
       const baseTodo = prev[index];
-      // New todo inherits parentId from base todo (indent is derived from parentId)
       const baseParentId = baseTodo?.parentId ?? null;
+      let indentLevel = MIN_INDENT;
+      if (baseParentId != null) {
+        const parent = prev.find((t) => t.id === baseParentId);
+        const parentIndent = parent
+          ? deriveIndentFromParentId(parent)
+          : MIN_INDENT;
+        indentLevel = clampIndent(parentIndent + 1);
+      }
       next.splice(index + 1, 0, {
         id,
         text,
         completed: false,
         parentId: baseParentId,
-        indent: deriveIndentFromParentId({
-          id,
-          text,
-          completed: false,
-          parentId: baseParentId,
-        }),
+        indent: indentLevel,
       });
       return next;
     });

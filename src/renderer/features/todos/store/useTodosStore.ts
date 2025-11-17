@@ -5,7 +5,9 @@ import {
   outdentChildren,
   deriveIndentFromParentId,
   computeParentForIndentChange,
+  clampIndent,
 } from '../utils/todoUtils';
+import { MIN_INDENT } from '../utils/constants';
 import {
   duplicateList as duplicateListApi,
   deleteList as deleteListApi,
@@ -66,6 +68,10 @@ type TodosState = {
   deleteSelectedList: () => void;
   deleteList: (id: string) => Promise<void>;
   renameList: (id: string, name: string) => void;
+  updateListMeta: (
+    id: string,
+    updates: Partial<Pick<TodoList, 'name'>>,
+  ) => void;
   duplicateList: (
     sourceListId: string,
     newListName?: string,
@@ -296,7 +302,7 @@ export const useTodosStore = create<TodosState>((set, get) => ({
   },
 
   setIndent: (id, indent) => {
-    const clamped = Math.max(0, Math.min(1, indent | 0));
+    const clamped = clampIndent(indent | 0);
     set((state) => {
       const list = state.lists.find((l) => l.id === state.selectedListId);
       if (!list) return state;
@@ -311,8 +317,20 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       const newParentId = computeParentForIndentChange(list.todos, id, clamped);
       updated[targetIndex] =
         newParentId == null
-          ? { ...target, parentId: null, indent: clamped }
+          ? {
+              ...target,
+              parentId: clamped === MIN_INDENT ? null : undefined,
+              indent: clamped,
+            }
           : { ...target, parentId: newParentId, indent: clamped };
+      const appliedIndent = updated[targetIndex].indent;
+      debugLogger.log('info', 'Store: setIndent', {
+        todoId: id,
+        previousIndent: currentIndent,
+        requestedIndent: clamped,
+        appliedIndent,
+        parentId: newParentId,
+      });
 
       const updatedLists = state.lists.map((l) =>
         l.id === list.id
@@ -333,7 +351,7 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       const target = list.todos.find((t) => t.id === id);
       if (!target) return state;
       const currentIndent = deriveIndentFromParentId(target);
-      const newIndent = Math.max(0, Math.min(1, currentIndent + delta));
+      const newIndent = clampIndent(currentIndent + delta);
       if (currentIndent === newIndent) return state;
 
       const targetIndex = list.todos.findIndex((t) => t.id === id);
@@ -345,8 +363,19 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       );
       updated[targetIndex] =
         newParentId == null
-          ? { ...target, parentId: null, indent: newIndent }
+          ? {
+              ...target,
+              parentId: newIndent === MIN_INDENT ? null : undefined,
+              indent: newIndent,
+            }
           : { ...target, parentId: newParentId, indent: newIndent };
+      debugLogger.log('info', 'Store: changeIndent', {
+        todoId: id,
+        previousIndent: currentIndent,
+        requestedDelta: delta,
+        appliedIndent: updated[targetIndex].indent,
+        parentId: newParentId,
+      });
 
       const updatedLists = state.lists.map((l) =>
         l.id === list.id
@@ -373,17 +402,20 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       const next = [...list.todos];
       const baseTodo = next[index];
       const baseParentId = baseTodo?.parentId ?? null;
+      let indentLevel = MIN_INDENT;
+      if (baseParentId != null) {
+        const parent = list.todos.find((t) => t.id === baseParentId);
+        const parentIndent = parent
+          ? deriveIndentFromParentId(parent)
+          : MIN_INDENT;
+        indentLevel = clampIndent(parentIndent + 1);
+      }
       const newTodo: EditorTodo = {
         id,
         text,
         completed: false,
         parentId: baseParentId,
-        indent: deriveIndentFromParentId({
-          id,
-          text,
-          completed: false,
-          parentId: baseParentId,
-        } as EditorTodo),
+        indent: indentLevel,
       };
       next.splice(index + 1, 0, newTodo);
 
@@ -550,6 +582,31 @@ export const useTodosStore = create<TodosState>((set, get) => ({
           ? { ...l, name: trimmedName, updatedAt: new Date().toISOString() }
           : l,
       );
+      return {
+        ...state,
+        lists: sortListsByRecency(updatedLists),
+      } as TodosState;
+    });
+  },
+
+  updateListMeta: (id, updates) => {
+    set((state) => {
+      const list = state.lists.find((l) => l.id === id);
+      if (!list) return state;
+      const nextName = updates.name != null ? updates.name.trim() : list.name;
+      const changed = nextName !== list.name;
+      const updatedLists = state.lists.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              name: nextName,
+              updatedAt: new Date().toISOString(),
+            }
+          : l,
+      );
+      if (!changed) {
+        // Even if name unchanged, we still bump recency
+      }
       return {
         ...state,
         lists: sortListsByRecency(updatedLists),
