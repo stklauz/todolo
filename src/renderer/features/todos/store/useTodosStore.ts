@@ -610,27 +610,6 @@ export const useTodosStore = create<TodosState>((set, get) => ({
     });
   },
 
-  updateListMeta: (id, updates) => {
-    set((state) => {
-      const list = state.lists.find((l) => l.id === id);
-      if (!list) return state;
-      const nextName = updates.name != null ? updates.name.trim() : list.name;
-      const updatedLists = state.lists.map((l) =>
-        l.id === id
-          ? {
-              ...l,
-              name: nextName,
-              updatedAt: new Date().toISOString(),
-            }
-          : l,
-      );
-      return {
-        ...state,
-        lists: sortListsByRecency(updatedLists),
-      } as TodosState;
-    });
-  },
-
   duplicateList: async (sourceListId, newListName) => {
     const state = get();
     const sourceList = state.lists.find((l) => l.id === sourceListId);
