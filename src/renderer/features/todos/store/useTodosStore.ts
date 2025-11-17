@@ -594,7 +594,6 @@ export const useTodosStore = create<TodosState>((set, get) => ({
       const list = state.lists.find((l) => l.id === id);
       if (!list) return state;
       const nextName = updates.name != null ? updates.name.trim() : list.name;
-      const changed = nextName !== list.name;
       const updatedLists = state.lists.map((l) =>
         l.id === id
           ? {
@@ -604,9 +603,6 @@ export const useTodosStore = create<TodosState>((set, get) => ({
             }
           : l,
       );
-      if (!changed) {
-        // Even if name unchanged, we still bump recency
-      }
       return {
         ...state,
         lists: sortListsByRecency(updatedLists),

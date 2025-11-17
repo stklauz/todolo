@@ -1,6 +1,7 @@
 import React from 'react';
 import { Checkbox } from '../Checkbox';
 import { clampIndent } from '../../utils/todoUtils';
+import { MAX_INDENT } from '../../utils/constants';
 
 const styles = require('./TodoRow.module.css');
 
@@ -43,8 +44,7 @@ export const TodoRow = React.memo(
       ref,
     ) => {
       const indentLevel = clampIndent(Number(indent ?? 0));
-      const maxClassDepth = 4;
-      const classDepth = Math.min(indentLevel, maxClassDepth);
+      const classDepth = Math.min(indentLevel, MAX_INDENT);
       const indentClass =
         classDepth > 0 ? (styles as any)[`indent${classDepth}`] || '' : '';
       return (

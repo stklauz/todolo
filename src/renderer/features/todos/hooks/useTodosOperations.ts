@@ -143,7 +143,7 @@ export default function useTodosOperations({
         newParentId == null
           ? {
               ...target,
-              parentId: clamped === MIN_INDENT ? null : undefined,
+              parentId: null,
               indent: clamped,
             }
           : { ...target, parentId: newParentId, indent: clamped };
@@ -188,7 +188,7 @@ export default function useTodosOperations({
         newParentId == null
           ? {
               ...target,
-              parentId: newIndent === MIN_INDENT ? null : undefined,
+              parentId: null,
               indent: newIndent,
             }
           : { ...target, parentId: newParentId, indent: newIndent };

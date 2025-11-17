@@ -372,26 +372,28 @@ export const reparentChildren = (
   newParentId: number | null,
   todos: EditorTodo[],
 ): EditorTodo[] => {
-  const reassigned = new Set<number>();
-  const next = todos.map((t) => {
-    if (t.parentId === parentId) {
-      reassigned.add(t.id);
-      return {
-        ...t,
-        parentId: newParentId,
-      };
+  const lookupMap = new Map<number, EditorTodo>();
+  todos.forEach((todo) => {
+    if (typeof todo.id === 'number') {
+      lookupMap.set(todo.id, todo);
     }
-    return t;
   });
-  const lookup = buildLookup(next);
-  return next.map((t) =>
-    reassigned.has(t.id)
-      ? {
-          ...t,
-          indent: deriveIndentFromParentId(t, { lookup }),
-        }
-      : t,
-  );
+  const lookup = (id: number) => lookupMap.get(id);
+
+  return todos.map((todo) => {
+    if (todo.parentId !== parentId) {
+      return todo;
+    }
+    const updated = {
+      ...todo,
+      parentId: newParentId,
+    };
+    lookupMap.set(updated.id, updated);
+    return {
+      ...updated,
+      indent: deriveIndentFromParentId(updated, { lookup }),
+    };
+  });
 };
 
 /**

@@ -40,10 +40,6 @@
   padding-left: 5.25rem !important;
 }
 
-.indent4 {
-  padding-left: 7rem !important;
-}
-
 .row:hover {
   background: var(--color-bg-hover);
 }

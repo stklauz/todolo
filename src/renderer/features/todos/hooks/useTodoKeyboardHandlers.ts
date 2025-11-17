@@ -9,7 +9,6 @@ import {
   deriveIndentFromParentId,
   clampIndent,
 } from '../utils/todoUtils';
-import { MAX_INDENT } from '../utils/constants';
 
 export interface UseTodoKeyboardHandlersProps {
   allTodos: EditorTodo[];
@@ -42,7 +41,7 @@ function handleTabKey(
 
   const currentDepth = deriveIndentFromParentId(current);
   const nextDepth = clampIndent(currentDepth + 1);
-  if (nextDepth <= currentDepth || nextDepth > MAX_INDENT) {
+  if (nextDepth <= currentDepth) {
     return;
   }
 

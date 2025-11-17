@@ -25,7 +25,7 @@ Object.defineProperty(window, 'electron', {
  * usages are easy to audit and don't pollute test output.
  */
 beforeEach(() => {
-  const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
+  jest.spyOn(console, 'info').mockImplementation(() => {});
 
   const redirectToInfo =
     (label: string) =>
