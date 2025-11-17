@@ -1,3 +1,16 @@
+# [1.9.0](https://github.com/stklauz/todolo/compare/v1.8.1...v1.9.0) (2025-11-17)
+
+### Bug Fixes
+
+- fix tests and release ([f44aa6a](https://github.com/stklauz/todolo/commit/f44aa6afb5451764b04bd0727ad33500416ae4c3))
+- fixing pr feedback and comments ([099e45f](https://github.com/stklauz/todolo/commit/099e45f92addc5414f269fbc2df74cfa701a583e))
+
+### Features
+
+- change indent levels ([90504b0](https://github.com/stklauz/todolo/commit/90504b057b14dca240b138bdc34af3b31cc3fef8))
+- change indent levels ([#53](https://github.com/stklauz/todolo/issues/53)) ([0400a94](https://github.com/stklauz/todolo/commit/0400a948c84d492325b3a9a591f26424fdda9d96))
+- set default order of lists by most recent ([e6ae867](https://github.com/stklauz/todolo/commit/e6ae8671e55d64ecf19ebd32cf7cdf0fc911fe41))
+
 ## [1.8.1](https://github.com/stklauz/todolo/compare/v1.8.0...v1.8.1) (2025-11-06)
 
 ### Bug Fixes
