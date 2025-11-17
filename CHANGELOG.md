@@ -1,3 +1,9 @@
+## [1.9.1](https://github.com/stklauz/todolo/compare/v1.9.0...v1.9.1) (2025-11-17)
+
+### Bug Fixes
+
+- drag and drop logic in indented items ([6aab291](https://github.com/stklauz/todolo/commit/6aab2919fad31d6f76bc111c7045f7015eab6056))
+
 # [1.9.0](https://github.com/stklauz/todolo/compare/v1.8.1...v1.9.0) (2025-11-17)
 
 ### Bug Fixes
