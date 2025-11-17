@@ -72,8 +72,8 @@ export const deriveIndentFromParentId = (
     }
     const parent = resolvedLookup(currentParentId);
     if (!parent) {
-      const fallback = typeof todo.indent === 'number' ? todo.indent : depth;
-      return clampIndent(fallback);
+      // Parent chain broken: return indent based on traversed depth
+      return clampIndent(depth);
     }
     currentParentId = parent.parentId;
   }
