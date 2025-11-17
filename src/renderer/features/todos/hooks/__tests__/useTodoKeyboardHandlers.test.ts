@@ -5,11 +5,11 @@ import type { EditorTodo } from '../../types';
 
 describe('useTodoKeyboardHandlers', () => {
   const mockTodos: EditorTodo[] = [
-    { id: 1, text: 'Parent 1', completed: false, indent: 0 },
-    { id: 2, text: 'Child 1.1', completed: false, indent: 1 },
-    { id: 3, text: 'Child 1.2', completed: false, indent: 1 },
-    { id: 4, text: 'Parent 2', completed: false, indent: 0 },
-    { id: 5, text: '', completed: false, indent: 0 },
+    { id: 1, text: 'Parent 1', completed: false, indent: 0, parentId: null },
+    { id: 2, text: 'Child 1.1', completed: false, indent: 1, parentId: 1 },
+    { id: 3, text: 'Child 1.2', completed: false, indent: 1, parentId: 1 },
+    { id: 4, text: 'Parent 2', completed: false, indent: 0, parentId: null },
+    { id: 5, text: '', completed: false, indent: 0, parentId: null },
   ];
 
   const mockChangeIndent = jest.fn();
@@ -84,12 +84,12 @@ describe('useTodoKeyboardHandlers', () => {
       expect(mockChangeIndent).toHaveBeenCalledWith(2, -1);
     });
 
-    it('should indent when Tab is pressed and parent exists above', () => {
+    it('should indent when Tab is pressed and a valid ancestor exists above', () => {
       const { result } = renderHook(() =>
         useTodoKeyboardHandlers(defaultProps),
       );
 
-      const handler = result.current(2); // Child todo
+      const handler = result.current(3); // Second child todo
       const mockEvent = {
         key: 'Tab',
         shiftKey: false,
@@ -99,7 +99,7 @@ describe('useTodoKeyboardHandlers', () => {
       handler(mockEvent);
 
       expect(mockEvent.preventDefault).toHaveBeenCalled();
-      expect(mockChangeIndent).toHaveBeenCalledWith(2, +1);
+      expect(mockChangeIndent).toHaveBeenCalledWith(3, +1);
     });
 
     it('should not indent when Tab is pressed and no parent exists above', () => {
@@ -127,6 +127,37 @@ describe('useTodoKeyboardHandlers', () => {
       );
 
       const handler = result.current(1);
+      const mockEvent = {
+        key: 'Tab',
+        shiftKey: false,
+        preventDefault: jest.fn(),
+      } as unknown as React.KeyboardEvent<HTMLTextAreaElement>;
+
+      handler(mockEvent);
+
+      expect(mockEvent.preventDefault).toHaveBeenCalled();
+      expect(mockChangeIndent).not.toHaveBeenCalled();
+    });
+
+    it('should not indent when already at maximum supported depth', () => {
+      const deepTodos: EditorTodo[] = [
+        { id: 1, text: 'Root', completed: false, indent: 0, parentId: null },
+        { id: 2, text: 'Child', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'Grandchild', completed: false, indent: 2, parentId: 2 },
+        {
+          id: 4,
+          text: 'Great grandchild',
+          completed: false,
+          indent: 3,
+          parentId: 3,
+        },
+      ];
+
+      const { result } = renderHook(() =>
+        useTodoKeyboardHandlers({ ...defaultProps, allTodos: deepTodos }),
+      );
+
+      const handler = result.current(4);
       const mockEvent = {
         key: 'Tab',
         shiftKey: false,

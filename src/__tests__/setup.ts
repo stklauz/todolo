@@ -19,8 +19,24 @@ Object.defineProperty(window, 'electron', {
 });
 
 // Suppress console noise during tests; restored via restoreMocks/reset in Jest config
+/**
+ * Tests are only allowed to emit through console.info. All other console methods
+ * are redirected to console.info (which is mocked to a noop) so accidental
+ * usages are easy to audit and don't pollute test output.
+ */
 beforeEach(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'info').mockImplementation(() => {});
+
+  const redirectToInfo =
+    (label: string) =>
+    (message?: unknown, ...rest: unknown[]) =>
+      console.info(`[${label}]`, message, ...rest);
+
+  jest.spyOn(console, 'log').mockImplementation(redirectToInfo('console.log'));
+  jest
+    .spyOn(console, 'warn')
+    .mockImplementation(redirectToInfo('console.warn'));
+  jest
+    .spyOn(console, 'error')
+    .mockImplementation(redirectToInfo('console.error'));
 });

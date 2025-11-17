@@ -65,11 +65,13 @@ export default function useListsManagement({
   }, []);
 
   function addList(): string {
-    const id = crypto?.randomUUID?.() || `list-${Date.now()}`;
+    // eslint-disable-next-line no-undef
+    const id = globalThis.crypto?.randomUUID?.() || `list-${Date.now()}`;
     const idx = lists.length + 1;
     const name = `List ${idx}`;
     const now = new Date().toISOString();
     const newList = { id, name, todos: [], createdAt: now, updatedAt: now };
+    // Rely on store's setLists to handle sorting to avoid double work
     setLists((prev) => [...prev, newList]);
     setSelectedListId(id);
     // Persist new list immediately to avoid FK/selection races on restart

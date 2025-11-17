@@ -83,15 +83,12 @@ export default function useTodosState() {
 
   const updateList = React.useCallback(
     (id: string, updates: Partial<TodoList>) => {
-      setLists((prev) =>
-        prev.map((l) =>
-          l.id === id
-            ? { ...l, ...updates, updatedAt: new Date().toISOString() }
-            : l,
-        ),
-      );
+      // Delegate to store action for consistency
+      useTodosStore.getState().updateListMeta(id, {
+        name: updates.name ?? undefined,
+      });
     },
-    [setLists],
+    [],
   );
 
   /**

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Checkbox } from '../Checkbox';
+import { clampIndent } from '../../utils/todoUtils';
+import { MAX_INDENT } from '../../utils/constants';
 
 const styles = require('./TodoRow.module.css');
 
@@ -41,9 +43,10 @@ export const TodoRow = React.memo(
       },
       ref,
     ) => {
-      const indentLevel = Math.max(0, Math.min(1, Number(indent)));
+      const indentLevel = clampIndent(Number(indent ?? 0));
+      const classDepth = Math.min(indentLevel, MAX_INDENT);
       const indentClass =
-        indentLevel > 0 ? (styles as any)[`indent${indentLevel}`] || '' : '';
+        classDepth > 0 ? (styles as any)[`indent${classDepth}`] || '' : '';
       return (
         <div
           className={`${styles.row} ${isDropTarget ? styles.dropTarget : ''}`}

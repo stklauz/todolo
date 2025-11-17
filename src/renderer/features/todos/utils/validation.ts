@@ -1,4 +1,5 @@
 import type { EditorTodo, TodoList } from '../types';
+import { clampIndent } from './todoUtils';
 
 /**
  * Validates and normalizes a todo object from storage
@@ -8,7 +9,7 @@ export const normalizeTodo = (todo: any, fallbackId?: number): EditorTodo => {
   const text =
     typeof todo.text === 'string' ? todo.text : String(todo.text ?? '');
   const completed = Boolean(todo.completed ?? todo.checked ?? false);
-  const indent = Math.max(0, Math.min(1, Number(todo.indent ?? 0)));
+  const indent = clampIndent(Number(todo.indent ?? 0));
 
   return {
     id,
