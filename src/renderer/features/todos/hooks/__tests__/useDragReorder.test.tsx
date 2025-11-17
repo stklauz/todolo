@@ -688,6 +688,190 @@ describe('useDragReorder', () => {
       expect(newTodos[0].text).toBe('1');
       expect(newTodos.map((t: EditorTodo) => t.text)).toEqual(['1', '3', '2']);
     });
+
+    it('should not increase indent when moving an item to the top of the list', () => {
+      // Scenario: A(0), B(0) -> drag B over A -> B(0), A(0)
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'A', completed: false, indent: 0 },
+        { id: 2, text: 'B', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(2); // B
+      });
+
+      act(() => {
+        result.current.handleDropOn(1); // drop on A (top row)
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      expect(newTodos.map((t: EditorTodo) => t.text)).toEqual(['B', 'A']);
+      // Indent should not be increased for the moved item
+      const moved = newTodos[0];
+      expect(Number(moved.indent ?? 0)).toBe(0);
+    });
+
+    it('should move a level-1 parent together with its level-2 children', () => {
+      // Scenario:
+      // R(0)
+      //   P(1)
+      //     C(2)
+      // S(0)
+      // Drag P onto S -> R, S, P, C (P + C move as a block)
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'R', completed: false, indent: 0 },
+        { id: 2, text: 'P', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'C', completed: false, indent: 2, parentId: 2 },
+        { id: 4, text: 'S', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(2); // P (indent 1, has child C)
+      });
+
+      act(() => {
+        result.current.handleDropOn(4); // drop on S
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      expect(newTodos.map((t: EditorTodo) => t.text)).toEqual([
+        'R',
+        'P',
+        'C',
+        'S',
+      ]);
+      const p = newTodos.find((t: EditorTodo) => t.text === 'P');
+      const c = newTodos.find((t: EditorTodo) => t.text === 'C');
+      expect(c?.parentId).toBe(p?.id);
+      expect(Number(p?.indent ?? 0)).toBe(1);
+      expect(Number(c?.indent ?? 0)).toBe(2);
+    });
+
+    it('should adjust deep indent when dropping a deeply-indented item under a shallower parent', () => {
+      // Scenario:
+      // A(0)
+      //   B(1)
+      //     X(3)   <-- visually too deep / inconsistent
+      // Drag X onto B -> A(0), B(1), X(2) with parentId = B
+      const todos: EditorTodo[] = [
+        { id: 1, text: 'A', completed: false, indent: 0 },
+        { id: 2, text: 'B', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'X', completed: false, indent: 3, parentId: 2 },
+      ];
+
+      mockGetTodos.mockReturnValue(todos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(3); // X (indent 3)
+      });
+
+      act(() => {
+        result.current.handleDropOn(2); // drop under B (indent 1)
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(todos);
+
+      const moved = newTodos.find((t: EditorTodo) => t.id === 3)!;
+      // Expect X to be normalized to a direct child of B (indent 2)
+      expect(moved.parentId).toBe(2);
+      expect(Number(moved.indent ?? 0)).toBe(2);
+    });
+
+    it('should move a parent block with deep children as a single unit', () => {
+      // Scenario: P1(0), C1(1), GC1(2), P2(0) -> drag P1 over P2 -> P2, P1, C1, GC1
+      const deepTodos: EditorTodo[] = [
+        { id: 1, text: 'P1', completed: false, indent: 0 },
+        { id: 2, text: 'C1', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'GC1', completed: false, indent: 2, parentId: 2 },
+        { id: 4, text: 'P2', completed: false, indent: 0 },
+      ];
+
+      mockGetTodos.mockReturnValue(deepTodos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(1); // P1
+      });
+
+      act(() => {
+        result.current.handleDropOn(4); // drop on P2
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(deepTodos);
+
+      expect(newTodos.map((t: EditorTodo) => t.text)).toEqual([
+        'P1',
+        'C1',
+        'GC1',
+        'P2',
+      ]);
+      // Parent/child relationships within the moved block should be preserved
+      const p1 = newTodos.find((t: EditorTodo) => t.text === 'P1');
+      const c1 = newTodos.find((t: EditorTodo) => t.text === 'C1');
+      const gc1 = newTodos.find((t: EditorTodo) => t.text === 'GC1');
+      expect(c1?.parentId).toBe(p1?.id);
+      expect(gc1?.parentId).toBe(c1?.id);
+    });
+
+    it('should move a deep child within sibling group without changing its ancestry', () => {
+      // Scenario: P(0), C1(1), GC1(2), C2(1) -> drag GC1 over C2
+      const deepTodos: EditorTodo[] = [
+        { id: 1, text: 'P', completed: false, indent: 0 },
+        { id: 2, text: 'C1', completed: false, indent: 1, parentId: 1 },
+        { id: 3, text: 'GC1', completed: false, indent: 2, parentId: 2 },
+        { id: 4, text: 'C2', completed: false, indent: 1, parentId: 1 },
+      ];
+
+      mockGetTodos.mockReturnValue(deepTodos);
+      const { result } = renderHook(() =>
+        useDragReorder(mockGetTodos, mockSetTodos, mockSectionOf),
+      );
+
+      act(() => {
+        result.current.handleDragStart(3); // GC1
+      });
+
+      act(() => {
+        result.current.handleDropOn(4); // drop on C2
+      });
+
+      const setTodosCall = mockSetTodos.mock.calls[0][0];
+      const newTodos = setTodosCall(deepTodos);
+
+      // Order should keep parent first and move GC1 before the drop target sibling
+      expect(newTodos.map((t: EditorTodo) => t.text)).toEqual([
+        'P',
+        'C1',
+        'GC1',
+        'C2',
+      ]);
+
+      const movedGc1 = newTodos.find((t: EditorTodo) => t.text === 'GC1');
+      // Ancestry should still point to its original parent (C1)
+      expect(movedGc1?.parentId).toBe(2);
+      expect(Number(movedGc1?.indent ?? 0)).toBe(2);
+    });
   });
 
   describe('Edge Cases', () => {

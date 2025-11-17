@@ -135,14 +135,17 @@ export default function useDragReorder(
         )
           return prev;
         const next = [...prev];
-        // compute source block
-        const srcIsParent = Number(next[srcIndex0].indent ?? 0) === 0;
-        const srcStart = srcIsParent ? srcIndex0 : srcIndex0;
+        // Compute source block: move the dragged todo together with all of its
+        // descendants (rows with strictly deeper indent that follow it).
+        const sourceIndent = Number(next[srcIndex0].indent ?? 0);
+        const srcStart = srcIndex0;
         let srcEnd = srcIndex0;
-        if (srcIsParent) {
-          for (let i = srcIndex0 + 1; i < next.length; i++) {
-            if (Number(next[i].indent ?? 0) === 0) break;
+        for (let i = srcIndex0 + 1; i < next.length; i++) {
+          const ind = Number(next[i].indent ?? 0);
+          if (ind > sourceIndent) {
             srcEnd = i;
+          } else {
+            break;
           }
         }
         // If target is inside source block, ignore
@@ -151,70 +154,87 @@ export default function useDragReorder(
         const block = next.splice(srcStart, srcEnd - srcStart + 1);
         // compute target block start
         // When dropping onto a child, insert at the child's row (do not snap to parent)
-        // This preserves child-group ordering and allows inserting a parent between children
+        // This preserves child-group ordering and allows inserting a parent between children.
         let tgtIndex = tgtIndex0;
-        // adjust target index after removal
+        // adjust target index after removal; for downward moves we still want
+        // to insert the block at the target's position (so the target shifts down).
         if (tgtIndex0 > srcEnd) {
           tgtIndex -= block.length;
         }
-        // insert before target row (or parent row, if target was a parent)
+        // insert at computed index
         next.splice(tgtIndex, 0, ...block);
-        // Ensure no orphan children for child moves and set parentId accordingly
-        if (!srcIsParent) {
-          const movedIndex = next.findIndex((t) => t.id === sourceId);
+
+        // Normalize overly deep indentation when dropping under a shallower target.
+        const movedIndex = next.findIndex((t) => t.id === sourceId);
+        const targetIndex = next.findIndex((t) => t.id === targetId);
+        const movedIndent =
+          movedIndex !== -1 ? Number(next[movedIndex].indent ?? 0) : 0;
+        if (movedIndex !== -1 && targetIndex !== -1) {
+          const targetIndent = Number(next[targetIndex].indent ?? 0);
+          if (movedIndent > targetIndent + 1) {
+            next[movedIndex] = {
+              ...next[movedIndex],
+              indent: targetIndent + 1,
+            } as any;
+          }
+        }
+
+        // Ensure no orphan children for single-row level-1 child moves and set parentId accordingly.
+        // Only apply this when we moved a single row at indent 1; multi-row blocks
+        // and deeper descendants preserve their existing parent/child relationships.
+        const movedWasSingleLevel1Child =
+          movedIndex !== -1 && srcStart === srcEnd && movedIndent === 1;
+        if (movedWasSingleLevel1Child && movedIndex !== -1) {
           debugLogger.log('info', 'Handling child move', {
             movedIndex,
             sourceId,
             movedTodo: movedIndex !== -1 ? next[movedIndex] : null,
             indent: movedIndex !== -1 ? next[movedIndex].indent : null,
           });
-          if (movedIndex !== -1 && Number(next[movedIndex].indent ?? 0) === 1) {
-            // Find nearest previous ACTIVE top-level parent by parentId (not just indent)
-            let parentId: number | null = null;
+          // Find nearest previous ACTIVE top-level parent by parentId (not just indent)
+          let parentId: number | null = null;
 
-            // First, check if targetId itself is a valid parent (direct drop onto parent)
-            // This handles the case where a child is dragged onto a parent
-            const targetIndex = next.findIndex((t) => t.id === targetId);
-            if (targetIndex !== -1) {
-              const targetTodo = next[targetIndex];
-              if (
-                targetTodo.parentId == null &&
-                !targetTodo.completed &&
-                targetIndex > movedIndex
-              ) {
-                // Target is an active top-level parent positioned after the moved child
-                parentId = targetId;
+          // First, check if targetId itself is a valid parent (direct drop onto parent)
+          // This handles the case where a child is dragged onto a parent
+          if (targetIndex !== -1) {
+            const targetTodo = next[targetIndex];
+            if (
+              targetTodo.parentId == null &&
+              !targetTodo.completed &&
+              targetIndex > movedIndex
+            ) {
+              // Target is an active top-level parent positioned after the moved child
+              parentId = targetId;
+            }
+          }
+
+          // Otherwise search backward for nearest active parent
+          if (parentId == null) {
+            for (let i = movedIndex - 1; i >= 0; i--) {
+              const cand = next[i];
+              if (cand.parentId == null && !cand.completed) {
+                // Found a top-level active parent - use it as new parent
+                parentId = cand.id;
+                break;
               }
             }
-
-            // Otherwise search backward for nearest active parent
-            if (parentId == null) {
-              for (let i = movedIndex - 1; i >= 0; i--) {
-                const cand = next[i];
-                if (cand.parentId == null && !cand.completed) {
-                  // Found a top-level active parent - use it as new parent
-                  parentId = cand.id;
-                  break;
-                }
-              }
-            }
-            debugLogger.log('info', 'Computed new parent for moved child', {
-              sourceId,
+          }
+          debugLogger.log('info', 'Computed new parent for moved child', {
+            sourceId,
+            parentId,
+          });
+          if (parentId == null) {
+            next[movedIndex] = {
+              ...next[movedIndex],
+              parentId: null,
+              indent: 0,
+            } as any;
+          } else {
+            next[movedIndex] = {
+              ...next[movedIndex],
               parentId,
-            });
-            if (parentId == null) {
-              next[movedIndex] = {
-                ...next[movedIndex],
-                parentId: null,
-                indent: 0,
-              } as any;
-            } else {
-              next[movedIndex] = {
-                ...next[movedIndex],
-                parentId,
-                indent: 1,
-              } as any;
-            }
+              indent: 1,
+            } as any;
           }
         }
         return next;
